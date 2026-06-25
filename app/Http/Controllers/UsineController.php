@@ -1,0 +1,171 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Ticket;
+use App\Models\Usine;
+use App\Services\UsinePaymentPdfService;
+use App\Services\UsinePaymentService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+
+class UsineController extends Controller
+{
+    public function __construct(
+        private readonly UsinePaymentService $paymentService,
+        private readonly UsinePaymentPdfService $paymentPdfService,
+    ) {}
+
+    public function index(Request $request): View
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        $usinesQuery = Usine::query()
+            ->withCount('tickets')
+            ->orderBy('nom_usine');
+
+        if ($search !== '') {
+            $usinesQuery->where('nom_usine', 'like', '%'.$search.'%');
+        }
+
+        $usines = $usinesQuery
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('usines.index', compact('usines', 'search'));
+    }
+
+    public function amounts(Request $request): View
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        $usinesQuery = Usine::query()
+            ->select([
+                'usines.id_usine',
+                'usines.nom_usine',
+                DB::raw('COALESCE(SUM(t.montant_paie), 0) AS total_montant'),
+                DB::raw('COALESCE(SUM(t.montant_payer), 0) AS montant_paye'),
+                DB::raw('COALESCE(SUM(t.montant_reste), 0) AS reste_a_payer'),
+            ])
+            ->leftJoin('tickets as t', function ($join) {
+                $join->on('usines.id_usine', '=', 't.id_usine')
+                    ->whereNotNull('t.date_validation_boss');
+            })
+            ->groupBy('usines.id_usine', 'usines.nom_usine')
+            ->orderBy('usines.nom_usine');
+
+        if ($search !== '') {
+            $usinesQuery->where('usines.nom_usine', 'like', '%'.$search.'%');
+        }
+
+        $usines = $usinesQuery
+            ->paginate(15)
+            ->withQueryString();
+
+        $totals = Ticket::query()
+            ->validated()
+            ->select([
+                DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
+                DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
+                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+            ])
+            ->first();
+
+        return view('usines.amounts', compact('usines', 'totals', 'search'));
+    }
+
+    public function amountsShow(Usine $usine): View
+    {
+        $monthlyAmounts = Ticket::query()
+            ->validated()
+            ->where('id_usine', $usine->id_usine)
+            ->select([
+                DB::raw("DATE_FORMAT(date_ticket, '%Y-%m') AS mois"),
+                DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
+                DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
+                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COUNT(id_ticket) AS nombre_tickets'),
+            ])
+            ->groupBy('mois')
+            ->orderByDesc('mois')
+            ->get();
+
+        $totals = Ticket::query()
+            ->validated()
+            ->where('id_usine', $usine->id_usine)
+            ->select([
+                DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
+                DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
+                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COUNT(id_ticket) AS nombre_tickets'),
+            ])
+            ->first();
+
+        return view('usines.amounts-show', compact('usine', 'monthlyAmounts', 'totals'));
+    }
+
+    public function paymentsHistoryPdf(Usine $usine): Response
+    {
+        return $this->paymentPdfService->download($usine);
+    }
+
+    public function storePayment(Request $request, Usine $usine): RedirectResponse
+    {
+        if ($request->has('montant')) {
+            $request->merge([
+                'montant' => preg_replace('/\s+/', '', (string) $request->input('montant')),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'montant' => ['required', 'numeric', 'min:0.01'],
+            'date_paiement' => ['required', 'date'],
+            'mode_paiement' => ['required', 'string', 'max:100'],
+            'reference_paiement' => ['nullable', 'string', 'max:255'],
+            'redirect_to' => ['nullable', 'string'],
+            'payment_usine_id' => ['nullable', 'integer'],
+        ]);
+
+        try {
+            $this->paymentService->create(
+                $usine,
+                (float) $validated['montant'],
+                $validated['date_paiement'],
+                $validated['mode_paiement'],
+                $validated['reference_paiement'] ?? null,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['paiement' => $e->getMessage()])
+                ->withInput()
+                ->with('payment_usine_id', $usine->id_usine);
+        }
+
+        $redirectTo = $validated['redirect_to'] ?? route('usines.amounts.show', $usine);
+        if (! is_string($redirectTo) || ! str_starts_with($redirectTo, url('/montants-usines'))) {
+            $redirectTo = route('usines.amounts.show', $usine);
+        }
+
+        return redirect($redirectTo)
+            ->with('success', 'Paiement enregistré avec succès.');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nom_usine' => ['required', 'string', 'max:255', 'unique:usines,nom_usine'],
+        ]);
+
+        Usine::query()->create([
+            'nom_usine' => trim($validated['nom_usine']),
+            'created_by' => auth()->id(),
+        ]);
+
+        return redirect()
+            ->route('usines.index')
+            ->with('success', 'Usine enregistrée avec succès.');
+    }
+}

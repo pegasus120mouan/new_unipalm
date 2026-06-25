@@ -1,0 +1,96 @@
+#sidebar .sidebar-header .logo img {
+    height: auto !important;
+    width: auto !important;
+    max-height: 80px;
+    max-width: 220px;
+    object-fit: contain;
+}
+
+#sidebar .submenu .submenu-item a {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+#sidebar .submenu .submenu-item a i {
+    font-size: 0.95rem;
+    width: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.financement-resume-table thead,
+.financement-history-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.financement-resume-table thead th,
+.financement-history-table thead th {
+    border: none;
+    padding: 1rem 0.85rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.financement-resume-table tbody td,
+.financement-history-table tbody td {
+    padding: 0.9rem 0.85rem;
+    vertical-align: middle;
+}
+
+.financement-agent-link {
+    color: #2c3e50;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.financement-agent-link:hover {
+    color: #667eea;
+}
+
+.financement-agent-link i {
+    color: #667eea;
+    margin-right: 0.35rem;
+}
+
+.montant-positif {
+    color: #198754;
+    font-weight: 600;
+}
+
+.montant-negatif {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.montant-solde {
+    color: #d97706;
+    font-weight: 700;
+}
+
+.financement-stat-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.financement-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.financement-stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 0.35rem;
+}
+
+.financement-detail-header {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}

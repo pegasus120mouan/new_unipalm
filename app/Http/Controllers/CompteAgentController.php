@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Agent;
+use App\Models\Bordereau;
+use App\Services\AgentBordereauPaymentService;
+use App\Services\AgentTransactionsHistoryPdfService;
+use App\Services\CaisseService;
+use App\Services\CompteAgentService;
+use App\Services\FinancementService;
+use App\Services\PretService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\View\View;
+use InvalidArgumentException;
+
+class CompteAgentController extends Controller
+{
+    public function __construct(
+        private readonly CompteAgentService $compteAgentService,
+        private readonly FinancementService $financementService,
+        private readonly PretService $pretService,
+        private readonly CaisseService $caisseService,
+        private readonly AgentBordereauPaymentService $bordereauPaymentService,
+        private readonly AgentTransactionsHistoryPdfService $transactionsHistoryPdfService,
+    ) {}
+
+    public function index(Request $request): View
+    {
+        $filters = [
+            'search_nom' => trim((string) $request->query('search_nom', '')),
+            'search_prenom' => trim((string) $request->query('search_prenom', '')),
+            'search_contact' => trim((string) $request->query('search_contact', '')),
+            'search_chef' => trim((string) $request->query('search_chef', '')),
+        ];
+
+        $totalAgents = $this->compteAgentService->totalAgentsCount();
+        $globalStats = $this->compteAgentService->globalStats();
+        $agents = $this->compteAgentService->paginatedAgentSummaries($filters);
+        $hasFilters = collect($filters)->contains(fn ($value) => $value !== '');
+
+        return view('comptes-agents.index', compact(
+            'filters',
+            'totalAgents',
+            'globalStats',
+            'agents',
+            'hasFilters',
+        ));
+    }
+
+    public function show(Request $request, Agent $agent): View
+    {
+        abort_if($agent->date_suppression !== null, 404);
+
+        $agent->load('groupe');
+
+        $filters = [
+            'statut_ticket' => trim((string) $request->query('statut_ticket', '')),
+            'statut_bordereau' => trim((string) $request->query('statut_bordereau', '')),
+        ];
+
+        $activeSection = $request->query('section', 'tickets') === 'bordereaux' ? 'bordereaux' : 'tickets';
+
+        $financementStats = $this->financementService->statsForAgent($agent->id_agent);
+        $pretStats = $this->pretService->statsForAgent($agent->id_agent);
+        $financialStats = $this->compteAgentService->financialStatsForAgent(
+            $agent->id_agent,
+            (float) $financementStats['solde_financement'],
+        );
+        $counts = $this->compteAgentService->countsForAgent($agent->id_agent);
+        $this->bordereauPaymentService->syncTicketsForAgent($agent->id_agent);
+        $tickets = $this->compteAgentService->paginatedAgentTickets($agent->id_agent, $filters);
+        $bordereaux = $this->compteAgentService->paginatedAgentBordereaux($agent->id_agent, $filters);
+        $soldeCaisse = $this->caisseService->getSolde();
+
+        return view('comptes-agents.show', compact(
+            'agent',
+            'filters',
+            'activeSection',
+            'financementStats',
+            'pretStats',
+            'financialStats',
+            'counts',
+            'tickets',
+            'bordereaux',
+            'soldeCaisse',
+        ));
+    }
+
+    public function storeBordereauPayment(Request $request, Bordereau $bordereau): RedirectResponse
+    {
+        if ($request->has('montant')) {
+            $request->merge([
+                'montant' => preg_replace('/\s+/', '', (string) $request->input('montant')),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'montant' => ['required', 'numeric', 'min:0.01'],
+            'source_paiement' => ['required', 'in:transactions,financement,cheque'],
+            'numero_cheque' => ['nullable', 'string', 'max:50'],
+            'redirect_to' => ['nullable', 'string'],
+        ]);
+
+        if ($validated['source_paiement'] === 'cheque' && blank($validated['numero_cheque'] ?? null)) {
+            return back()
+                ->withInput()
+                ->withErrors(['paiement' => 'Le numéro de chèque est obligatoire.']);
+        }
+
+        try {
+            $this->bordereauPaymentService->pay($bordereau, $request->user(), $validated);
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['paiement' => $e->getMessage()]);
+        }
+
+        $redirect = $validated['redirect_to'] ?? route('comptes-agents.show', [
+            'agent' => $bordereau->id_agent,
+            'section' => 'bordereaux',
+        ]);
+
+        return redirect()->to($redirect)
+            ->with('success', 'Paiement du bordereau enregistré avec succès.');
+    }
+
+    public function transactionsHistoryPdf(Request $request, Agent $agent): Response
+    {
+        abort_if($agent->date_suppression !== null, 404);
+
+        $validated = $request->validate([
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        return $this->transactionsHistoryPdfService->download(
+            $agent,
+            $validated['date_debut'],
+            $validated['date_fin'],
+        );
+    }
+}
