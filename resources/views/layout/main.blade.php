@@ -698,6 +698,7 @@
                     'usines.amounts',
                     'usines.amounts.show',
                     'comptes-groupes.*',
+                    'utilisateurs.*',
                 ]))
                     @include('tickets.partials.stats-cards')
                 @endif
