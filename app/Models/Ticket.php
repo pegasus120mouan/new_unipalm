@@ -113,6 +113,17 @@ class Ticket extends Model
         });
     }
 
+    public function scopeVisibleToCurrentUser($query)
+    {
+        $user = auth()->user();
+
+        if ($user?->limitsTicketsToOwn()) {
+            $query->where('id_utilisateur', $user->id);
+        }
+
+        return $query;
+    }
+
     public function scopeEligibleForBordereau($query, int $idAgent, string $dateDebut, string $dateFin)
     {
         return $query

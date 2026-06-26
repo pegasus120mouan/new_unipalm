@@ -12,11 +12,13 @@ class TicketService
      */
     public function getDashboardStats(): array
     {
+        $query = Ticket::query()->visibleToCurrentUser();
+
         return [
-            'total' => Ticket::query()->count(),
-            'en_attente' => Ticket::query()->pending()->count(),
-            'valides' => Ticket::query()->validated()->count(),
-            'valides_non_payes' => Ticket::query()
+            'total' => (clone $query)->count(),
+            'en_attente' => (clone $query)->pending()->count(),
+            'valides' => (clone $query)->validated()->count(),
+            'valides_non_payes' => (clone $query)
                 ->validated()
                 ->whereNull('date_paie')
                 ->count(),

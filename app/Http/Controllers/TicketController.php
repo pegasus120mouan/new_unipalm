@@ -23,8 +23,7 @@ class TicketController extends Controller
         $filters = $this->searchFiltersFromRequest($request);
         $isSearchRequested = $request->has('search');
 
-        $query = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur']);
+        $query = $this->ticketQuery();
 
         if ($isSearchRequested) {
             $this->applySearchFilters($query, $filters);
@@ -41,8 +40,7 @@ class TicketController extends Controller
 
     public function today(): View
     {
-        $tickets = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur'])
+        $tickets = $this->ticketQuery()
             ->whereDate('created_at', today())
             ->orderByDesc('created_at')
             ->orderByDesc('id_ticket')
@@ -54,8 +52,7 @@ class TicketController extends Controller
 
     public function pending(): View
     {
-        $tickets = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur'])
+        $tickets = $this->ticketQuery()
             ->pending()
             ->orderByDesc('date_ticket')
             ->orderByDesc('id_ticket')
@@ -75,8 +72,7 @@ class TicketController extends Controller
             'statut' => $request->input('statut'),
         ];
 
-        $query = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur'])
+        $query = $this->ticketQuery()
             ->paid()
             ->whereNotNull('date_ticket');
 
@@ -128,8 +124,7 @@ class TicketController extends Controller
             'date_fin' => $request->input('date_fin'),
         ];
 
-        $query = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur'])
+        $query = $this->ticketQuery()
             ->validated();
 
         if ($filters['agent_id']) {
@@ -175,8 +170,7 @@ class TicketController extends Controller
             'numero_ticket' => $request->input('numero_ticket'),
         ];
 
-        $query = Ticket::query()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur']);
+        $query = $this->ticketQuery();
 
         if ($filters['agent_id']) {
             $query->where('id_agent', (int) $filters['agent_id']);
@@ -253,8 +247,7 @@ class TicketController extends Controller
         $tickets = null;
 
         if ($isSearchRequested) {
-            $query = Ticket::query()
-                ->with(['agent', 'usine', 'vehicule', 'utilisateur']);
+            $query = $this->ticketQuery();
 
             $this->applySearchFilters($query, $filters);
 
@@ -277,6 +270,8 @@ class TicketController extends Controller
 
     public function update(Request $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorizeTicketAccess($ticket);
+
         $validated = $request->validate([
             'date_ticket' => ['required', 'date'],
             'numero_ticket' => [
@@ -304,6 +299,9 @@ class TicketController extends Controller
 
     public function validate(Request $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorizeTicketValidation();
+        $this->authorizeTicketAccess($ticket);
+
         if (! $ticket->isPending()) {
             return back()->withErrors([
                 'prix_unitaire' => 'Ce ticket n\'est plus en attente de validation.',
@@ -323,12 +321,22 @@ class TicketController extends Controller
 
     public function validateBulk(Request $request): RedirectResponse
     {
+        $this->authorizeTicketValidation();
+
         $validated = $request->validate([
             'ticket_ids' => ['required', 'array', 'min:1'],
             'ticket_ids.*' => ['integer', 'exists:tickets,id_ticket'],
             'prix_unitaire' => ['required', 'numeric', 'min:0.01'],
             'update_all_usine' => ['sometimes', 'boolean'],
         ]);
+
+        if (auth()->user()?->limitsTicketsToOwn()) {
+            $validated['ticket_ids'] = Ticket::query()
+                ->visibleToCurrentUser()
+                ->whereIn('id_ticket', $validated['ticket_ids'])
+                ->pluck('id_ticket')
+                ->all();
+        }
 
         $result = $this->ticketService->validateMany(
             $validated['ticket_ids'],
@@ -351,6 +359,32 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.pending')
             ->with('success', $message);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<Ticket>
+     */
+    private function ticketQuery()
+    {
+        return Ticket::query()
+            ->visibleToCurrentUser()
+            ->with(['agent', 'usine', 'vehicule', 'utilisateur']);
+    }
+
+    private function authorizeTicketAccess(Ticket $ticket): void
+    {
+        $user = auth()->user();
+
+        if ($user?->limitsTicketsToOwn() && (int) $ticket->id_utilisateur !== (int) $user->id) {
+            abort(403, 'Vous ne pouvez accéder qu\'aux tickets que vous avez enregistrés.');
+        }
+    }
+
+    private function authorizeTicketValidation(): void
+    {
+        if (! auth()->user()?->canValidateTickets()) {
+            abort(403, 'Les opérateurs ne peuvent pas valider un ticket.');
+        }
     }
 
     /**

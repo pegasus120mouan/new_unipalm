@@ -14,7 +14,7 @@ class LoginController extends Controller
     public function create(): RedirectResponse|View
     {
         if (Auth::check()) {
-            return redirect()->route('tickets.index');
+            return redirect('/');
         }
 
         return view('auth.login');
@@ -41,7 +41,7 @@ class LoginController extends Controller
             Auth::login($utilisateur);
             $request->session()->regenerate();
 
-            return redirect()->intended(route('tickets.index'));
+            return redirect()->intended('/');
         }
 
         return back()->withErrors([

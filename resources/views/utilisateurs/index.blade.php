@@ -150,16 +150,21 @@
 
     <section class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-people"></i> Utilisateurs</span>
-                    <span class="text-muted">{{ $utilisateurs->total() }} utilisateur(s)</span>
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="fw-semibold"><i class="bi bi-people"></i> Utilisateurs</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                        <small class="text-muted"><i class="bi bi-pencil-square"></i> Cliquez sur Nom, Prénoms, Contact ou Login puis Entrée pour enregistrer</small>
+                        <span class="badge bg-dark">{{ $utilisateurs->total() }} utilisateur(s)</span>
+                    </div>
                 </div>
                 <div class="card-body table-responsive p-0">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0 utilisateurs-data-table">
+                        <thead class="utilisateurs-table-header">
                             <tr>
-                                <th>Utilisateur</th>
+                                <th class="text-center" style="width: 4rem;">Photo</th>
+                                <th>Nom</th>
+                                <th>Prénoms</th>
                                 <th>Contact</th>
                                 <th>Login</th>
                                 <th>Rôle</th>
@@ -179,27 +184,59 @@
                                         default => 'bg-secondary',
                                     };
                                 @endphp
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
-                                                style="width: 36px; height: 36px; font-size: 0.85rem; font-weight: 600;">
-                                                {{ strtoupper(substr($utilisateur->nom, 0, 1)) }}
+                                <tr data-utilisateur-row="{{ $utilisateur->id }}">
+                                    <td class="text-center">
+                                        <a href="{{ route('utilisateurs.show', $utilisateur) }}"
+                                            class="utilisateur-photo-link"
+                                            title="Profil de {{ $utilisateur->full_name }}">
+                                            <div class="utilisateur-photo">
+                                                @if ($utilisateur->hasAvatarImage())
+                                                    <img src="{{ $utilisateur->avatar_url }}"
+                                                        alt="{{ $utilisateur->formatted_nom }}"
+                                                        class="utilisateur-photo__img rounded-circle"
+                                                        width="40" height="40"
+                                                        onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                                                    <div class="utilisateur-photo__fallback d-none rounded-circle">
+                                                        {{ strtoupper(mb_substr($utilisateur->formatted_nom, 0, 1, 'UTF-8')) }}
+                                                    </div>
+                                                @else
+                                                    <div class="utilisateur-photo__fallback rounded-circle">
+                                                        {{ strtoupper(mb_substr($utilisateur->formatted_nom, 0, 1, 'UTF-8')) }}
+                                                    </div>
+                                                @endif
                                             </div>
-                                            <div>
-                                                <div class="fw-semibold">{{ $utilisateur->full_name }}</div>
-                                                <small class="text-muted">#{{ $utilisateur->id }}</small>
-                                            </div>
-                                        </div>
+                                        </a>
                                     </td>
-                                    <td>
-                                        @if ($utilisateur->contact)
-                                            <span class="badge bg-light text-dark border">{{ $utilisateur->contact }}</span>
-                                        @else
-                                            —
-                                        @endif
+                                    <td class="utilisateur-editable-cell fw-semibold" tabindex="0"
+                                        data-field="nom"
+                                        data-url="{{ route('utilisateurs.inline-update', $utilisateur) }}"
+                                        data-value="{{ $utilisateur->nom }}">
+                                        <span class="utilisateur-editable-display">{{ $utilisateur->formatted_nom }}</span>
                                     </td>
-                                    <td><code>{{ $utilisateur->login }}</code></td>
+                                    <td class="utilisateur-editable-cell" tabindex="0"
+                                        data-field="prenoms"
+                                        data-url="{{ route('utilisateurs.inline-update', $utilisateur) }}"
+                                        data-value="{{ $utilisateur->prenoms }}">
+                                        <span class="utilisateur-editable-display">{{ $utilisateur->formatted_prenoms }}</span>
+                                    </td>
+                                    <td class="utilisateur-editable-cell" tabindex="0"
+                                        data-field="contact"
+                                        data-url="{{ route('utilisateurs.inline-update', $utilisateur) }}"
+                                        data-value="{{ $utilisateur->contact }}">
+                                        <span class="utilisateur-editable-display">
+                                            @if ($utilisateur->contact)
+                                                <span class="badge bg-light text-dark border">{{ $utilisateur->contact }}</span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </span>
+                                    </td>
+                                    <td class="utilisateur-editable-cell utilisateur-editable-cell--login" tabindex="0"
+                                        data-field="login"
+                                        data-url="{{ route('utilisateurs.inline-update', $utilisateur) }}"
+                                        data-value="{{ $utilisateur->login }}">
+                                        <span class="utilisateur-editable-display utilisateur-login-text">{{ $utilisateur->login }}</span>
+                                    </td>
                                     <td>
                                         <span class="badge {{ $roleBadge }}">{{ $utilisateur->role_label }}</span>
                                     </td>
@@ -212,14 +249,24 @@
                                     </td>
                                     <td class="text-center">
                                         @if ($utilisateur->id !== auth()->id())
-                                            <form method="POST" action="{{ route('utilisateurs.toggle-statut', $utilisateur) }}" class="d-inline">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm {{ $utilisateur->isActive() ? 'btn-outline-danger' : 'btn-outline-success' }}"
-                                                    title="{{ $utilisateur->isActive() ? 'Désactiver' : 'Activer' }}">
-                                                    <i class="bi bi-{{ $utilisateur->isActive() ? 'toggle-off' : 'toggle-on' }}"></i>
-                                                    {{ $utilisateur->isActive() ? 'Désactiver' : 'Activer' }}
-                                                </button>
-                                            </form>
+                                            <div class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-center">
+                                                <form method="POST" action="{{ route('utilisateurs.toggle-statut', $utilisateur) }}" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm {{ $utilisateur->isActive() ? 'btn-outline-warning' : 'btn-outline-success' }}"
+                                                        title="{{ $utilisateur->isActive() ? 'Désactiver' : 'Activer' }}">
+                                                        <i class="bi bi-{{ $utilisateur->isActive() ? 'toggle-off' : 'toggle-on' }}"></i>
+                                                        {{ $utilisateur->isActive() ? 'Désactiver' : 'Activer' }}
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ route('utilisateurs.destroy', $utilisateur) }}" class="d-inline form-delete-utilisateur">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Supprimer"
+                                                        data-user-name="{{ $utilisateur->full_name }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @else
                                             <span class="text-muted small">Votre compte</span>
                                         @endif
@@ -227,7 +274,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         Aucun utilisateur trouvé.
                                     </td>
                                 </tr>
@@ -312,9 +359,294 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="utilisateurInlineSuccessModal" tabindex="-1" aria-labelledby="utilisateurInlineSuccessModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width: 56px; height: 56px;">
+                        <i class="bi bi-check-lg fs-2"></i>
+                    </div>
+                    <h5 class="mb-2" id="utilisateurInlineSuccessModalLabel">Modification effectuée</h5>
+                    <p class="text-muted mb-0 small" id="utilisateurInlineSuccessMessage"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-0 pb-4">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
+    <style>
+        .utilisateurs-table-header {
+            background: #111;
+        }
+
+        .utilisateurs-table-header th {
+            color: #fff !important;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: none;
+            padding: 0.95rem 1rem;
+            white-space: nowrap;
+        }
+
+        .utilisateurs-data-table tbody td {
+            padding: 0.85rem 1rem;
+            vertical-align: middle;
+        }
+
+        .utilisateur-photo-link {
+            display: inline-flex;
+            text-decoration: none;
+            transition: transform 0.15s ease;
+        }
+
+        .utilisateur-photo-link:hover {
+            transform: scale(1.05);
+        }
+
+        .utilisateur-photo-link:hover .utilisateur-photo__img,
+        .utilisateur-photo-link:hover .utilisateur-photo__fallback {
+            border-color: #435ebe;
+            box-shadow: 0 0 0 2px rgba(67, 94, 190, 0.2);
+        }
+
+        .utilisateur-photo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .utilisateur-photo__img {
+            object-fit: cover;
+            border: 2px solid #e9ecef;
+        }
+
+        .utilisateur-photo__fallback {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #435ebe;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: 2px solid #e9ecef;
+        }
+
+        .utilisateur-editable-cell {
+            cursor: text;
+            min-width: 7rem;
+        }
+
+        .utilisateur-editable-cell:hover:not(.is-editing) {
+            background-color: rgba(67, 94, 190, 0.06);
+            outline: 1px dashed rgba(67, 94, 190, 0.25);
+        }
+
+        .utilisateur-editable-cell.is-editing {
+            padding: 0.25rem;
+        }
+
+        .utilisateur-editable-cell.is-saving {
+            opacity: 0.6;
+        }
+
+        .utilisateur-editable-input {
+            width: 100%;
+            min-width: 6rem;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const csrfToken = @json(csrf_token());
+            const fieldLabels = { nom: 'Nom', prenoms: 'Prénoms', contact: 'Contact', login: 'Login' };
+            const successModalEl = document.getElementById('utilisateurInlineSuccessModal');
+            const successModal = successModalEl && typeof bootstrap !== 'undefined'
+                ? (bootstrap.Modal.getInstance(successModalEl) || new bootstrap.Modal(successModalEl))
+                : null;
+
+            function escapeHtml(text) {
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function displayValue(field, value) {
+                if (!value && field === 'contact') {
+                    return '<span class="text-muted">—</span>';
+                }
+
+                if (field === 'contact') {
+                    return `<span class="badge bg-light text-dark border">${escapeHtml(value)}</span>`;
+                }
+
+                if (field === 'login') {
+                    return `<code>${escapeHtml(value)}</code>`;
+                }
+
+                return escapeHtml(value);
+            }
+
+            function showSuccessModal(field, display) {
+                const label = fieldLabels[field] || field;
+                const messageEl = document.getElementById('utilisateurInlineSuccessMessage');
+
+                if (messageEl) {
+                    messageEl.textContent = `${label} enregistré : ${display}`;
+                }
+
+                successModal?.show();
+            }
+
+            function finishEdit(cell, value, field, display) {
+                cell.classList.remove('is-editing', 'is-saving');
+                cell.dataset.value = value;
+                cell.innerHTML = `<span class="utilisateur-editable-display">${displayValue(field, display ?? value)}</span>`;
+            }
+
+            function cancelEdit(cell) {
+                const field = cell.dataset.field;
+                const value = cell.dataset.value || '';
+                let display = value;
+
+                if (field === 'nom' || field === 'prenoms') {
+                    display = cell.querySelector('.utilisateur-editable-display')?.textContent?.trim() || value;
+                }
+
+                finishEdit(cell, value, field, display);
+            }
+
+            async function saveEdit(cell, input) {
+                const field = cell.dataset.field;
+                const url = cell.dataset.url;
+                const original = (cell.dataset.value || '').trim();
+                const value = input.value.trim();
+
+                if (value === '') {
+                    alert('Ce champ ne peut pas être vide.');
+                    input.focus();
+                    return;
+                }
+
+                if (value === original) {
+                    cancelEdit(cell);
+                    return;
+                }
+
+                cell.classList.add('is-saving');
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({ field, value }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        const message = data.message
+                            || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Erreur lors de la mise à jour.');
+                        throw new Error(message);
+                    }
+
+                    const display = data.display ?? data.value;
+                    finishEdit(cell, data.value, field, display);
+                    showSuccessModal(field, display);
+
+                    const row = cell.closest('tr');
+                    const deleteBtn = row?.querySelector('.form-delete-utilisateur button[type="submit"]');
+                    if (deleteBtn && (field === 'nom' || field === 'prenoms')) {
+                        const nomCell = row.querySelector('[data-field="nom"]');
+                        const prenomsCell = row.querySelector('[data-field="prenoms"]');
+                        const nom = nomCell?.dataset.value || '';
+                        const prenoms = prenomsCell?.dataset.value || '';
+                        deleteBtn.dataset.userName = `${nom} ${prenoms}`.trim();
+                    }
+                } catch (error) {
+                    cell.classList.remove('is-saving');
+                    alert(error.message || 'Impossible d\'enregistrer la modification.');
+                    input.focus();
+                }
+            }
+
+            function startEdit(cell) {
+                if (cell.classList.contains('is-editing')) {
+                    return;
+                }
+
+                document.querySelectorAll('.utilisateur-editable-cell.is-editing').forEach(cancelEdit);
+
+                const value = cell.dataset.value || '';
+
+                cell.classList.add('is-editing');
+                cell.innerHTML = `<input type="text" class="form-control form-control-sm utilisateur-editable-input" value="${escapeHtml(value)}">`;
+
+                const input = cell.querySelector('.utilisateur-editable-input');
+                input.focus();
+                input.select();
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        saveEdit(cell, input);
+                    }
+
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        cancelEdit(cell);
+                    }
+                });
+
+                input.addEventListener('blur', function () {
+                    if (cell.classList.contains('is-editing') && !cell.classList.contains('is-saving')) {
+                        cancelEdit(cell);
+                    }
+                });
+            }
+
+            document.querySelectorAll('.utilisateur-editable-cell').forEach(function (cell) {
+                cell.addEventListener('click', function () {
+                    startEdit(cell);
+                });
+
+                cell.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        startEdit(cell);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.form-delete-utilisateur').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    const button = form.querySelector('button[type="submit"]');
+                    const name = button?.dataset.userName || 'cet utilisateur';
+
+                    if (!confirm(`Confirmer la suppression de ${name} ?`)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+
     @if ($errors->has('nom') || $errors->has('prenoms') || $errors->has('contact') || $errors->has('login') || $errors->has('password') || $errors->has('role'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {

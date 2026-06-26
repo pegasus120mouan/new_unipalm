@@ -29,6 +29,10 @@
         </div>
     @endif
 
+    @php
+        $canValidateTickets = auth()->user()->canValidateTickets();
+    @endphp
+
     <section class="row">
         <div class="col-12">
             <div class="card">
@@ -39,10 +43,12 @@
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
+                        @if ($canValidateTickets)
                         <button type="button" class="btn btn-sm btn-success" id="bulkValidateBtn" disabled
                             data-bs-toggle="modal" data-bs-target="#bulkValidateModal">
                             <i class="bi bi-check2-all"></i> Valider la sélection
                         </button>
+                        @endif
                         <a href="{{ route('tickets.index') }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-arrow-left"></i> Tous les tickets
                         </a>
@@ -51,8 +57,8 @@
                 <div class="card-body table-responsive">
                     @include('tickets.partials.table', [
                         'emptyMessage' => 'Aucun ticket en attente.',
-                        'showValidateAction' => true,
-                        'showBulkSelection' => true,
+                        'showValidateAction' => $canValidateTickets,
+                        'showBulkSelection' => $canValidateTickets,
                         'compactView' => true,
                     ])
                 </div>
@@ -60,6 +66,7 @@
         </div>
     </section>
 
+    @if ($canValidateTickets)
     <div class="modal fade" id="validateTicketModal" tabindex="-1" aria-labelledby="validateTicketModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -133,8 +140,9 @@
             </div>
         </div>
     </div>
+    @endif
 
-    @if ($errors->has('prix_unitaire') && ! old('ticket_ids'))
+    @if ($canValidateTickets && $errors->has('prix_unitaire') && ! old('ticket_ids'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('validateTicketModal')).show();
@@ -142,7 +150,7 @@
         </script>
     @endif
 
-    @if ($errors->has('prix_unitaire') && old('ticket_ids'))
+    @if ($canValidateTickets && $errors->has('prix_unitaire') && old('ticket_ids'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('bulkValidateModal')).show();
@@ -150,6 +158,7 @@
         </script>
     @endif
 
+    @if ($canValidateTickets)
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('validateTicketForm');
@@ -247,4 +256,5 @@
             @endif
         });
     </script>
+    @endif
 @endsection

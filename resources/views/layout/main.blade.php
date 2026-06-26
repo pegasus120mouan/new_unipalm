@@ -75,6 +75,8 @@
 
 
 
+                        @auth
+                        @if ($canModule('analytics'))
                         <li class="sidebar-item {{ request()->routeIs('tickets.index') ? 'active' : '' }}">
 
                             <a href="{{ route('tickets.index') }}" class='sidebar-link'>
@@ -86,6 +88,8 @@
                             </a>
 
                         </li>
+                        @endif
+                        @endauth
 
 
 
@@ -191,6 +195,8 @@
 
 
 
+                        @auth
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('tickets.*') && ! request()->routeIs('tickets.index') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -203,6 +209,7 @@
 
                             <ul class="submenu">
 
+                              @if ($canModule('tickets.index'))
                               <li class="submenu-item {{ request()->routeIs('tickets.index') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.index') }}">
@@ -211,7 +218,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.today'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.today') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.today') }}">
@@ -220,7 +229,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.pending'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.pending') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.pending') }}">
@@ -229,7 +240,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.validated'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.validated') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.validated') }}">
@@ -238,7 +251,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.paid'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.paid') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.paid') }}">
@@ -247,7 +262,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.modifications'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.modifications') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.modifications') }}">
@@ -256,7 +273,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('tickets.search'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.search') ? 'active' : '' }}">
 
                                     <a href="{{ route('tickets.search') }}">
@@ -265,22 +284,18 @@
                                     </a>
 
                                 </li>
-
-                                <li class="submenu-item ">
-
-                                    <a href="extra-component-divider.html">
-                                        <i class="bi bi-people submenu-icon--group"></i>
-                                        <span>Recherche par groupe</span>
-                                    </a>
-
-                                </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
 
 
 
+                        @auth
+                        @if ($canModuleAny(['prix-unitaires', 'bordereaux', 'financements', 'prets', 'usines.amounts', 'comptes-agents', 'comptes-groupes']))
                         <li class="sidebar-item has-sub {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'bordereaux.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -293,6 +308,7 @@
 
                             <ul class="submenu {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'bordereaux.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
+                                @if ($canModule('prix-unitaires'))
                                 <li class="submenu-item {{ request()->routeIs('prix-unitaires.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('prix-unitaires.index') }}">
@@ -301,7 +317,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('bordereaux'))
                                 <li class="submenu-item {{ request()->routeIs('bordereaux.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('bordereaux.index') }}">
@@ -310,7 +328,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('financements'))
                                 <li class="submenu-item {{ request()->routeIs('financements.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('financements.index') }}">
@@ -319,7 +339,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('prets'))
                                 <li class="submenu-item {{ request()->routeIs('prets.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('prets.index') }}">
@@ -328,7 +350,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('usines.amounts'))
                                 <li class="submenu-item {{ request()->routeIs('usines.amounts*') ? 'active' : '' }}">
 
                                     <a href="{{ route('usines.amounts') }}">
@@ -337,7 +361,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('comptes-agents'))
                                 <li class="submenu-item {{ request()->routeIs('comptes-agents.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('comptes-agents.index') }}">
@@ -346,7 +372,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('comptes-groupes'))
                                 <li class="submenu-item {{ request()->routeIs('comptes-groupes.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('comptes-groupes.index') }}">
@@ -355,13 +383,18 @@
                                     </a>
 
                                 </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
 
 
-                        <li class="sidebar-item has-sub {{ request()->routeIs('utilisateurs.*') ? 'active' : '' }}">
+                        @auth
+                        @if ($canModuleAny(['utilisateurs.index', 'utilisateurs.roles']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['utilisateurs.*', 'role-permissions.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -371,8 +404,9 @@
 
                             </a>
 
-                            <ul class="submenu {{ request()->routeIs('utilisateurs.*') ? 'active' : '' }}">
+                            <ul class="submenu {{ request()->routeIs(['utilisateurs.*', 'role-permissions.*']) ? 'active' : '' }}">
 
+                                @if ($canModule('utilisateurs.index'))
                                 <li class="submenu-item {{ request()->routeIs('utilisateurs.index') ? 'active' : '' }}">
 
                                     <a href="{{ route('utilisateurs.index') }}">
@@ -381,24 +415,28 @@
                                     </a>
 
                                 </li>
+                                @endif
 
-                                <li class="submenu-item ">
+                                @if ($canModule('utilisateurs.roles'))
+                                <li class="submenu-item {{ request()->routeIs('role-permissions.*') ? 'active' : '' }}">
 
-                                    <a href="error-404.html">Liste des admins</a>
+                                    <a href="{{ route('role-permissions.index') }}">
+                                        <i class="bi bi-shield-check submenu-icon--roles"></i>
+                                        <span>Gestion des rôles</span>
+                                    </a>
 
                                 </li>
-
-                                <li class="submenu-item ">
-
-                                    <a href="error-500.html">Gestion des rôles</a>
-
-                                </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
 
-                        <li class="sidebar-item has-sub">
+                        @auth
+                        @if ($canModuleAny(['ponts.index', 'ponts.location']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs('ponts.*') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -408,27 +446,37 @@
 
                             </a>
 
-                            <ul class="submenu ">
+                            <ul class="submenu {{ request()->routeIs('ponts.*') ? 'active' : '' }}">
 
-                                <li class="submenu-item ">
+                                @if ($canModule('ponts.index'))
+                                <li class="submenu-item {{ request()->routeIs('ponts.index') ? 'active' : '' }}">
 
-                                    <a href="error-403.html">Liste des ponts</a>
-
-                                </li>
-
-
-
-                                <li class="submenu-item ">
-
-                                    <a href="error-500.html">Localisation des ponts</a>
+                                    <a href="{{ route('ponts.index') }}">
+                                        <i class="bi bi-list-ul submenu-icon--all"></i>
+                                        <span>Liste des ponts</span>
+                                    </a>
 
                                 </li>
+                                @endif
+
+                                @if ($canModule('ponts.location'))
+                                <li class="submenu-item {{ request()->routeIs('ponts.location') ? 'active' : '' }}">
+
+                                    <a href="{{ route('ponts.location') }}">
+                                        <i class="bi bi-geo-alt submenu-icon--location"></i>
+                                        <span>Localisation des ponts</span>
+                                    </a>
+
+                                </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
 
-                        <li class="sidebar-item has-sub">
+                        @if ($canModuleAny(['plantations.index', 'plantations.collecteurs', 'plantations.regions', 'plantations.zones']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -438,34 +486,55 @@
 
                             </a>
 
-                            <ul class="submenu ">
+                            <ul class="submenu {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
 
-                                <li class="submenu-item ">
+                                @if ($canModule('plantations.index'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.index') ? 'active' : '' }}">
 
-                                    <a href="error-403.html">Liste des plantations</a>
-
-                                </li>
-                                <li class="submenu-item ">
-
-                                    <a href="error-500.html">Liste des collecteurs</a>
-
-                                </li>
-                                <li class="submenu-item ">
-
-                                    <a href="error-500.html">Liste des régions</a>
+                                    <a href="{{ route('plantations.index') }}">
+                                        <i class="bi bi-list-ul submenu-icon--all"></i>
+                                        <span>Liste des plantations</span>
+                                    </a>
 
                                 </li>
-                                <li class="submenu-item ">
+                                @endif
+                                @if ($canModule('plantations.collecteurs'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.collecteurs') ? 'active' : '' }}">
 
-                                    <a href="error-500.html">Liste des zones</a>
+                                    <a href="{{ route('plantations.collecteurs') }}">
+                                        <span>Liste des collecteurs</span>
+                                    </a>
 
                                 </li>
+                                @endif
+                                @if ($canModule('plantations.regions'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.regions') ? 'active' : '' }}">
+
+                                    <a href="{{ route('plantations.regions') }}">
+                                        <span>Liste des régions</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('plantations.zones'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.zones') ? 'active' : '' }}">
+
+                                    <a href="{{ route('plantations.zones') }}">
+                                        <span>Liste des zones</span>
+                                    </a>
+
+                                </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
                        
 
+                        @auth
+                        @if ($canModuleAny(['groupes', 'agents', 'usines', 'vehicules']))
                         <li class="sidebar-item has-sub {{ request()->routeIs(['groupes.*', 'agents.*', 'vehicules.*']) || request()->routeIs('usines.index') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -478,6 +547,7 @@
 
                             <ul class="submenu {{ request()->routeIs(['groupes.*', 'agents.*', 'vehicules.*']) || request()->routeIs('usines.index') ? 'active' : '' }}">
 
+                                @if ($canModule('groupes'))
                                 <li class="submenu-item {{ request()->routeIs('groupes.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('groupes.index') }}">
@@ -486,7 +556,9 @@
                                     </a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('agents'))
                                 <li class="submenu-item {{ request()->routeIs('agents.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('agents.index') }}">
@@ -495,6 +567,9 @@
                                     </a>
 
                                 </li>
+                                @endif
+
+                                @if ($canModule('usines'))
                                 <li class="submenu-item {{ request()->routeIs('usines.index') ? 'active' : '' }}">
 
                                     <a href="{{ route('usines.index') }}">
@@ -503,6 +578,9 @@
                                     </a>
 
                                 </li>
+                                @endif
+
+                                @if ($canModule('vehicules'))
                                 <li class="submenu-item {{ request()->routeIs('vehicules.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('vehicules.index') }}">
@@ -511,16 +589,16 @@
                                     </a>
 
                                 </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
 
-
-
-
-
-
+                        @auth
+                        @if ($canModuleAny(['sorties.demandes', 'sorties.pending', 'sorties.validated', 'sorties.diverses']))
                         <li class="sidebar-item has-sub">
 
                             <a href="#" class='sidebar-link'>
@@ -533,33 +611,44 @@
 
                             <ul class="submenu ">
 
+                                @if ($canModule('sorties.demandes'))
                                 <li class="submenu-item ">
 
                                     <a href="form-editor-quill.html">Liste des demandes</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('sorties.pending'))
                                 <li class="submenu-item ">
 
                                     <a href="form-editor-ckeditor.html">Demandes en attente</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('sorties.validated'))
                                 <li class="submenu-item ">
 
                                     <a href="form-editor-summernote.html">Demandes validées</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('sorties.diverses'))
                                 <li class="submenu-item ">
 
                                     <a href="form-editor-tinymce.html">Sorties Diverses</a>
 
                                 </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+
+                        @if ($canModuleAny(['caisse.solde', 'caisse.approvisionnement', 'caisse.banques']))
                         <li class="sidebar-item has-sub">
 
                             <a href="#" class='sidebar-link'>
@@ -572,30 +661,36 @@
 
                             <ul class="submenu ">
 
+                                @if ($canModule('caisse.solde'))
                                 <li class="submenu-item ">
 
                                     <a href="ui-widgets-chatbox.html">Solde de la caisse</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('caisse.approvisionnement'))
                                 <li class="submenu-item ">
 
                                     <a href="ui-widgets-pricing.html">Approvisionnement</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('caisse.banques'))
                                 <li class="submenu-item ">
 
                                     <a href="ui-widgets-todolist.html">Banques</a>
 
                                 </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
 
-
-
+                        @if ($canModuleAny(['recus.tickets', 'recus.demandes']))
                         <li class="sidebar-item has-sub">
 
                             <a href="#" class='sidebar-link'>
@@ -608,27 +703,27 @@
 
                             <ul class="submenu ">
 
+                                @if ($canModule('recus.tickets'))
                                 <li class="submenu-item ">
 
                                     <a href="ui-icons-bootstrap-icons.html">Recu paiement tickets/bordereaux</a>
 
                                 </li>
+                                @endif
 
+                                @if ($canModule('recus.demandes'))
                                 <li class="submenu-item ">
 
                                     <a href="ui-icons-fontawesome.html">Recu des paiements demandes et diverses</a>
 
                                 </li>
-
-                                <li class="submenu-item ">
-
-                                    <a href="ui-icons-dripicons.html">Dripicons</a>
-
-                                </li>
+                                @endif
 
                             </ul>
 
                         </li>
+                        @endif
+                        @endauth
 
 
                     </ul>
@@ -652,10 +747,14 @@
                             <i class="bi bi-justify fs-3"></i>
                         </a>
 
+                        @auth
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
                         <a href="{{ route('tickets.index') }}"
                             class="btn btn-sm {{ request()->routeIs('tickets.*') ? 'btn-primary' : 'btn-outline-primary' }}">
                             <i class="bi bi-collection-fill"></i> Tickets
                         </a>
+                        @endif
+                        @endauth
                     </div>
 
                     <div class="d-flex align-items-center gap-3">
@@ -699,6 +798,9 @@
                     'usines.amounts.show',
                     'comptes-groupes.*',
                     'utilisateurs.*',
+                    'role-permissions.*',
+                    'plantations.*',
+                    'ponts.*',
                 ]))
                     @include('tickets.partials.stats-cards')
                 @endif
