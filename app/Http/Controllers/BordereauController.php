@@ -92,7 +92,7 @@ class BordereauController extends Controller
             $previewTickets = Ticket::query()
                 ->with(['usine', 'vehicule'])
                 ->whereIn('id_ticket', $previewCriteria['ticket_ids'])
-                ->orderByDesc('date_ticket')
+                ->orderByDesc('created_at')
                 ->orderByDesc('id_ticket')
                 ->get();
 
@@ -136,7 +136,7 @@ class BordereauController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'bordereau' => 'Aucun ticket validé disponible pour cet agent sur la période (sans bordereau).',
+                    'bordereau' => 'Aucun ticket validé disponible pour cet agent sur la période (date de création, sans bordereau).',
                 ]);
         }
 
@@ -187,7 +187,11 @@ class BordereauController extends Controller
 
         return redirect()
             ->route('bordereaux.index')
-            ->with('success', "Bordereau {$bordereau->numero_bordereau} créé avec {$ticketCount} ticket(s) sélectionné(s).");
+            ->with('bordereau_generated', [
+                'numero' => $bordereau->numero_bordereau,
+                'tickets' => $ticketCount,
+                'agent' => $bordereau->agent?->full_name ?? '-',
+            ]);
     }
 
     public function validate(Bordereau $bordereau): RedirectResponse

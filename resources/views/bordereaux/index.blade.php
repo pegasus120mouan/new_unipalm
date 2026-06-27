@@ -244,7 +244,7 @@
                     </div>
                     <div class="modal-body">
                         <p class="text-muted small mb-3">
-                            Sélectionnez l'agent et la période (<strong>date ticket</strong>), puis cliquez sur
+                            Sélectionnez l'agent et la période (<strong>date de création</strong>), puis cliquez sur
                             <strong>Voir</strong> pour afficher les tickets validés sans bordereau.
                         </p>
 
@@ -267,7 +267,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="bordereau_date_debut" class="form-label">Date de début</label>
+                            <label for="bordereau_date_debut" class="form-label">Date de début (création)</label>
                             <input type="date" name="date_debut" id="bordereau_date_debut"
                                 class="form-control @error('date_debut') is-invalid @enderror"
                                 value="{{ old('date_debut') }}" required>
@@ -277,7 +277,7 @@
                         </div>
 
                         <div class="mb-0">
-                            <label for="bordereau_date_fin" class="form-label">Date de fin</label>
+                            <label for="bordereau_date_fin" class="form-label">Date de fin (création)</label>
                             <input type="date" name="date_fin" id="bordereau_date_fin"
                                 class="form-control @error('date_fin') is-invalid @enderror"
                                 value="{{ old('date_fin') }}" required>
@@ -319,7 +319,7 @@
                                 <div>
                                     <span class="fw-semibold">{{ $previewCriteria['agent_name'] ?? '-' }}</span>
                                     <span class="text-muted">
-                                        — du {{ \Illuminate\Support\Carbon::parse($previewCriteria['date_debut'])->format('d/m/Y') }}
+                                        — création du {{ \Illuminate\Support\Carbon::parse($previewCriteria['date_debut'])->format('d/m/Y') }}
                                         au {{ \Illuminate\Support\Carbon::parse($previewCriteria['date_fin'])->format('d/m/Y') }}
                                     </span>
                                 </div>
@@ -409,6 +409,53 @@
         </div>
     @endif
 
+    @if (session('bordereau_generated'))
+        @php
+            $generated = session('bordereau_generated');
+        @endphp
+        <div class="modal fade" id="bordereauGeneratedModal" tabindex="-1" aria-labelledby="bordereauGeneratedModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="bordereauGeneratedModalLabel">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            Bordereau généré
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-file-earmark-check text-success" style="font-size: 3.5rem;"></i>
+                        </div>
+                        <p class="mb-2 fs-5 fw-semibold">Le bordereau a été généré avec succès.</p>
+                        <div class="border rounded p-3 bg-light text-start small mb-0">
+                            <div class="row g-2">
+                                <div class="col-5 text-muted">Numéro</div>
+                                <div class="col-7 fw-semibold">{{ $generated['numero'] ?? '-' }}</div>
+                                <div class="col-5 text-muted">Agent</div>
+                                <div class="col-7">{{ $generated['agent'] ?? '-' }}</div>
+                                <div class="col-5 text-muted">Tickets</div>
+                                <div class="col-7">{{ $generated['tickets'] ?? 0 }} ticket(s)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center bg-light">
+                        @if (! empty($generated['numero']))
+                            <a href="{{ route('bordereaux.pdf', $generated['numero']) }}"
+                                target="_blank" rel="noopener noreferrer"
+                                class="btn btn-outline-primary">
+                                <i class="bi bi-file-earmark-pdf"></i> Voir le PDF
+                            </a>
+                        @endif
+                        <button type="button" class="btn btn-success" data-bs-dismiss="modal">
+                            <i class="bi bi-check-lg"></i> OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="modal fade" id="deleteBordereauModal" tabindex="-1" aria-labelledby="deleteBordereauModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -458,6 +505,15 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 const el = document.getElementById('selectTicketsBordereauModal');
+                if (el && typeof bootstrap !== 'undefined') {
+                    (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).show();
+                }
+            });
+        </script>
+    @elseif (session('bordereau_generated'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const el = document.getElementById('bordereauGeneratedModal');
                 if (el && typeof bootstrap !== 'undefined') {
                     (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).show();
                 }

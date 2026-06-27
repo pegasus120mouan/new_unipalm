@@ -128,8 +128,8 @@ class Ticket extends Model
     {
         return $query
             ->where('id_agent', $idAgent)
-            ->whereDate('date_ticket', '>=', $dateDebut)
-            ->whereDate('date_ticket', '<=', $dateFin)
+            ->whereDate('created_at', '>=', $dateDebut)
+            ->whereDate('created_at', '<=', $dateFin)
             ->validated()
             ->where(function ($query) {
                 $query->whereNull('numero_bordereau')

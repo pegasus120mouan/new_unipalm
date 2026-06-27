@@ -13,7 +13,7 @@ class BordereauService
         return Ticket::query()
             ->with(['usine', 'vehicule'])
             ->eligibleForBordereau($idAgent, $dateDebut, $dateFin)
-            ->orderByDesc('date_ticket')
+            ->orderByDesc('created_at')
             ->orderByDesc('id_ticket')
             ->get();
     }
@@ -24,7 +24,7 @@ class BordereauService
 
         if ($tickets->isEmpty()) {
             throw new \InvalidArgumentException(
-                'Aucun ticket validé disponible pour cet agent sur la période sélectionnée (date ticket).'
+                'Aucun ticket validé disponible pour cet agent sur la période sélectionnée (date de création).'
             );
         }
 
