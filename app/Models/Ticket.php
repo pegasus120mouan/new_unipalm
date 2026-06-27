@@ -120,6 +120,11 @@ class Ticket extends Model
         return $this->date_paie !== null;
     }
 
+    public function isSold(): bool
+    {
+        return $this->statut_ticket === 'soldé';
+    }
+
     public function scopeWithoutPrixUnitaire($query)
     {
         return $query->where(function ($query) {

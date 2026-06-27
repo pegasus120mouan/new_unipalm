@@ -41,7 +41,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <span>Liste des tickets</span>
-                        <span class="text-muted ms-2">(modification impossible si le ticket est payé)</span>
+                        <span class="text-muted ms-2">(cliquez sur un champ modifiable, puis Entrée pour enregistrer — impossible si payé)</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
@@ -51,271 +51,351 @@
                     </div>
                 </div>
                 <div class="card-body table-responsive">
-                    @include('tickets.partials.table', [
+                    @include('tickets.partials.modifications-table', [
                         'emptyMessage' => 'Aucun ticket trouvé.',
-                        'showEditAction' => true,
                     ])
                 </div>
             </div>
         </div>
     </section>
 
-    <div class="modal fade" id="editTicketModal" tabindex="-1" aria-labelledby="editTicketModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editTicketModalLabel">Modifier le ticket</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+    <div class="modal fade" id="ticketModifiedModal" tabindex="-1" aria-labelledby="ticketModifiedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title" id="ticketModifiedModalLabel">
+                        <i class="bi bi-check-circle me-2"></i>Modification effectuée
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
-                <form method="POST" action="" id="editTicketForm">
-                    @csrf
-                    @method('PUT')
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="edit_date_ticket" class="form-label">Date ticket</label>
-                                <input type="date" name="date_ticket" id="edit_date_ticket" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="edit_numero_ticket" class="form-label">N° Ticket</label>
-                                <input type="text" name="numero_ticket" id="edit_numero_ticket" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 position-relative">
-                                <label for="edit_usine_search" class="form-label">Usine</label>
-                                <input type="text" id="edit_usine_search" class="form-control"
-                                    placeholder="Rechercher une usine..." autocomplete="off">
-                                <input type="hidden" name="id_usine" id="edit_id_usine" required>
-                                <div id="edit_usine_suggestions" class="list-group position-absolute w-100 shadow-sm"
-                                    style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
-                                <div id="edit_usine_found" class="form-text mt-1" style="display: none;">
-                                    Usine trouvée :
-                                    <button type="button" id="edit_usine_found_select"
-                                        class="btn btn-link btn-sm p-0 align-baseline text-success fw-bold text-decoration-none">
-                                        <span id="edit_usine_found_name"></span>
-                                    </button>
-                                    <span class="text-muted">— cliquer pour sélectionner</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6 position-relative">
-                                <label for="edit_agent_search" class="form-label">Chargé de mission</label>
-                                <input type="text" id="edit_agent_search" class="form-control"
-                                    placeholder="Rechercher par N° agent..." autocomplete="off">
-                                <input type="hidden" name="id_agent" id="edit_id_agent" required>
-                                <div id="edit_agent_suggestions" class="list-group position-absolute w-100 shadow-sm"
-                                    style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
-                                <div id="edit_agent_found" class="form-text mt-1" style="display: none;">
-                                    Agent trouvé :
-                                    <button type="button" id="edit_agent_found_select"
-                                        class="btn btn-link btn-sm p-0 align-baseline text-success fw-bold text-decoration-none">
-                                        <span id="edit_agent_found_name"></span>
-                                    </button>
-                                    <span class="text-muted">— cliquer pour sélectionner</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="edit_vehicule_id" class="form-label">Véhicule</label>
-                                <select name="vehicule_id" id="edit_vehicule_id" class="form-select" required>
-                                    <option value="">Sélectionner un véhicule</option>
-                                    @foreach ($vehicules as $vehicule)
-                                        <option value="{{ $vehicule->vehicules_id }}">{{ $vehicule->matricule_vehicule }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="edit_poids" class="form-label">Poids</label>
-                                <input type="number" name="poids" id="edit_poids" class="form-control"
-                                    step="0.01" min="0" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Enregistrer
-                        </button>
-                    </div>
-                </form>
+                <div class="modal-body py-4 text-center">
+                    <p class="mb-0 fs-5">Les modifications du ticket ont été enregistrées.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">OK</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <style>
+        .ticket-editable-cell {
+            cursor: pointer;
+        }
+        .ticket-editable-cell:hover {
+            background-color: rgba(67, 94, 190, 0.08);
+        }
+        .ticket-editable-cell.is-editing {
+            background-color: rgba(67, 94, 190, 0.12);
+            padding: 0.25rem;
+        }
+        .ticket-editable-cell .form-control,
+        .ticket-editable-cell .form-select {
+            min-width: 8rem;
+        }
+        tr.ticket-row-readonly td {
+            cursor: not-allowed;
+        }
+        tr.ticket-row-readonly:hover {
+            background-color: rgba(108, 117, 125, 0.06);
+        }
+    </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('editTicketForm');
-            const modal = document.getElementById('editTicketModal');
-            const updateBaseUrl = @json(url('/tickets'));
+            const USINES = @json($usinesForAutocomplete);
+            const AGENTS = @json($agentsForAutocomplete);
+            const VEHICULES = @json($vehiculesForAutocomplete);
+            const UPDATE_BASE = @json(url('/tickets'));
+            const CSRF = @json(csrf_token());
+            const successModalEl = document.getElementById('ticketModifiedModal');
+            const successModal = successModalEl ? new bootstrap.Modal(successModalEl) : null;
 
-            function setupAutocomplete(config) {
-                const searchInput = document.getElementById(config.searchId);
-                const hiddenInput = document.getElementById(config.hiddenId);
-                const suggestions = document.getElementById(config.suggestionsId);
-                const foundBox = document.getElementById(config.foundId);
-                const foundName = document.getElementById(config.foundNameId);
-                const foundSelect = document.getElementById(config.foundSelectId);
-                let pendingItem = null;
+            let activeCell = null;
 
-                function clearSelection() {
-                    hiddenInput.value = '';
-                    pendingItem = null;
-                    foundBox.style.display = 'none';
-                    foundName.textContent = '';
-                }
-
-                function selectItem(item) {
-                    searchInput.value = item[config.labelKey];
-                    hiddenInput.value = item.id;
-                    pendingItem = null;
-                    foundBox.style.display = 'none';
-                    foundName.textContent = '';
-                    suggestions.style.display = 'none';
-                }
-
-                function setSelection(id, label) {
-                    hiddenInput.value = id;
-                    searchInput.value = label;
-                    pendingItem = null;
-                    foundBox.style.display = 'none';
-                    suggestions.style.display = 'none';
-                }
-
-                function showPendingItem(item) {
-                    pendingItem = item;
-                    foundName.textContent = item[config.labelKey];
-                    foundBox.style.display = 'block';
-                }
-
-                function showSuggestions(query) {
-                    const term = query.trim().toLowerCase();
-                    suggestions.innerHTML = '';
-
-                    if (term.length < 1) {
-                        suggestions.style.display = 'none';
-                        clearSelection();
-                        return;
+            function buildSelect(options, value) {
+                const select = document.createElement('select');
+                select.className = 'form-select form-select-sm';
+                options.forEach(function (opt) {
+                    const option = document.createElement('option');
+                    option.value = String(opt.id);
+                    option.textContent = opt.label;
+                    if (String(opt.id) === String(value)) {
+                        option.selected = true;
                     }
-
-                    const matches = config.items.filter(item =>
-                        config.filter(item, term)
-                    ).slice(0, 10);
-
-                    if (matches.length === 0) {
-                        suggestions.innerHTML = `<div class="list-group-item text-muted">${config.emptyText}</div>`;
-                        suggestions.style.display = 'block';
-                        clearSelection();
-                        return;
-                    }
-
-                    matches.forEach(item => {
-                        const button = document.createElement('button');
-                        button.type = 'button';
-                        button.className = 'list-group-item list-group-item-action';
-                        button.innerHTML = config.renderItem(item);
-                        button.addEventListener('mousedown', (event) => {
-                            event.preventDefault();
-                            selectItem(item);
-                        });
-                        suggestions.appendChild(button);
-                    });
-
-                    suggestions.style.display = 'block';
-
-                    const exact = config.items.find(item => config.isExact(item, term));
-                    if (exact) {
-                        showPendingItem(exact);
-                    } else {
-                        foundBox.style.display = 'none';
-                        pendingItem = null;
-                        hiddenInput.value = '';
-                    }
-                }
-
-                searchInput.addEventListener('input', () => {
-                    if (hiddenInput.value) {
-                        hiddenInput.value = '';
-                        pendingItem = null;
-                        foundBox.style.display = 'none';
-                    }
-                    showSuggestions(searchInput.value);
+                    select.appendChild(option);
                 });
-
-                searchInput.addEventListener('focus', () => {
-                    const term = searchInput.value.trim();
-                    if (term && !hiddenInput.value) {
-                        showSuggestions(term);
-                    }
-                });
-
-                foundSelect.addEventListener('click', () => {
-                    if (pendingItem) {
-                        selectItem(pendingItem);
-                    }
-                });
-
-                document.addEventListener('click', (event) => {
-                    if (!searchInput.contains(event.target)
-                        && !suggestions.contains(event.target)
-                        && !foundBox.contains(event.target)) {
-                        suggestions.style.display = 'none';
-                    }
-                });
-
-                return { clearSelection, setSelection };
+                return select;
             }
 
-            const usineAutocomplete = setupAutocomplete({
-                items: @json($usinesForAutocomplete),
-                searchId: 'edit_usine_search',
-                hiddenId: 'edit_id_usine',
-                suggestionsId: 'edit_usine_suggestions',
-                foundId: 'edit_usine_found',
-                foundNameId: 'edit_usine_found_name',
-                foundSelectId: 'edit_usine_found_select',
-                labelKey: 'label',
-                emptyText: 'Aucune usine trouvée',
-                filter: (item, term) => item.label.toLowerCase().includes(term),
-                isExact: (item, term) => item.label.toLowerCase() === term,
-                renderItem: (item) => `<strong>${item.label}</strong>`,
-            });
+            function buildInput(type, value, step) {
+                const input = document.createElement('input');
+                input.type = type;
+                input.className = 'form-control form-control-sm';
+                input.value = value ?? '';
+                if (step) {
+                    input.step = step;
+                }
+                if (type === 'number') {
+                    input.min = '0';
+                }
+                return input;
+            }
 
-            const agentAutocomplete = setupAutocomplete({
-                items: @json($agentsForAutocomplete),
-                searchId: 'edit_agent_search',
-                hiddenId: 'edit_id_agent',
-                suggestionsId: 'edit_agent_suggestions',
-                foundId: 'edit_agent_found',
-                foundNameId: 'edit_agent_found_name',
-                foundSelectId: 'edit_agent_found_select',
-                labelKey: 'name',
-                emptyText: 'Aucun agent trouvé',
-                filter: (item, term) => item.numero.toLowerCase().includes(term),
-                isExact: (item, term) => item.numero.toLowerCase() === term,
-                renderItem: (item) => `<span class="text-muted">${item.numero}</span> — <strong>${item.name}</strong>`,
-            });
+            function cancelEdit(cell) {
+                if (!cell || !cell.classList.contains('is-editing')) {
+                    return;
+                }
+                const editor = cell.querySelector('.ticket-cell-editor');
+                const display = cell.querySelector('.ticket-cell-display');
+                if (editor) {
+                    editor.remove();
+                }
+                if (display) {
+                    display.style.display = '';
+                }
+                cell.classList.remove('is-editing');
+                if (activeCell === cell) {
+                    activeCell = null;
+                }
+            }
 
-            document.querySelectorAll('.edit-ticket-btn').forEach((button) => {
-                button.addEventListener('click', () => {
-                    form.action = `${updateBaseUrl}/${button.dataset.ticketId}`;
-                    document.getElementById('edit_date_ticket').value = button.dataset.dateTicket || '';
-                    document.getElementById('edit_numero_ticket').value = button.dataset.numeroTicket || '';
-                    document.getElementById('edit_vehicule_id').value = button.dataset.vehiculeId || '';
-                    document.getElementById('edit_poids').value = button.dataset.poids || '';
+            function commitEditor(cell) {
+                const field = cell.dataset.field;
+                const editor = cell.querySelector('.ticket-cell-editor');
+                const display = cell.querySelector('.ticket-cell-display');
+                if (!editor || !display) {
+                    return;
+                }
 
-                    usineAutocomplete.setSelection(
-                        button.dataset.idUsine || '',
-                        button.dataset.usineName || ''
-                    );
-                    agentAutocomplete.setSelection(
-                        button.dataset.idAgent || '',
-                        button.dataset.agentName || ''
-                    );
+                let value = editor.value;
+                let label = display.textContent.trim();
+
+                if (field === 'id_usine') {
+                    const found = USINES.find(function (u) { return String(u.id) === String(value); });
+                    label = found ? found.label : label;
+                    cell.dataset.label = label;
+                } else if (field === 'id_agent') {
+                    const found = AGENTS.find(function (a) { return String(a.id) === String(value); });
+                    label = found ? found.name : label;
+                    cell.dataset.label = label;
+                } else if (field === 'vehicule_id') {
+                    const found = VEHICULES.find(function (v) { return String(v.id) === String(value); });
+                    label = found ? found.label : label;
+                    cell.dataset.label = label;
+                } else if (field === 'prix_unitaire') {
+                    if (value === '' || parseFloat(value) <= 0) {
+                        display.innerHTML = '<span class="badge bg-warning ticket-prix-badge">En attente</span>';
+                        cell.dataset.value = '';
+                    } else {
+                        display.textContent = Number(value).toLocaleString('fr-FR');
+                        cell.dataset.value = value;
+                    }
+                    editor.remove();
+                    display.style.display = '';
+                    cell.classList.remove('is-editing');
+                    activeCell = null;
+                    return;
+                } else if (field === 'date_ticket' || field === 'created_at') {
+                    if (value) {
+                        const parts = value.split('-');
+                        label = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : value;
+                    }
+                } else if (field === 'poids') {
+                    label = value ? Number(value).toLocaleString('fr-FR') : '—';
+                }
+
+                cell.dataset.value = value;
+                if (field !== 'prix_unitaire') {
+                    display.textContent = label || '—';
+                }
+                editor.remove();
+                display.style.display = '';
+                cell.classList.remove('is-editing');
+                activeCell = null;
+            }
+
+            function activateEditor(cell) {
+                if (cell.dataset.editable === undefined && cell.closest('tr').dataset.editable !== '1') {
+                    return;
+                }
+                const row = cell.closest('tr');
+                if (!row || row.dataset.editable !== '1') {
+                    return;
+                }
+                if (activeCell && activeCell !== cell) {
+                    commitEditor(activeCell);
+                }
+                if (cell.classList.contains('is-editing')) {
+                    return;
+                }
+
+                const field = cell.dataset.field;
+                const value = cell.dataset.value || '';
+                const display = cell.querySelector('.ticket-cell-display');
+                display.style.display = 'none';
+                cell.classList.add('is-editing');
+
+                let editor;
+                if (field === 'id_usine') {
+                    editor = buildSelect(USINES, value);
+                } else if (field === 'id_agent') {
+                    editor = buildSelect(AGENTS.map(function (a) { return { id: a.id, label: a.name }; }), value);
+                } else if (field === 'vehicule_id') {
+                    editor = buildSelect(VEHICULES, value);
+                } else if (field === 'poids') {
+                    editor = buildInput('number', value, '1');
+                } else if (field === 'prix_unitaire') {
+                    editor = buildInput('number', value, '0.01');
+                } else if (field === 'date_ticket' || field === 'created_at') {
+                    editor = buildInput('date', value);
+                } else {
+                    display.style.display = '';
+                    cell.classList.remove('is-editing');
+                    return;
+                }
+
+                editor.classList.add('ticket-cell-editor');
+                cell.appendChild(editor);
+                editor.focus();
+                activeCell = cell;
+
+                editor.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveRow(row, cell);
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEdit(cell);
+                    }
+                });
+
+                if (editor.tagName === 'SELECT') {
+                    editor.addEventListener('change', function () {
+                        editor.dataset.changed = '1';
+                    });
+                }
+            }
+
+            function collectRowPayload(row) {
+                if (activeCell && activeCell.closest('tr') === row) {
+                    commitEditor(activeCell);
+                }
+
+                function cellValue(field) {
+                    const cell = row.querySelector('[data-field="' + field + '"]');
+                    return cell ? cell.dataset.value : '';
+                }
+
+                return {
+                    date_ticket: cellValue('date_ticket'),
+                    numero_ticket: row.dataset.numeroTicket,
+                    id_usine: parseInt(cellValue('id_usine'), 10),
+                    id_agent: parseInt(cellValue('id_agent'), 10),
+                    vehicule_id: parseInt(cellValue('vehicule_id'), 10),
+                    poids: cellValue('poids'),
+                    prix_unitaire: cellValue('prix_unitaire') || null,
+                    created_at: cellValue('created_at') || null,
+                };
+            }
+
+            function updateRowFromResponse(row, ticket) {
+                const map = {
+                    date_ticket: ['date_ticket', 'date_ticket_display'],
+                    id_usine: ['id_usine', 'usine_name'],
+                    id_agent: ['id_agent', 'agent_name'],
+                    vehicule_id: ['vehicule_id', 'vehicule_label'],
+                    poids: ['poids', 'poids_display'],
+                    created_at: ['created_at', 'created_at_display'],
+                    prix_unitaire: ['prix_unitaire', 'prix_unitaire_display'],
+                };
+
+                Object.keys(map).forEach(function (field) {
+                    const cell = row.querySelector('[data-field="' + field + '"]');
+                    if (!cell) {
+                        return;
+                    }
+                    const valKey = map[field][0];
+                    const displayKey = map[field][1];
+                    cell.dataset.value = ticket[valKey] ?? '';
+                    if (field === 'id_usine' || field === 'id_agent' || field === 'vehicule_id') {
+                        cell.dataset.label = ticket[displayKey] ?? '';
+                    }
+                    const display = cell.querySelector('.ticket-cell-display');
+                    if (!display) {
+                        return;
+                    }
+                    if (field === 'prix_unitaire') {
+                        if (ticket.prix_unitaire_display) {
+                            display.textContent = ticket.prix_unitaire_display;
+                        } else {
+                            display.innerHTML = '<span class="badge bg-warning ticket-prix-badge">En attente</span>';
+                        }
+                    } else {
+                        display.textContent = ticket[displayKey] ?? '—';
+                    }
+                });
+
+                const montantCell = row.querySelector('.ticket-montant-cell');
+                if (montantCell && ticket.montant_display) {
+                    montantCell.textContent = ticket.montant_display;
+                }
+            }
+
+            function saveRow(row, fromCell) {
+                if (row.dataset.editable !== '1') {
+                    return;
+                }
+                if (fromCell && fromCell.classList.contains('is-editing')) {
+                    commitEditor(fromCell);
+                }
+
+                const payload = collectRowPayload(row);
+                const ticketId = row.dataset.ticketId;
+
+                fetch(UPDATE_BASE + '/' + ticketId, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': CSRF,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(payload),
+                })
+                    .then(function (r) {
+                        return r.json().then(function (body) {
+                            return { ok: r.ok, body: body };
+                        });
+                    })
+                    .then(function (res) {
+                        if (!res.ok || !res.body.ok) {
+                            alert(res.body.message || 'Impossible d\'enregistrer les modifications.');
+                            return;
+                        }
+                        updateRowFromResponse(row, res.body.ticket);
+                        if (successModal) {
+                            successModal.show();
+                        }
+                    })
+                    .catch(function () {
+                        alert('Erreur réseau lors de l\'enregistrement.');
+                    });
+            }
+
+            document.querySelectorAll('.ticket-editable-cell').forEach(function (cell) {
+                cell.addEventListener('click', function () {
+                    activateEditor(cell);
                 });
             });
 
-            modal.addEventListener('hidden.bs.modal', () => {
-                usineAutocomplete.clearSelection();
-                agentAutocomplete.clearSelection();
-                document.getElementById('edit_usine_search').value = '';
-                document.getElementById('edit_agent_search').value = '';
+            document.addEventListener('click', function (e) {
+                if (!activeCell) {
+                    return;
+                }
+                if (!activeCell.contains(e.target)) {
+                    commitEditor(activeCell);
+                }
             });
         });
     </script>

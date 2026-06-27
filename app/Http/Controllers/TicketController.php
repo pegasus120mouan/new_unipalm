@@ -267,6 +267,11 @@ class TicketController extends Controller
             'label' => $usine->nom_usine,
         ])->values();
 
+        $vehiculesForAutocomplete = $vehicules->map(fn (Vehicule $vehicule) => [
+            'id' => $vehicule->vehicules_id,
+            'label' => $vehicule->matricule_vehicule,
+        ])->values();
+
         return view('tickets.modifications', compact(
             'tickets',
             'filters',
@@ -275,6 +280,7 @@ class TicketController extends Controller
             'vehicules',
             'agentsForAutocomplete',
             'usinesForAutocomplete',
+            'vehiculesForAutocomplete',
         ));
     }
 
@@ -317,7 +323,7 @@ class TicketController extends Controller
         ));
     }
 
-    public function update(Request $request, Ticket $ticket): RedirectResponse
+    public function update(Request $request, Ticket $ticket): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $this->authorizeTicketAccess($ticket);
 
@@ -333,12 +339,49 @@ class TicketController extends Controller
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
             'poids' => ['required', 'numeric', 'min:0'],
+            'prix_unitaire' => ['nullable', 'numeric', 'min:0'],
+            'created_at' => ['nullable', 'date'],
         ]);
 
         try {
-            $this->ticketService->update($ticket, $validated);
+            $updated = $this->ticketService->update($ticket, $validated);
         } catch (\InvalidArgumentException $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+            }
+
             return back()->withErrors(['ticket' => $e->getMessage()]);
+        }
+
+        if ($request->wantsJson()) {
+            $updated->load(['usine', 'agent', 'vehicule']);
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Modification effectuée.',
+                'ticket' => [
+                    'date_ticket' => $updated->date_ticket?->format('Y-m-d'),
+                    'date_ticket_display' => $updated->date_ticket?->format('d/m/Y'),
+                    'id_usine' => $updated->id_usine,
+                    'usine_name' => $updated->usine?->nom_usine,
+                    'id_agent' => $updated->id_agent,
+                    'agent_name' => $updated->agent?->full_name,
+                    'vehicule_id' => $updated->vehicule_id,
+                    'vehicule_label' => $updated->vehicule?->matricule_vehicule,
+                    'poids' => $updated->poids,
+                    'poids_display' => $updated->poids ? number_format($updated->poids, 0, '', ' ') : '—',
+                    'prix_unitaire' => $updated->prix_unitaire,
+                    'prix_unitaire_display' => $updated->hasPrixUnitaire()
+                        ? number_format((float) $updated->prix_unitaire, 0, '', ' ')
+                        : null,
+                    'created_at' => $updated->created_at?->format('Y-m-d'),
+                    'created_at_display' => $updated->created_at?->format('d/m/Y'),
+                    'montant_paie' => $updated->montant_paie,
+                    'montant_display' => $updated->montant_paie
+                        ? number_format((float) $updated->montant_paie, 0, '', ' ')
+                        : null,
+                ],
+            ]);
         }
 
         return redirect()
@@ -408,6 +451,23 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.pending')
             ->with('success', $message);
+    }
+
+    public function destroy(Ticket $ticket): RedirectResponse
+    {
+        if (! auth()->user()?->canAccessModule('tickets.destroy')) {
+            abort(403, 'Vous n\'avez pas la permission de supprimer un ticket.');
+        }
+
+        $this->authorizeTicketAccess($ticket);
+
+        try {
+            $this->ticketService->delete($ticket);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['ticket' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Ticket supprimé avec succès.');
     }
 
     /**

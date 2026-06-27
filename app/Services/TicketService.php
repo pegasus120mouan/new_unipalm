@@ -100,6 +100,14 @@ class TicketService
             'poids' => $data['poids'],
         ]);
 
+        if (array_key_exists('prix_unitaire', $data) && $data['prix_unitaire'] !== null && $data['prix_unitaire'] !== '') {
+            $ticket->prix_unitaire = $data['prix_unitaire'];
+        }
+
+        if (! empty($data['created_at'])) {
+            $ticket->created_at = \Illuminate\Support\Carbon::parse($data['created_at'])->startOfDay();
+        }
+
         if ($ticket->hasPrixUnitaire()) {
             $ticket->montant_paie = (float) $ticket->prix_unitaire * (float) $ticket->poids;
         }
@@ -151,5 +159,14 @@ class TicketService
             'validated' => $validated,
             'usines_updated' => $usineIds,
         ];
+    }
+
+    public function delete(Ticket $ticket): void
+    {
+        if ($ticket->isSold()) {
+            throw new \InvalidArgumentException('Impossible de supprimer un ticket soldé.');
+        }
+
+        $ticket->delete();
     }
 }

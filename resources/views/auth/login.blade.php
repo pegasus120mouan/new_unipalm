@@ -57,13 +57,18 @@
 
                             <div class="mb-4">
                                 <label for="password" class="form-label auth-label">Mot de passe</label>
-                                <div class="form-group position-relative has-icon-left mb-0">
+                                <div class="auth-input-wrap">
                                     <input type="password" name="password" id="password"
-                                        class="form-control form-control-xl @error('password') is-invalid @enderror"
+                                        class="form-control form-control-xl auth-input-with-icons @error('password') is-invalid @enderror"
                                         placeholder="Saisissez votre mot de passe" required autocomplete="current-password">
-                                    <div class="form-control-icon">
+                                    <span class="auth-input-icon auth-input-icon-left" aria-hidden="true">
                                         <i class="bi bi-lock"></i>
-                                    </div>
+                                    </span>
+                                    <button type="button" class="auth-input-icon auth-input-icon-right password-toggle-btn"
+                                        id="togglePassword" aria-label="Afficher le mot de passe"
+                                        title="Afficher le mot de passe">
+                                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -122,6 +127,28 @@
     </div>
 
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        (function () {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.getElementById('togglePassword');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+
+            if (!passwordInput || !toggleBtn || !toggleIcon) {
+                return;
+            }
+
+            toggleBtn.addEventListener('click', function () {
+                const isHidden = passwordInput.type === 'password';
+                passwordInput.type = isHidden ? 'text' : 'password';
+                toggleIcon.classList.toggle('bi-eye', !isHidden);
+                toggleIcon.classList.toggle('bi-eye-slash', isHidden);
+
+                const label = isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+                toggleBtn.setAttribute('aria-label', label);
+                toggleBtn.setAttribute('title', label);
+            });
+        })();
+    </script>
 </body>
 
 </html>

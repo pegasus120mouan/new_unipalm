@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{ticket:id_ticket}/validate', [TicketController::class, 'validate'])->name('tickets.validate');
     Route::post('/tickets/validate-bulk', [TicketController::class, 'validateBulk'])->name('tickets.validate-bulk');
     Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
+    Route::delete('/tickets/{ticket:id_ticket}', [TicketController::class, 'destroy'])->name('tickets.destroy');
 
     Route::get('/financements', [FinancementController::class, 'index'])->name('financements.index');
     Route::get('/financements/agents/{agent:id_agent}', [FinancementController::class, 'show'])->name('financements.show');

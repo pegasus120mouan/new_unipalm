@@ -30,6 +30,9 @@
             @if (! empty($showEditAction))
                 <th>Actions</th>
             @endif
+            @if (! empty($showDeleteAction))
+                <th class="text-center" style="width: 3rem;">Suppr.</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -145,6 +148,25 @@
                         @endif
                     </td>
                 @endif
+                @if (! empty($showDeleteAction))
+                    <td class="text-center">
+                        @if ($ticket->isSold())
+                            <span class="text-muted" title="Ticket soldé — suppression impossible">
+                                <i class="bi bi-trash fs-5 opacity-25"></i>
+                            </span>
+                        @else
+                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 border-0"
+                                    title="Supprimer le ticket"
+                                    onclick="return confirm(@json('Supprimer le ticket « '.($ticket->numero_ticket ?? '').' » ?'));">
+                                    <i class="bi bi-trash fs-5"></i>
+                                </button>
+                            </form>
+                        @endif
+                    </td>
+                @endif
             </tr>
         @empty
             @php
@@ -152,6 +174,7 @@
                     + (empty($compactView) ? 3 : 0)
                     + (! empty($showValidateAction) ? 1 : 0)
                     + (! empty($showEditAction) ? 1 : 0)
+                    + (! empty($showDeleteAction) ? 1 : 0)
                     + (! empty($showBulkSelection) ? 1 : 0);
             @endphp
             <tr>

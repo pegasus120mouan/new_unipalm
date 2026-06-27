@@ -20,6 +20,7 @@ return [
                 'tickets.paid' => 'Tickets payés',
                 'tickets.modifications' => 'Modifications de tickets',
                 'tickets.search' => 'Recherche avancée',
+                'tickets.destroy' => 'Supprimer un ticket',
             ],
         ],
         'finance' => [
@@ -105,6 +106,7 @@ return [
         'tickets.validate' => 'tickets.pending',
         'tickets.validate-bulk' => 'tickets.pending',
         'tickets.store' => 'tickets.index',
+        'tickets.destroy' => 'tickets.destroy',
 
         'prix-unitaires.index' => 'prix-unitaires',
         'prix-unitaires.store' => 'prix-unitaires',
@@ -222,7 +224,7 @@ return [
         'admin' => '*',
         'directeur' => [
             'analytics', 'tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated',
-            'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search',
+            'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search', 'tickets.destroy',
             'prix-unitaires', 'bordereaux', 'financements', 'prets', 'usines.amounts',
             'comptes-agents', 'comptes-groupes', 'utilisateurs.index',
             'groupes', 'agents', 'usines', 'vehicules',

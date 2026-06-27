@@ -22,6 +22,13 @@
         </div>
     @endif
 
+    @if ($errors->has('ticket'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ $errors->first('ticket') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     <section class="row">
         <div class="col-12">
             <div class="card">
@@ -74,7 +81,9 @@
                     <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
                 </div>
                 <div class="card-body table-responsive">
-                    @include('tickets.partials.table')
+                    @include('tickets.partials.table', [
+                        'showDeleteAction' => auth()->user()->canAccessModule('tickets.destroy'),
+                    ])
                 </div>
             </div>
         </div>
