@@ -18,6 +18,7 @@
             @if (empty($compactView))
                 <th>Validation</th>
             @endif
+            <th class="text-center">Vérification</th>
             <th>Montant</th>
             @if (empty($compactView))
                 <th>Date paie</th>
@@ -68,6 +69,23 @@
                         @endif
                     </td>
                 @endif
+                <td class="text-center">
+                    @if ($ticket->isVerified())
+                        <img src="{{ asset('assets/images/icones/verified.png') }}"
+                            alt="Vérifié"
+                            title="Ticket vérifié{{ $ticket->verifie_par ? ' par '.$ticket->verifie_par : '' }}"
+                            width="28"
+                            height="28"
+                            class="d-inline-block">
+                    @else
+                        <img src="{{ asset('assets/images/icones/false.png') }}"
+                            alt="Non vérifié"
+                            title="Ticket non vérifié"
+                            width="28"
+                            height="28"
+                            class="d-inline-block">
+                    @endif
+                </td>
                 <td>
                     @if (blank($ticket->montant_paie))
                         <span class="badge bg-warning">En attente</span>
@@ -130,7 +148,7 @@
             </tr>
         @empty
             @php
-                $columnCount = 10
+                $columnCount = 11
                     + (empty($compactView) ? 3 : 0)
                     + (! empty($showValidateAction) ? 1 : 0)
                     + (! empty($showEditAction) ? 1 : 0)

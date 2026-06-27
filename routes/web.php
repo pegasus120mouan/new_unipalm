@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tickets/jour', [TicketController::class, 'today'])->name('tickets.today');
     Route::get('/tickets/en-attente', [TicketController::class, 'pending'])->name('tickets.pending');
     Route::get('/tickets/valides', [TicketController::class, 'validated'])->name('tickets.validated');
+    Route::get('/tickets/verifies', [TicketController::class, 'verified'])->name('tickets.verified');
     Route::get('/tickets/payes', [TicketController::class, 'paid'])->name('tickets.paid');
     Route::get('/tickets/modifications', [TicketController::class, 'modifications'])->name('tickets.modifications');
     Route::get('/tickets/recherche', [TicketController::class, 'search'])->name('tickets.search');

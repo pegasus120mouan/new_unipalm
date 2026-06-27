@@ -160,6 +160,55 @@ class TicketController extends Controller
         return view('tickets.validated', compact('tickets', 'filters', 'agents', 'usines'));
     }
 
+    public function verified(Request $request): View
+    {
+        $filters = [
+            'agent_id' => $request->input('agent_id'),
+            'usine_id' => $request->input('usine_id'),
+            'date_debut' => $request->input('date_debut'),
+            'date_fin' => $request->input('date_fin'),
+            'numero_ticket' => trim((string) $request->input('numero_ticket', '')),
+        ];
+
+        $query = $this->ticketQuery()->verified();
+
+        if ($filters['agent_id']) {
+            $query->where('id_agent', (int) $filters['agent_id']);
+        }
+
+        if ($filters['usine_id']) {
+            $query->where('id_usine', (int) $filters['usine_id']);
+        }
+
+        if ($filters['date_debut']) {
+            $query->whereDate('date_verification', '>=', $filters['date_debut']);
+        }
+
+        if ($filters['date_fin']) {
+            $query->whereDate('date_verification', '<=', $filters['date_fin']);
+        }
+
+        if ($filters['numero_ticket'] !== '') {
+            $query->where('numero_ticket', 'like', '%'.$filters['numero_ticket'].'%');
+        }
+
+        $tickets = $query
+            ->orderByDesc('date_verification')
+            ->orderByDesc('id_ticket')
+            ->paginate(15)
+            ->withQueryString();
+
+        $agents = Agent::query()
+            ->whereNull('date_suppression')
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
+
+        $usines = Usine::query()->orderBy('nom_usine')->get();
+
+        return view('tickets.verified', compact('tickets', 'filters', 'agents', 'usines'));
+    }
+
     public function modifications(Request $request): View
     {
         $filters = [

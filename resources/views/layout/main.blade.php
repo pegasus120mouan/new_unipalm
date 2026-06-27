@@ -196,7 +196,7 @@
 
 
                         @auth
-                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('tickets.*') && ! request()->routeIs('tickets.index') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -248,6 +248,17 @@
                                     <a href="{{ route('tickets.validated') }}">
                                         <i class="bi bi-check-circle submenu-icon--validated"></i>
                                         <span>Tickets Validés</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('tickets.verified'))
+                                <li class="submenu-item {{ request()->routeIs('tickets.verified') ? 'active' : '' }}">
+
+                                    <a href="{{ route('tickets.verified') }}">
+                                        <i class="bi bi-shield-check submenu-icon--verified"></i>
+                                        <span>Tickets Vérifiés</span>
                                     </a>
 
                                 </li>
@@ -748,7 +759,7 @@
                         </a>
 
                         @auth
-                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
                         <a href="{{ route('tickets.index') }}"
                             class="btn btn-sm {{ request()->routeIs('tickets.*') ? 'btn-primary' : 'btn-outline-primary' }}">
                             <i class="bi bi-collection-fill"></i> Tickets

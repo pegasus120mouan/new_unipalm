@@ -22,6 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'montant_reste',
     'statut_ticket',
     'numero_bordereau',
+    'verification',
+    'date_verification',
+    'verifie_par',
     'created_at',
 ])]
 class Ticket extends Model
@@ -45,6 +48,8 @@ class Ticket extends Model
             'montant_paie' => 'decimal:2',
             'montant_payer' => 'decimal:2',
             'montant_reste' => 'decimal:2',
+            'verification' => 'boolean',
+            'date_verification' => 'datetime',
         ];
     }
 
@@ -78,6 +83,16 @@ class Ticket extends Model
         return $query->whereNotNull('date_validation_boss')
             ->whereNotNull('prix_unitaire')
             ->where('prix_unitaire', '>', 0);
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->where('verification', true);
+    }
+
+    public function isVerified(): bool
+    {
+        return (bool) $this->verification;
     }
 
     public function scopePaid($query)
@@ -131,6 +146,7 @@ class Ticket extends Model
             ->whereDate('created_at', '>=', $dateDebut)
             ->whereDate('created_at', '<=', $dateFin)
             ->validated()
+            ->verified()
             ->where(function ($query) {
                 $query->whereNull('numero_bordereau')
                     ->orWhere('numero_bordereau', '');

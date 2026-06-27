@@ -24,7 +24,7 @@ class BordereauService
 
         if ($tickets->isEmpty()) {
             throw new \InvalidArgumentException(
-                'Aucun ticket validé disponible pour cet agent sur la période sélectionnée (date de création).'
+                'Aucun ticket vérifié et validé disponible pour cet agent sur la période sélectionnée (date de création).'
             );
         }
 
@@ -54,7 +54,7 @@ class BordereauService
 
         if ($tickets->count() !== count($ticketIds)) {
             throw new \InvalidArgumentException(
-                'Un ou plusieurs tickets sélectionnés ne sont plus disponibles pour ce bordereau.'
+                'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (vérification, validation ou bordereau).'
             );
         }
 
