@@ -61,36 +61,42 @@
                 <div class="card-body agents-filters-body">
                     <form method="GET" action="{{ route('agents.index') }}">
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-6 col-xl-3">
-                                <label for="search_nom" class="form-label agents-filter-label">Nom</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                    <input type="text" name="search_nom" id="search_nom" class="form-control"
-                                        placeholder="Rechercher par nom..." value="{{ $filters['search_nom'] }}">
+                            <div class="col-md-6 col-xl-4">
+                                <label for="search_agent" class="form-label agents-filter-label">Agent</label>
+                                <div class="position-relative">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-person-search"></i></span>
+                                        <input type="text" name="search" id="search_agent" class="form-control agent-search-autocomplete"
+                                            autocomplete="off"
+                                            placeholder="Nom, prénom ou N° agent..."
+                                            value="{{ $searchDisplay }}">
+                                        <input type="hidden" name="id_agent" id="id_agent" value="{{ $filters['id_agent'] ?? '' }}">
+                                    </div>
+                                    <div class="agent-filter-suggestions list-group shadow-sm" id="search_agent_suggestions" style="display: none;"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-xl-3">
-                                <label for="search_prenom" class="form-label agents-filter-label">Prénom</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                                    <input type="text" name="search_prenom" id="search_prenom" class="form-control"
-                                        placeholder="Rechercher par prénom..." value="{{ $filters['search_prenom'] }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
+                            <div class="col-md-6 col-xl-4">
                                 <label for="search_contact" class="form-label agents-filter-label">Contact</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                                    <input type="text" name="search_contact" id="search_contact" class="form-control"
-                                        placeholder="Rechercher par contact..." value="{{ $filters['search_contact'] }}">
+                                <div class="position-relative">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                        <input type="text" name="search_contact" id="search_contact" class="form-control agent-filter-autocomplete"
+                                            data-field="contact" autocomplete="off"
+                                            placeholder="Rechercher par contact..." value="{{ $filters['search_contact'] }}">
+                                    </div>
+                                    <div class="agent-filter-suggestions list-group shadow-sm" id="search_contact_suggestions" style="display: none;"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-xl-3">
+                            <div class="col-md-6 col-xl-4">
                                 <label for="search_groupe" class="form-label agents-filter-label">Groupe</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-people"></i></span>
-                                    <input type="text" name="search_groupe" id="search_groupe" class="form-control"
-                                        placeholder="Rechercher par groupe..." value="{{ $filters['search_groupe'] }}">
+                                <div class="position-relative">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-people"></i></span>
+                                        <input type="text" name="search_groupe" id="search_groupe" class="form-control agent-filter-autocomplete"
+                                            data-field="groupe" autocomplete="off"
+                                            placeholder="Rechercher par groupe..." value="{{ $filters['search_groupe'] }}">
+                                    </div>
+                                    <div class="agent-filter-suggestions list-group shadow-sm" id="search_groupe_suggestions" style="display: none;"></div>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -109,11 +115,8 @@
                     @if ($hasFilters)
                         <div class="agents-active-filters mt-3">
                             <span class="small text-muted me-2">Filtres actifs :</span>
-                            @if ($filters['search_nom'] !== '')
-                                <span class="badge rounded-pill text-bg-light border">Nom : {{ $filters['search_nom'] }}</span>
-                            @endif
-                            @if ($filters['search_prenom'] !== '')
-                                <span class="badge rounded-pill text-bg-light border">Prénom : {{ $filters['search_prenom'] }}</span>
+                            @if ($filters['search'] !== '' || $filters['id_agent'])
+                                <span class="badge rounded-pill text-bg-light border">Agent : {{ $searchDisplay }}</span>
                             @endif
                             @if ($filters['search_contact'] !== '')
                                 <span class="badge rounded-pill text-bg-light border">Contact : {{ $filters['search_contact'] }}</span>
@@ -147,6 +150,7 @@
                                 <th>Prénom</th>
                                 <th>Contact</th>
                                 <th>Groupe</th>
+                                <th class="text-center">Ponts</th>
                                 <th>Date de création</th>
                                 <th>Ajouté par</th>
                                 <th class="text-center">Actions</th>
@@ -197,6 +201,17 @@
                                             —
                                         @endif
                                     </td>
+                                    <td class="text-center">
+                                        @if ($agent->ponts_count > 0)
+                                            <a href="{{ route('agents.show', $agent) }}#agent-ponts"
+                                                class="badge bg-secondary text-decoration-none"
+                                                title="Voir les ponts associés">
+                                                {{ $agent->ponts_count }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">0</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $agent->date_ajout?->format('d/m/Y') ?? '—' }}</td>
                                     <td>{{ $agent->createur?->full_name ?? '—' }}</td>
                                     <td class="text-center">
@@ -213,7 +228,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         Aucun agent trouvé.
                                     </td>
                                 </tr>
@@ -434,9 +449,267 @@
             width: 100%;
             min-width: 6rem;
         }
+
+        .agent-filter-suggestions {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            max-height: 220px;
+            overflow-y: auto;
+            border-radius: 0.375rem;
+        }
+
+        .agent-filter-suggestions .list-group-item {
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.55rem 0.85rem;
+            border-left: none;
+            border-right: none;
+        }
+
+        .agent-filter-suggestions .list-group-item:first-child {
+            border-top: none;
+        }
+
+        .agent-filter-suggestions .list-group-item-action:hover,
+        .agent-filter-suggestions .list-group-item-action.active {
+            background-color: rgba(67, 94, 190, 0.1);
+            color: #1e2d4d;
+        }
+
+        .agent-suggestion-numero {
+            color: #6c757d;
+            font-size: 0.82rem;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const autocompleteUrl = @json(route('agents.autocomplete'));
+            let debounceTimer = null;
+            let fetchController = null;
+
+            function hideSuggestions(box) {
+                if (!box) {
+                    return;
+                }
+                box.style.display = 'none';
+                box.innerHTML = '';
+            }
+
+            function hideAllSuggestions() {
+                document.querySelectorAll('.agent-filter-suggestions').forEach(hideSuggestions);
+            }
+
+            function setupAgentSearchAutocomplete() {
+                const input = document.getElementById('search_agent');
+                const hiddenId = document.getElementById('id_agent');
+                const suggestionsBox = document.getElementById('search_agent_suggestions');
+
+                if (!input || !hiddenId || !suggestionsBox) {
+                    return;
+                }
+
+                function renderAgentSuggestions(items) {
+                    suggestionsBox.innerHTML = '';
+
+                    if (!items.length) {
+                        suggestionsBox.innerHTML = '<div class="list-group-item text-muted small">Aucun agent trouvé</div>';
+                        suggestionsBox.style.display = 'block';
+                        return;
+                    }
+
+                    items.forEach(function (item) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'list-group-item list-group-item-action text-start';
+
+                        if (item.numero) {
+                            button.innerHTML = '<span class="agent-suggestion-numero">' + escapeHtml(item.numero) + '</span> — <strong>' + escapeHtml(item.name) + '</strong>';
+                        } else {
+                            button.innerHTML = '<strong>' + escapeHtml(item.name) + '</strong>';
+                        }
+
+                        button.addEventListener('mousedown', function (event) {
+                            event.preventDefault();
+                            input.value = item.label;
+                            hiddenId.value = item.id;
+                            hideSuggestions(suggestionsBox);
+                        });
+                        suggestionsBox.appendChild(button);
+                    });
+
+                    suggestionsBox.style.display = 'block';
+                }
+
+                async function fetchAgentSuggestions(query) {
+                    if (fetchController) {
+                        fetchController.abort();
+                    }
+
+                    fetchController = new AbortController();
+
+                    try {
+                        const url = new URL(autocompleteUrl, window.location.origin);
+                        url.searchParams.set('field', 'agent');
+                        url.searchParams.set('q', query);
+
+                        const response = await fetch(url.toString(), {
+                            headers: { Accept: 'application/json' },
+                            signal: fetchController.signal,
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const items = await response.json();
+                        renderAgentSuggestions(Array.isArray(items) ? items : []);
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            hideSuggestions(suggestionsBox);
+                        }
+                    }
+                }
+
+                input.addEventListener('input', function () {
+                    hiddenId.value = '';
+                    const query = input.value.trim();
+                    clearTimeout(debounceTimer);
+
+                    if (query.length < 1) {
+                        hideSuggestions(suggestionsBox);
+                        return;
+                    }
+
+                    debounceTimer = setTimeout(function () {
+                        fetchAgentSuggestions(query);
+                    }, 200);
+                });
+
+                input.addEventListener('focus', function () {
+                    const query = input.value.trim();
+                    if (query.length >= 1 && !hiddenId.value) {
+                        fetchAgentSuggestions(query);
+                    }
+                });
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        hideSuggestions(suggestionsBox);
+                    }
+                });
+            }
+
+            function setupFilterAutocomplete(input) {
+                const field = input.dataset.field;
+                const suggestionsBox = input.closest('.position-relative')?.querySelector('.agent-filter-suggestions');
+
+                if (!field || !suggestionsBox) {
+                    return;
+                }
+
+                function renderSuggestions(items) {
+                    suggestionsBox.innerHTML = '';
+
+                    if (!items.length) {
+                        suggestionsBox.innerHTML = '<div class="list-group-item text-muted small">Aucune suggestion</div>';
+                        suggestionsBox.style.display = 'block';
+                        return;
+                    }
+
+                    items.forEach(function (item) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'list-group-item list-group-item-action';
+                        button.textContent = item;
+                        button.addEventListener('mousedown', function (event) {
+                            event.preventDefault();
+                            input.value = item;
+                            hideSuggestions(suggestionsBox);
+                        });
+                        suggestionsBox.appendChild(button);
+                    });
+
+                    suggestionsBox.style.display = 'block';
+                }
+
+                async function fetchSuggestions(query) {
+                    if (fetchController) {
+                        fetchController.abort();
+                    }
+
+                    fetchController = new AbortController();
+
+                    try {
+                        const url = new URL(autocompleteUrl, window.location.origin);
+                        url.searchParams.set('field', field);
+                        url.searchParams.set('q', query);
+
+                        const response = await fetch(url.toString(), {
+                            headers: { Accept: 'application/json' },
+                            signal: fetchController.signal,
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const items = await response.json();
+                        renderSuggestions(Array.isArray(items) ? items : []);
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            hideSuggestions(suggestionsBox);
+                        }
+                    }
+                }
+
+                input.addEventListener('input', function () {
+                    const query = input.value.trim();
+                    clearTimeout(debounceTimer);
+
+                    if (query.length < 1) {
+                        hideSuggestions(suggestionsBox);
+                        return;
+                    }
+
+                    debounceTimer = setTimeout(function () {
+                        fetchSuggestions(query);
+                    }, 200);
+                });
+
+                input.addEventListener('focus', function () {
+                    const query = input.value.trim();
+                    if (query.length >= 1) {
+                        fetchSuggestions(query);
+                    }
+                });
+
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') {
+                        hideSuggestions(suggestionsBox);
+                    }
+                });
+            }
+
+            function escapeHtml(text) {
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            setupAgentSearchAutocomplete();
+            document.querySelectorAll('.agent-filter-autocomplete').forEach(setupFilterAutocomplete);
+
+            document.addEventListener('click', function (event) {
+                if (!event.target.closest('.position-relative')) {
+                    hideAllSuggestions();
+                }
+            });
+
             const csrfToken = @json(csrf_token());
             const fieldLabels = { nom: 'Nom', prenom: 'Prénom', contact: 'Contact' };
             const successModalEl = document.getElementById('agentInlineSuccessModal');
@@ -465,14 +738,6 @@
                 }
 
                 return escapeHtml(value);
-            }
-
-            function escapeHtml(text) {
-                return String(text)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;');
             }
 
             function finishEdit(cell, value, field) {

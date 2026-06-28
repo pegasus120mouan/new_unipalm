@@ -90,6 +90,11 @@
                             <i class="bi bi-geo-alt"></i> Localisation des ponts
                         </a>
                         @endif
+                        @if (auth()->user()->canAccessModule('ponts.types'))
+                        <a href="{{ route('ponts.types.index') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-type"></i> Types de ponts
+                        </a>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -155,6 +160,7 @@
                             <tr>
                                 <th>Code</th>
                                 <th>Nom du pont</th>
+                                <th>Type</th>
                                 <th>Gérant</th>
                                 <th>Coopérative</th>
                                 <th>Coordonnées</th>
@@ -167,7 +173,8 @@
                                 <tr>
                                     <td><code>{{ $pont->code_pont }}</code></td>
                                     <td class="fw-semibold">{{ $pont->nom_pont }}</td>
-                                    <td>{{ $pont->gerant }}</td>
+                                    <td>{{ $pont->typePont?->libelle ?? '—' }}</td>
+                                    <td>{{ $pont->gerantLabel() }}</td>
                                     <td>{{ $pont->cooperatif ?: '—' }}</td>
                                     <td>
                                         @if ($pont->hasCoordinates())
@@ -194,7 +201,8 @@
                                                 data-id="{{ $pont->id_pont }}"
                                                 data-code="{{ $pont->code_pont }}"
                                                 data-nom="{{ $pont->nom_pont }}"
-                                                data-gerant="{{ $pont->gerant }}"
+                                                data-type-id="{{ $pont->id_type_pont }}"
+                                                data-id-agent="{{ $pont->id_agent }}"
                                                 data-cooperatif="{{ $pont->cooperatif }}"
                                                 data-statut="{{ $pont->statut }}"
                                                 data-latitude="{{ $pont->latitude }}"
@@ -212,7 +220,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         @if ($hasFilters)
                                             Aucun pont ne correspond aux filtres.
                                         @else
@@ -252,15 +260,27 @@
                                     value="{{ old('nom_pont') }}" required>
                                 @error('nom_pont')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
+                            <div class="col-md-6">
+                                <label for="id_type_pont" class="form-label">Type de pont</label>
+                                <select name="id_type_pont" id="id_type_pont" class="form-select @error('id_type_pont') is-invalid @enderror">
+                                    <option value="">— Sélectionner —</option>
+                                    @foreach ($typesPont as $type)
+                                        <option value="{{ $type->id_type_pont }}" @selected(old('id_type_pont') == $type->id_type_pont)>
+                                            {{ $type->libelle }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('id_type_pont')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                             <div class="col-md-6 position-relative">
                                 <label for="gerant_search" class="form-label">Gérant *</label>
                                 <input type="text" id="gerant_search"
-                                    class="form-control @error('gerant') is-invalid @enderror"
+                                    class="form-control @error('id_agent') is-invalid @enderror"
                                     placeholder="Rechercher par N° agent..."
                                     autocomplete="off"
                                     value="{{ old('gerant_search') }}">
-                                <input type="hidden" name="gerant" id="gerant"
-                                    value="{{ old('gerant') }}" required>
+                                <input type="hidden" name="id_agent" id="id_agent"
+                                    value="{{ old('id_agent') }}" required>
                                 <div id="gerant_suggestions" class="list-group position-absolute w-100 shadow-sm"
                                     style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
                                 <div id="gerant_found" class="form-text mt-1" style="display: none;">
@@ -271,7 +291,7 @@
                                     </button>
                                     <span class="text-muted">— cliquer pour sélectionner</span>
                                 </div>
-                                @error('gerant')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                @error('id_agent')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="cooperatif" class="form-label">Coopérative</label>
@@ -328,13 +348,22 @@
                                 <label for="edit_nom_pont" class="form-label">Nom du pont *</label>
                                 <input type="text" name="nom_pont" id="edit_nom_pont" class="form-control" required>
                             </div>
+                            <div class="col-md-6">
+                                <label for="edit_id_type_pont" class="form-label">Type de pont</label>
+                                <select name="id_type_pont" id="edit_id_type_pont" class="form-select">
+                                    <option value="">— Sélectionner —</option>
+                                    @foreach ($typesPont as $type)
+                                        <option value="{{ $type->id_type_pont }}">{{ $type->libelle }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-md-6 position-relative">
                                 <label for="edit_gerant_search" class="form-label">Gérant *</label>
                                 <input type="text" id="edit_gerant_search"
                                     class="form-control"
                                     placeholder="Rechercher par N° agent..."
                                     autocomplete="off">
-                                <input type="hidden" name="gerant" id="edit_gerant" required>
+                                <input type="hidden" name="id_agent" id="edit_id_agent" required>
                                 <div id="edit_gerant_suggestions" class="list-group position-absolute w-100 shadow-sm"
                                     style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
                                 <div id="edit_gerant_found" class="form-text mt-1" style="display: none;">
@@ -457,7 +486,7 @@
 
                 function selectItem(item) {
                     searchInput.value = formatDisplay(item);
-                    hiddenInput.value = item.name;
+                    hiddenInput.value = item.id;
                     pendingItem = null;
                     foundBox.style.display = 'none';
                     foundName.textContent = '';
@@ -552,16 +581,16 @@
                 });
 
                 return {
-                    setGerant: function (gerantName) {
+                    setAgent: function (agentId) {
                         const agent = agentsForAutocomplete.find(function (item) {
-                            return item.name === gerantName;
+                            return String(item.id) === String(agentId);
                         });
 
                         if (agent) {
                             selectItem(agent);
                         } else {
-                            searchInput.value = gerantName || '';
-                            hiddenInput.value = gerantName || '';
+                            searchInput.value = '';
+                            hiddenInput.value = agentId || '';
                         }
                     },
                     clearSelection: function () {
@@ -574,7 +603,7 @@
 
             const addGerantAutocomplete = setupGerantAutocomplete({
                 searchId: 'gerant_search',
-                hiddenId: 'gerant',
+                hiddenId: 'id_agent',
                 suggestionsId: 'gerant_suggestions',
                 foundId: 'gerant_found',
                 foundNameId: 'gerant_found_name',
@@ -583,7 +612,7 @@
 
             const editGerantAutocomplete = setupGerantAutocomplete({
                 searchId: 'edit_gerant_search',
-                hiddenId: 'edit_gerant',
+                hiddenId: 'edit_id_agent',
                 suggestionsId: 'edit_gerant_suggestions',
                 foundId: 'edit_gerant_found',
                 foundNameId: 'edit_gerant_found_name',
@@ -604,7 +633,8 @@
                     editForm.action = `${pontBaseUrl}/${id}`;
                     document.getElementById('edit_code_pont').value = button.dataset.code || '';
                     document.getElementById('edit_nom_pont').value = button.dataset.nom || '';
-                    editGerantAutocomplete.setGerant(button.dataset.gerant || '');
+                    document.getElementById('edit_id_type_pont').value = button.dataset.typeId || '';
+                    editGerantAutocomplete.setAgent(button.dataset.idAgent || '');
                     document.getElementById('edit_cooperatif').value = button.dataset.cooperatif || '';
                     document.getElementById('edit_statut').value = button.dataset.statut || 'Actif';
                     document.getElementById('edit_latitude').value = button.dataset.latitude || '';
@@ -623,8 +653,8 @@
                 });
             });
 
-            @if (old('gerant') && ! old('_method'))
-                addGerantAutocomplete.setGerant(@json(old('gerant')));
+            @if (old('id_agent') && ! old('_method'))
+                addGerantAutocomplete.setAgent(@json(old('id_agent')));
             @endif
 
             @if ($errors->any() && ! old('_method'))

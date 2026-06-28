@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\PontBascule;
+use App\Models\TypePont;
 use App\Services\PontBasculeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,9 @@ class PontBasculeController extends Controller
             'cooperatif' => trim((string) $request->query('cooperatif', '')),
         ];
 
-        $query = PontBascule::query()->orderBy('code_pont');
+        $query = PontBascule::query()
+            ->with(['typePont', 'agent'])
+            ->orderBy('code_pont');
 
         if ($filters['search'] !== '') {
             $term = '%'.$filters['search'].'%';
@@ -32,7 +35,12 @@ class PontBasculeController extends Controller
                 $q->where('code_pont', 'like', $term)
                     ->orWhere('nom_pont', 'like', $term)
                     ->orWhere('gerant', 'like', $term)
-                    ->orWhere('cooperatif', 'like', $term);
+                    ->orWhere('cooperatif', 'like', $term)
+                    ->orWhereHas('agent', function ($agentQuery) use ($term) {
+                        $agentQuery->where('nom', 'like', $term)
+                            ->orWhere('prenom', 'like', $term)
+                            ->orWhere('numero_agent', 'like', $term);
+                    });
             });
         }
 
@@ -67,6 +75,8 @@ class PontBasculeController extends Controller
 
         $hasFilters = collect($filters)->contains(fn ($value) => $value !== '');
 
+        $typesPont = TypePont::query()->orderBy('libelle')->get();
+
         return view('ponts.index', compact(
             'ponts',
             'filters',
@@ -75,12 +85,14 @@ class PontBasculeController extends Controller
             'agents',
             'agentsForAutocomplete',
             'hasFilters',
+            'typesPont',
         ));
     }
 
     public function location(): View
     {
         $ponts = PontBascule::query()
+            ->with('agent')
             ->orderBy('code_pont')
             ->get()
             ->map(fn (PontBascule $pont) => [
@@ -89,7 +101,7 @@ class PontBasculeController extends Controller
                 'nom_pont' => $pont->nom_pont,
                 'latitude' => $pont->latitude,
                 'longitude' => $pont->longitude,
-                'gerant' => $pont->gerant,
+                'gerant' => $pont->gerantLabel(),
                 'cooperatif' => $pont->cooperatif,
                 'statut' => $pont->statut,
             ]);
@@ -108,7 +120,8 @@ class PontBasculeController extends Controller
     {
         $validated = $request->validate([
             'nom_pont' => ['required', 'string', 'max:255'],
-            'gerant' => ['required', 'string', 'max:100'],
+            'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
+            'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -132,7 +145,8 @@ class PontBasculeController extends Controller
                 Rule::unique('pont_bascule', 'code_pont')->ignore($pont->id_pont, 'id_pont'),
             ],
             'nom_pont' => ['required', 'string', 'max:255'],
-            'gerant' => ['required', 'string', 'max:100'],
+            'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
+            'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

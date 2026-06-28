@@ -446,7 +446,7 @@
                         @endauth
 
                         @auth
-                        @if ($canModuleAny(['ponts.index', 'ponts.location']))
+                        @if ($canModuleAny(['ponts.index', 'ponts.types', 'ponts.location']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('ponts.*') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -465,6 +465,17 @@
                                     <a href="{{ route('ponts.index') }}">
                                         <i class="bi bi-list-ul submenu-icon--all"></i>
                                         <span>Liste des ponts</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('ponts.types'))
+                                <li class="submenu-item {{ request()->routeIs('ponts.types.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('ponts.types.index') }}">
+                                        <i class="bi bi-type submenu-icon--type"></i>
+                                        <span>Types de ponts</span>
                                     </a>
 
                                 </li>

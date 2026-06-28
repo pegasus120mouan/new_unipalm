@@ -55,6 +55,7 @@ return [
             'label' => 'Gestion des ponts',
             'modules' => [
                 'ponts.index' => 'Liste des ponts',
+                'ponts.types' => 'Types de ponts',
                 'ponts.location' => 'Localisation des ponts',
             ],
         ],
@@ -160,9 +161,11 @@ return [
         'groupes.show' => 'groupes',
 
         'agents.index' => 'agents',
+        'agents.autocomplete' => 'agents',
         'agents.store' => 'agents',
         'agents.show' => 'agents',
         'agents.update' => 'agents',
+        'agents.associate-pont' => 'agents',
         'agents.inline-update' => 'agents',
         'agents.destroy' => 'agents',
 
@@ -173,6 +176,10 @@ return [
         'vehicules.store' => 'vehicules',
 
         'ponts.index' => 'ponts.index',
+        'ponts.types.index' => 'ponts.types',
+        'ponts.types.store' => 'ponts.types',
+        'ponts.types.update' => 'ponts.types',
+        'ponts.types.destroy' => 'ponts.types',
         'ponts.location' => 'ponts.location',
         'ponts.store' => 'ponts.index',
         'ponts.update' => 'ponts.index',
@@ -213,6 +220,7 @@ return [
         'usines' => 'usines.index',
         'vehicules' => 'vehicules.index',
         'ponts.index' => 'ponts.index',
+        'ponts.types' => 'ponts.types.index',
         'ponts.location' => 'ponts.location',
         'plantations.index' => 'plantations.index',
         'plantations.collecteurs' => 'plantations.collecteurs',

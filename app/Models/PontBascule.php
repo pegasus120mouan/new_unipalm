@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'code_pont',
     'nom_pont',
+    'id_type_pont',
+    'id_agent',
     'latitude',
     'longitude',
     'gerant',
@@ -28,6 +31,21 @@ class PontBascule extends Model
             'latitude' => 'float',
             'longitude' => 'float',
         ];
+    }
+
+    public function typePont(): BelongsTo
+    {
+        return $this->belongsTo(TypePont::class, 'id_type_pont', 'id_type_pont');
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'id_agent', 'id_agent');
+    }
+
+    public function gerantLabel(): string
+    {
+        return $this->agent?->full_name ?? $this->gerant ?? '—';
     }
 
     public function isActive(): bool

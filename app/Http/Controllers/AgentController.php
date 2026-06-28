@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Groupe;
+use App\Models\PontBascule;
 use App\Services\AgentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,22 +20,27 @@ class AgentController extends Controller
     public function index(Request $request): View
     {
         $filters = [
-            'search_nom' => trim((string) $request->query('search_nom', '')),
-            'search_prenom' => trim((string) $request->query('search_prenom', '')),
+            'search' => trim((string) $request->query('search', '')),
+            'id_agent' => $request->query('id_agent') ? (int) $request->query('id_agent') : null,
             'search_contact' => trim((string) $request->query('search_contact', '')),
             'search_groupe' => trim((string) $request->query('search_groupe', '')),
         ];
 
         $agentsQuery = Agent::query()
             ->with(['groupe', 'createur'])
+            ->withCount('ponts')
             ->whereNull('date_suppression');
 
-        if ($filters['search_nom'] !== '') {
-            $agentsQuery->where('nom', 'like', '%'.$filters['search_nom'].'%');
-        }
-
-        if ($filters['search_prenom'] !== '') {
-            $agentsQuery->where('prenom', 'like', '%'.$filters['search_prenom'].'%');
+        if ($filters['id_agent']) {
+            $agentsQuery->where('id_agent', $filters['id_agent']);
+        } elseif ($filters['search'] !== '') {
+            $term = '%'.$filters['search'].'%';
+            $agentsQuery->where(function ($query) use ($term) {
+                $query->where('nom', 'like', $term)
+                    ->orWhere('prenom', 'like', $term)
+                    ->orWhere('numero_agent', 'like', $term)
+                    ->orWhereRaw("CONCAT(nom, ' ', prenom) LIKE ?", [$term]);
+            });
         }
 
         if ($filters['search_contact'] !== '') {
@@ -61,9 +67,92 @@ class AgentController extends Controller
             ->orderBy('prenoms')
             ->get();
 
-        $hasFilters = collect($filters)->contains(fn ($value) => $value !== '');
+        $hasFilters = collect($filters)->contains(fn ($value) => $value !== null && $value !== '');
 
-        return view('agents.index', compact('agents', 'groupes', 'filters', 'hasFilters'));
+        $selectedAgent = null;
+        if ($filters['id_agent']) {
+            $selectedAgent = Agent::query()
+                ->whereNull('date_suppression')
+                ->find($filters['id_agent']);
+        }
+
+        $searchDisplay = $selectedAgent
+            ? trim(($selectedAgent->numero_agent ? $selectedAgent->numero_agent.' — ' : '').$selectedAgent->full_name)
+            : $filters['search'];
+
+        return view('agents.index', compact(
+            'agents',
+            'groupes',
+            'filters',
+            'hasFilters',
+            'selectedAgent',
+            'searchDisplay',
+        ));
+    }
+
+    public function autocomplete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'field' => ['required', 'in:agent,contact,groupe'],
+            'q' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $term = trim((string) ($validated['q'] ?? ''));
+
+        if ($term === '') {
+            return response()->json([]);
+        }
+
+        $like = '%'.$term.'%';
+
+        if ($validated['field'] === 'agent') {
+            $agents = Agent::query()
+                ->whereNull('date_suppression')
+                ->where(function ($query) use ($like) {
+                    $query->where('nom', 'like', $like)
+                        ->orWhere('prenom', 'like', $like)
+                        ->orWhere('numero_agent', 'like', $like)
+                        ->orWhereRaw("CONCAT(nom, ' ', prenom) LIKE ?", [$like]);
+                })
+                ->orderBy('nom')
+                ->orderBy('prenom')
+                ->limit(10)
+                ->get()
+                ->map(fn (Agent $agent) => [
+                    'id' => $agent->id_agent,
+                    'label' => trim(($agent->numero_agent ? $agent->numero_agent.' — ' : '').$agent->full_name),
+                    'numero' => $agent->numero_agent ?? '',
+                    'name' => $agent->full_name,
+                ])
+                ->values();
+
+            return response()->json($agents);
+        }
+
+        $suggestions = match ($validated['field']) {
+            'contact' => Agent::query()
+                ->whereNull('date_suppression')
+                ->where('contact', 'like', $like)
+                ->distinct()
+                ->orderBy('contact')
+                ->limit(10)
+                ->pluck('contact'),
+            'groupe' => Groupe::query()
+                ->where(function ($query) use ($like) {
+                    $query->where('nom', 'like', $like)
+                        ->orWhere('prenoms', 'like', $like)
+                        ->orWhereRaw("CONCAT(nom, ' ', prenoms) LIKE ?", [$like]);
+                })
+                ->orderBy('nom')
+                ->orderBy('prenoms')
+                ->limit(10)
+                ->get()
+                ->map(fn (Groupe $groupe) => $groupe->full_name)
+                ->unique()
+                ->values(),
+        };
+
+        return response()->json($suggestions->values()->all());
     }
 
     public function store(Request $request): RedirectResponse
@@ -108,14 +197,57 @@ class AgentController extends Controller
         $stats = [
             'tickets' => $agent->tickets()->count(),
             'bordereaux' => $agent->bordereaux()->count(),
+            'ponts' => $agent->ponts()->count(),
         ];
+
+        $ponts = $agent->ponts()
+            ->with('typePont')
+            ->orderBy('code_pont')
+            ->get();
+
+        $availablePonts = PontBascule::query()
+            ->with(['typePont', 'agent'])
+            ->where(function ($query) use ($agent) {
+                $query->whereNull('id_agent')
+                    ->orWhere('id_agent', '!=', $agent->id_agent);
+            })
+            ->orderBy('code_pont')
+            ->get();
 
         $groupes = Groupe::query()
             ->orderBy('nom')
             ->orderBy('prenoms')
             ->get();
 
-        return view('agents.show', compact('agent', 'stats', 'groupes'));
+        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts'));
+    }
+
+    public function associatePont(Request $request, Agent $agent): RedirectResponse
+    {
+        if ($agent->date_suppression !== null) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'pont_id' => ['required', 'integer', 'exists:pont_bascule,id_pont'],
+        ]);
+
+        $pont = PontBascule::query()->findOrFail((int) $validated['pont_id']);
+
+        if ((int) $pont->id_agent === (int) $agent->id_agent) {
+            return back()->withErrors([
+                'pont_id' => 'Ce pont est déjà associé à cet agent.',
+            ]);
+        }
+
+        $pont->update([
+            'id_agent' => $agent->id_agent,
+            'gerant' => $agent->full_name,
+        ]);
+
+        return redirect()
+            ->route('agents.show', $agent)
+            ->with('success', "Pont « {$pont->code_pont} — {$pont->nom_pont} » associé à l'agent avec succès.");
     }
 
     public function update(Request $request, Agent $agent): RedirectResponse

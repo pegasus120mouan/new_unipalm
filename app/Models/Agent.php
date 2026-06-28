@@ -70,4 +70,9 @@ class Agent extends Model
     {
         return $this->hasMany(Bordereau::class, 'id_agent', 'id_agent');
     }
+
+    public function ponts(): HasMany
+    {
+        return $this->hasMany(PontBascule::class, 'id_agent', 'id_agent');
+    }
 }

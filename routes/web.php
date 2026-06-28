@@ -9,6 +9,7 @@ use App\Http\Controllers\FinancementController;
 use App\Http\Controllers\GroupeController;
 use App\Http\Controllers\PretController;
 use App\Http\Controllers\PontBasculeController;
+use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\CollecteurController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ZoneController;
@@ -80,9 +81,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/groupes/{groupe}', [GroupeController::class, 'show'])->name('groupes.show');
 
     Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
+    Route::get('/agents/autocomplete', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');
     Route::post('/agents', [AgentController::class, 'store'])->name('agents.store');
     Route::get('/agents/{agent:id_agent}', [AgentController::class, 'show'])->name('agents.show');
     Route::put('/agents/{agent:id_agent}', [AgentController::class, 'update'])->name('agents.update');
+    Route::post('/agents/{agent:id_agent}/ponts', [AgentController::class, 'associatePont'])->name('agents.associate-pont');
     Route::patch('/agents/{agent:id_agent}/inline', [AgentController::class, 'inlineUpdate'])->name('agents.inline-update');
     Route::delete('/agents/{agent:id_agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
 
@@ -96,6 +99,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/vehicules', [VehiculeController::class, 'index'])->name('vehicules.index');
     Route::post('/vehicules', [VehiculeController::class, 'store'])->name('vehicules.store');
+
+    Route::get('/ponts/types', [TypePontController::class, 'index'])->name('ponts.types.index');
+    Route::post('/ponts/types', [TypePontController::class, 'store'])->name('ponts.types.store');
+    Route::put('/ponts/types/{typePont:id_type_pont}', [TypePontController::class, 'update'])->name('ponts.types.update');
+    Route::delete('/ponts/types/{typePont:id_type_pont}', [TypePontController::class, 'destroy'])->name('ponts.types.destroy');
 
     Route::get('/ponts', [PontBasculeController::class, 'index'])->name('ponts.index');
     Route::get('/ponts/localisation', [PontBasculeController::class, 'location'])->name('ponts.location');
