@@ -40,4 +40,14 @@ class Vehicule extends Model
             default => ucfirst((string) $this->type_vehicule),
         };
     }
+
+    public static function normalizeMatricule(string $matricule): string
+    {
+        return strtoupper(preg_replace('/\s+/', '', trim($matricule)) ?? '');
+    }
+
+    public function normalizedMatricule(): string
+    {
+        return self::normalizeMatricule((string) $this->matricule_vehicule);
+    }
 }

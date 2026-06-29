@@ -175,6 +175,8 @@ return [
 
         'vehicules.index' => 'vehicules',
         'vehicules.store' => 'vehicules',
+        'vehicules.destroy' => 'vehicules',
+        'vehicules.bulk-destroy' => 'vehicules',
 
         'ponts.index' => 'ponts.index',
         'ponts.types.index' => 'ponts.types',
