@@ -51,6 +51,11 @@
                                         <a href="{{ route('groupes.show', $agent->groupe) }}">{{ $agent->groupe->full_name }}</a>
                                     </span>
                                 @endif
+                                @if ($agent->isProfessionnel())
+                                    <span class="badge bg-primary">Professionnels</span>
+                                @else
+                                    <span class="badge bg-info">Particuliers</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -134,6 +139,23 @@
                                     @endforeach
                                 </select>
                                 @error('id_chef')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sous-groupe</label>
+                                <div class="d-flex flex-wrap gap-3 pt-2">
+                                    @foreach ($sousGroupes as $value => $label)
+                                        <div class="form-check">
+                                            <input class="form-check-input @error('sous_groupe') is-invalid @enderror"
+                                                type="radio" name="sous_groupe" id="edit_sous_groupe_{{ $value }}"
+                                                value="{{ $value }}"
+                                                @checked(old('sous_groupe', $agent->sous_groupe ?? \App\Models\Agent::SOUS_GROUPE_PARTICULIER) === $value) required>
+                                            <label class="form-check-label" for="edit_sous_groupe_{{ $value }}">
+                                                {{ $label }}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @error('sous_groupe')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="code_pin" class="form-label">

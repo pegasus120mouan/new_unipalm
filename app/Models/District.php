@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+#[Fillable([
+    'code',
+    'nom',
+])]
+class District extends Model
+{
+    protected $table = 'districts';
+
+    protected $primaryKey = 'id';
+
+    public $timestamps = false;
+
+    public function regions(): HasMany
+    {
+        return $this->hasMany(Region::class, 'district_id', 'id');
+    }
+}

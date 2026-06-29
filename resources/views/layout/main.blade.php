@@ -490,6 +490,31 @@
                                     </a>
 
                                 </li>
+                                <li class="submenu-item {{ request()->routeIs('ponts.departements.*') && ! request()->routeIs('ponts.departements.sous-prefectures') ? 'active' : '' }}">
+
+                                    <a href="{{ route('ponts.departements.index') }}">
+                                        <i class="bi bi-layers submenu-icon--regions"></i>
+                                        <span>Départements</span>
+                                    </a>
+
+                                </li>
+                                <li class="submenu-item {{ request()->routeIs('ponts.sous-prefectures.*') || request()->routeIs('ponts.departements.sous-prefectures') ? 'active' : '' }}">
+
+                                    <a href="{{ route('ponts.sous-prefectures.index') }}">
+                                        <i class="bi bi-grid submenu-icon--regions"></i>
+                                        <span>Sous-préfectures</span>
+                                    </a>
+
+                                </li>
+
+                                <li class="submenu-item {{ request()->routeIs('ponts.villages.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('ponts.villages.index') }}">
+                                        <i class="bi bi-house submenu-icon--regions"></i>
+                                        <span>Villages</span>
+                                    </a>
+
+                                </li>
                                 @endif
 
                                 @if ($canModule('ponts.location'))

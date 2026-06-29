@@ -69,6 +69,9 @@
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importGeoJsonModal">
                             <i class="bi bi-upload"></i> Importer GeoJSON
                         </button>
+                        <a href="{{ route('ponts.departements.index') }}" class="btn btn-outline-success">
+                            <i class="bi bi-layers"></i> Départements
+                        </a>
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRegionModal">
                             <i class="bi bi-plus-circle"></i> Enregistrer une région
                         </button>
@@ -144,6 +147,7 @@
                                 <th>ID</th>
                                 <th>Code</th>
                                 <th>Nom</th>
+                                <th class="text-center">Départements</th>
                                 <th class="text-center">GeoJSON</th>
                                 <th class="text-end">Actions</th>
                             </tr>
@@ -153,7 +157,16 @@
                                 <tr>
                                     <td><span class="badge bg-primary">{{ $region->id }}</span></td>
                                     <td class="fw-semibold">{{ $region->code ?? '—' }}</td>
-                                    <td>{{ $region->nom ?? '—' }}</td>
+                                    <td>
+                                        <a href="{{ route('ponts.regions.departements', $region) }}" class="fw-semibold text-decoration-none">
+                                            {{ $region->nom ?? '—' }}
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('ponts.regions.departements', $region) }}" class="badge bg-info text-decoration-none">
+                                            {{ $region->departements_count }}
+                                        </a>
+                                    </td>
                                     <td class="text-center">
                                         @if (filled($region->geojson))
                                             <span class="badge bg-success">Oui</span>
@@ -163,6 +176,10 @@
                                     </td>
                                     <td class="text-end">
                                         <div class="d-inline-flex gap-1">
+                                            <a href="{{ route('ponts.regions.departements', $region) }}"
+                                                class="btn btn-sm btn-outline-info" title="Voir les départements">
+                                                <i class="bi bi-layers"></i>
+                                            </a>
                                             @if (filled($region->geojson))
                                                 <button type="button" class="btn btn-sm btn-outline-primary view-map-btn"
                                                     data-bs-toggle="modal" data-bs-target="#viewRegionMapModal"
@@ -186,7 +203,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">Aucune région enregistrée.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">Aucune région enregistrée.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -377,6 +394,7 @@
             let regionMap = null;
             let regionLayer = null;
             let regionPontLayer = { layer: null };
+            let regionDepartementLayer = { layer: null };
             let allPontsLayer = { layer: null };
             let allRegionsMap = null;
             let importPreviewMap = null;
@@ -474,23 +492,126 @@
                 return bounds;
             }
 
-            function updateRegionMapInfo(ponts, regionNom) {
+            function parseGeoJsonData(raw) {
+                if (!raw) {
+                    return null;
+                }
+
+                if (typeof raw === 'object') {
+                    return raw;
+                }
+
+                return JSON.parse(raw);
+            }
+
+            function fitMapToContent(map, layers, markers, fitOptions) {
+                let bounds = null;
+
+                (layers || []).forEach(function (layer) {
+                    if (!layer || typeof layer.getBounds !== 'function') {
+                        return;
+                    }
+
+                    try {
+                        const layerBounds = layer.getBounds();
+                        if (layerBounds && layerBounds.isValid()) {
+                            bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
+                        }
+                    } catch (e) {}
+                });
+
+                (markers || []).forEach(function (marker) {
+                    if (!marker || typeof marker.getLatLng !== 'function') {
+                        return;
+                    }
+
+                    try {
+                        const latLng = marker.getLatLng();
+                        bounds = bounds ? bounds.extend(latLng) : L.latLngBounds(latLng, latLng);
+                    } catch (e) {}
+                });
+
+                if (bounds && bounds.isValid()) {
+                    map.fitBounds(bounds, fitOptions || { padding: [24, 24], maxZoom: 13 });
+                    return true;
+                }
+
+                return false;
+            }
+
+            function renderDepartementLayers(map, departements, layerHolder) {
+                if (layerHolder.layer) {
+                    map.removeLayer(layerHolder.layer);
+                    layerHolder.layer = null;
+                }
+
+                const group = L.layerGroup();
+                const layers = [];
+
+                (departements || []).forEach(function (departement, index) {
+                    if (!departement.geojson) {
+                        return;
+                    }
+
+                    try {
+                        const geojson = JSON.parse(departement.geojson);
+                        const color = palette[index % palette.length];
+                        const layer = L.geoJSON(geojson, {
+                            style: {
+                                color: color,
+                                weight: 2,
+                                fillColor: color,
+                                fillOpacity: 0.22,
+                            },
+                        }).bindPopup(
+                            '<div class="fw-semibold">' + (departement.nom || 'Département') + '</div>' +
+                            (departement.code ? '<div><code>' + departement.code + '</code></div>' : '')
+                        );
+
+                        layer.addTo(group);
+                        layers.push(layer);
+                    } catch (e) {
+                        console.warn('GeoJSON invalide pour le département', departement.id);
+                    }
+                });
+
+                if (layers.length) {
+                    group.addTo(map);
+                    layerHolder.layer = group;
+                }
+
+                return layers;
+            }
+
+            function updateRegionMapInfo(ponts, regionNom, departements) {
                 const infoEl = document.getElementById('regionMapPontInfo');
                 if (!infoEl) return;
 
                 const total = (ponts || []).length;
                 const geolocalises = (ponts || []).filter(function (p) { return p.has_coordinates; }).length;
+                const departementCount = (departements || []).length;
 
-                if (!total) {
+                if (!total && !departementCount) {
                     infoEl.classList.add('d-none');
                     return;
                 }
 
-                let message = '<i class="bi bi-signpost-split"></i> ' + total + ' pont(s) dans ' + regionNom;
-                message += ' — <span class="text-danger fw-semibold">' + geolocalises + ' sur la carte</span>';
-                if (geolocalises < total) {
-                    message += ' <span class="text-muted">(' + (total - geolocalises) + ' sans coordonnées GPS)</span>';
+                let message = '';
+
+                if (departementCount) {
+                    message += '<i class="bi bi-layers"></i> <span class="text-primary fw-semibold">'
+                        + departementCount + ' département(s)</span>';
                 }
+
+                if (total) {
+                    if (message) message += ' — ';
+                    message += '<i class="bi bi-signpost-split"></i> ' + total + ' pont(s) dans ' + regionNom;
+                    message += ', <span class="text-danger fw-semibold">' + geolocalises + ' sur la carte</span>';
+                    if (geolocalises < total) {
+                        message += ' <span class="text-muted">(' + (total - geolocalises) + ' sans GPS)</span>';
+                    }
+                }
+
                 infoEl.innerHTML = message;
                 infoEl.classList.remove('d-none');
             }
@@ -646,41 +767,55 @@
                         regionMap.removeLayer(regionLayer);
                         regionLayer = null;
                     }
+                    renderDepartementLayers(regionMap, [], regionDepartementLayer);
                     renderPontMarkers(regionMap, [], regionPontLayer);
 
                     try {
                         const region = await fetchRegion(btn.dataset.id);
                         document.getElementById('viewRegionName').textContent = region.nom || 'Région';
-                        updateRegionMapInfo(region.ponts || [], region.nom || 'Région');
+                        updateRegionMapInfo(region.ponts || [], region.nom || 'Région', region.departements || []);
+
+                        const hasDepartements = (region.departements || []).length > 0;
+
+                        renderDepartementLayers(regionMap, region.departements || [], regionDepartementLayer);
 
                         if (region.geojson) {
-                            const geojson = JSON.parse(region.geojson);
-                            regionLayer = L.geoJSON(geojson, {
-                                style: { color: '#435ebe', weight: 2, fillOpacity: 0.15 },
-                            }).addTo(regionMap);
+                            try {
+                                const geojson = parseGeoJsonData(region.geojson);
+                                regionLayer = L.geoJSON(geojson, {
+                                    style: hasDepartements
+                                        ? { color: '#435ebe', weight: 1, dashArray: '6 4', fillOpacity: 0 }
+                                        : { color: '#435ebe', weight: 2, fillOpacity: 0.12 },
+                                }).addTo(regionMap);
+                            } catch (geoError) {
+                                console.warn('GeoJSON région invalide', geoError);
+                                regionLayer = null;
+                            }
                         }
 
                         renderPontMarkers(regionMap, region.ponts || [], regionPontLayer);
 
-                        const fitGroup = L.featureGroup();
-                        if (regionLayer) {
-                            fitGroup.addLayer(regionLayer);
+                        const boundsLayers = [];
+                        if (regionDepartementLayer.layer && regionDepartementLayer.layer.getLayers().length) {
+                            boundsLayers.push(regionDepartementLayer.layer);
+                        } else if (regionLayer) {
+                            boundsLayers.push(regionLayer);
                         }
-                        const regionBounds = regionLayer ? regionLayer.getBounds() : null;
+
+                        const markerLayers = [];
                         if (regionPontLayer.layer) {
                             regionPontLayer.layer.eachLayer(function (layer) {
-                                if (!regionBounds || regionBounds.contains(layer.getLatLng())) {
-                                    fitGroup.addLayer(layer);
-                                }
+                                markerLayers.push(layer);
                             });
                         }
 
-                        if (fitGroup.getLayers().length) {
-                            regionMap.fitBounds(fitGroup.getBounds(), { padding: [24, 24], maxZoom: 13 });
-                        } else if (!region.geojson) {
-                            alert('Aucun tracé GeoJSON pour cette région.');
+                        if (!fitMapToContent(regionMap, boundsLayers, markerLayers)) {
+                            if (!region.geojson && !hasDepartements) {
+                                alert('Aucun tracé GeoJSON pour cette région.');
+                            }
                         }
                     } catch (e) {
+                        console.error('Erreur carte région', e);
                         alert('Impossible d\'afficher la carte de cette région.');
                     }
 

@@ -99,6 +99,15 @@
                                     <div class="agent-filter-suggestions list-group shadow-sm" id="search_groupe_suggestions" style="display: none;"></div>
                                 </div>
                             </div>
+                            <div class="col-md-6 col-xl-4">
+                                <label for="sous_groupe" class="form-label agents-filter-label">Sous-groupe</label>
+                                <select name="sous_groupe" id="sous_groupe" class="form-select">
+                                    <option value="">Tous</option>
+                                    @foreach ($sousGroupes as $value => $label)
+                                        <option value="{{ $value }}" @selected($filters['sous_groupe'] === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-12">
                                 <div class="d-flex flex-wrap gap-2 justify-content-end pt-1">
                                     <button type="submit" class="btn btn-dark px-4">
@@ -123,6 +132,9 @@
                             @endif
                             @if ($filters['search_groupe'] !== '')
                                 <span class="badge rounded-pill text-bg-light border">Groupe : {{ $filters['search_groupe'] }}</span>
+                            @endif
+                            @if ($filters['sous_groupe'] !== '')
+                                <span class="badge rounded-pill text-bg-light border">Sous-groupe : {{ $sousGroupes[$filters['sous_groupe']] ?? $filters['sous_groupe'] }}</span>
                             @endif
                         </div>
                     @endif
@@ -150,6 +162,7 @@
                                 <th>Prénom</th>
                                 <th>Contact</th>
                                 <th>Groupe</th>
+                                <th>Sous-groupe</th>
                                 <th class="text-center">Ponts</th>
                                 <th>Date de création</th>
                                 <th>Ajouté par</th>
@@ -201,6 +214,13 @@
                                             —
                                         @endif
                                     </td>
+                                    <td>
+                                        @if ($agent->isProfessionnel())
+                                            <span class="badge bg-primary">Professionnels</span>
+                                        @else
+                                            <span class="badge bg-info">Particuliers</span>
+                                        @endif
+                                    </td>
                                     <td class="text-center">
                                         @if ($agent->ponts_count > 0)
                                             <a href="{{ route('agents.show', $agent) }}#agent-ponts"
@@ -228,7 +248,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         Aucun agent trouvé.
                                     </td>
                                 </tr>
@@ -307,6 +327,27 @@
                             </select>
                             @error('id_chef')
                                 <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-diagram-3"></i> Sous-groupe <span class="text-danger">*</span>
+                            </label>
+                            <div class="d-flex flex-wrap gap-3">
+                                @foreach ($sousGroupes as $value => $label)
+                                    <div class="form-check">
+                                        <input class="form-check-input @error('sous_groupe') is-invalid @enderror"
+                                            type="radio" name="sous_groupe" id="sous_groupe_{{ $value }}"
+                                            value="{{ $value }}" @checked(old('sous_groupe', \App\Models\Agent::SOUS_GROUPE_PARTICULIER) === $value) required>
+                                        <label class="form-check-label" for="sous_groupe_{{ $value }}">
+                                            {{ $label }}
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
+                            @error('sous_groupe')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
@@ -790,7 +831,7 @@
                     }
 
                     finishEdit(cell, data.value, field);
-                    showSuccessModal(field, data.value);
+                    showSuccessModal(field, data.display ?? data.value);
 
                     const row = cell.closest('tr');
                     const deleteBtn = row?.querySelector('.form-delete-agent button[type="submit"]');

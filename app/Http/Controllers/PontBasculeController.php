@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agent;
+use App\Models\Departement;
 use App\Models\PontBascule;
 use App\Models\Region;
+use App\Models\SousPrefecture;
+use App\Models\Village;
 use App\Models\TypePont;
 use App\Services\PontBasculeService;
 use Illuminate\Http\JsonResponse;
@@ -28,7 +31,7 @@ class PontBasculeController extends Controller
         ];
 
         $query = PontBascule::query()
-            ->with(['typePont', 'agent', 'region'])
+            ->with(['typePont', 'agent', 'region', 'departement', 'sousPrefecture', 'village'])
             ->orderBy('code_pont');
 
         if ($filters['search'] !== '') {
@@ -129,13 +132,81 @@ class PontBasculeController extends Controller
 
     public function locationRegion(Region $region): JsonResponse
     {
+        $departements = $region->departements()
+            ->whereNotNull('geojson')
+            ->where('geojson', '!=', '')
+            ->orderBy('nom')
+            ->get(['id', 'code', 'nom', 'geojson'])
+            ->map(fn ($departement) => [
+                'id' => $departement->id,
+                'code' => $departement->code,
+                'nom' => $departement->nom,
+                'geojson' => $departement->geojson,
+            ])
+            ->values();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'id' => $region->id,
                 'nom' => $region->nom,
                 'geojson' => $region->geojson,
+                'departements' => $departements,
+                'departements_count' => $departements->count(),
             ],
+        ]);
+    }
+
+    public function departementsForRegion(Region $region): JsonResponse
+    {
+        $departements = $region->departements()
+            ->orderBy('nom')
+            ->get(['id', 'code', 'nom'])
+            ->map(fn (Departement $departement) => [
+                'id' => $departement->id,
+                'code' => $departement->code,
+                'nom' => $departement->nom,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $departements,
+        ]);
+    }
+
+    public function sousPrefecturesForDepartement(Departement $departement): JsonResponse
+    {
+        $sousPrefectures = $departement->sousPrefectures()
+            ->orderBy('nom')
+            ->get(['id', 'code', 'nom'])
+            ->map(fn (SousPrefecture $sousPrefecture) => [
+                'id' => $sousPrefecture->id,
+                'code' => $sousPrefecture->code,
+                'nom' => $sousPrefecture->nom,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $sousPrefectures,
+        ]);
+    }
+
+    public function villagesForSousPrefecture(SousPrefecture $sousPrefecture): JsonResponse
+    {
+        $villages = $sousPrefecture->villages()
+            ->orderBy('nom')
+            ->get(['id', 'nom'])
+            ->map(fn (Village $village) => [
+                'id' => $village->id,
+                'nom' => $village->nom,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $villages,
         ]);
     }
 
@@ -145,6 +216,21 @@ class PontBasculeController extends Controller
             'nom_pont' => ['required', 'string', 'max:255'],
             'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
             'id_region' => ['required', 'integer', Rule::exists('regions', 'id')],
+            'id_departement' => [
+                'required',
+                'integer',
+                Rule::exists('departements', 'id')->where(fn ($query) => $query->where('region_id', $request->input('id_region'))),
+            ],
+            'id_sous_prefecture' => [
+                'required',
+                'integer',
+                Rule::exists('sous_prefectures', 'id')->where(fn ($query) => $query->where('departement_id', $request->input('id_departement'))),
+            ],
+            'id_village' => [
+                'required',
+                'integer',
+                Rule::exists('villages', 'id')->where(fn ($query) => $query->where('sous_prefecture_id', $request->input('id_sous_prefecture'))),
+            ],
             'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
@@ -171,6 +257,21 @@ class PontBasculeController extends Controller
             'nom_pont' => ['required', 'string', 'max:255'],
             'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
             'id_region' => ['required', 'integer', Rule::exists('regions', 'id')],
+            'id_departement' => [
+                'required',
+                'integer',
+                Rule::exists('departements', 'id')->where(fn ($query) => $query->where('region_id', $request->input('id_region'))),
+            ],
+            'id_sous_prefecture' => [
+                'required',
+                'integer',
+                Rule::exists('sous_prefectures', 'id')->where(fn ($query) => $query->where('departement_id', $request->input('id_departement'))),
+            ],
+            'id_village' => [
+                'required',
+                'integer',
+                Rule::exists('villages', 'id')->where(fn ($query) => $query->where('sous_prefecture_id', $request->input('id_sous_prefecture'))),
+            ],
             'id_agent' => ['nullable', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],

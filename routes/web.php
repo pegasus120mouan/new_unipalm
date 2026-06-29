@@ -10,6 +10,9 @@ use App\Http\Controllers\GroupeController;
 use App\Http\Controllers\PretController;
 use App\Http\Controllers\PontBasculeController;
 use App\Http\Controllers\PontRegionController;
+use App\Http\Controllers\PontDepartementController;
+use App\Http\Controllers\PontSousPrefectureController;
+use App\Http\Controllers\PontVillageController;
 use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\CollecteurController;
 use App\Http\Controllers\RegionController;
@@ -108,12 +111,35 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ponts/regions/ponts-map-data', [PontRegionController::class, 'pontsMapData'])->name('ponts.regions.ponts-map-data');
     Route::get('/ponts/regions/map-data', [PontRegionController::class, 'mapData'])->name('ponts.regions.map-data');
+    Route::get('/ponts/regions/{region}/departements', [PontRegionController::class, 'departements'])->name('ponts.regions.departements');
     Route::get('/ponts/regions/{region}', [PontRegionController::class, 'show'])->name('ponts.regions.show');
     Route::post('/ponts/regions/import', [PontRegionController::class, 'import'])->name('ponts.regions.import');
     Route::get('/ponts/regions', [PontRegionController::class, 'index'])->name('ponts.regions.index');
     Route::post('/ponts/regions', [PontRegionController::class, 'store'])->name('ponts.regions.store');
     Route::put('/ponts/regions/{region}', [PontRegionController::class, 'update'])->name('ponts.regions.update');
     Route::delete('/ponts/regions/{region}', [PontRegionController::class, 'destroy'])->name('ponts.regions.destroy');
+
+    Route::get('/ponts/departements/map-data', [PontDepartementController::class, 'mapData'])->name('ponts.departements.map-data');
+    Route::post('/ponts/departements/import', [PontDepartementController::class, 'import'])->name('ponts.departements.import');
+    Route::get('/ponts/departements/{departement}/sous-prefectures', [PontSousPrefectureController::class, 'byDepartement'])->name('ponts.departements.sous-prefectures');
+    Route::get('/ponts/departements/{departement}', [PontDepartementController::class, 'show'])->name('ponts.departements.show');
+    Route::get('/ponts/departements', [PontDepartementController::class, 'index'])->name('ponts.departements.index');
+
+    Route::get('/ponts/sous-prefectures/map-data', [PontSousPrefectureController::class, 'mapData'])->name('ponts.sous-prefectures.map-data');
+    Route::post('/ponts/sous-prefectures/import', [PontSousPrefectureController::class, 'import'])->name('ponts.sous-prefectures.import');
+    Route::get('/ponts/sous-prefectures/{sousPrefecture}/villages-options', [PontBasculeController::class, 'villagesForSousPrefecture'])->name('ponts.sous-prefectures.villages-options');
+    Route::get('/ponts/sous-prefectures/{sousPrefecture}', [PontSousPrefectureController::class, 'show'])->name('ponts.sous-prefectures.show');
+    Route::get('/ponts/sous-prefectures', [PontSousPrefectureController::class, 'index'])->name('ponts.sous-prefectures.index');
+
+    Route::get('/ponts/villages/regions/{region}/departements-options', [PontVillageController::class, 'departementsForRegion'])->name('ponts.villages.departements-options');
+    Route::get('/ponts/villages/departements/{departement}/sous-prefectures-options', [PontVillageController::class, 'sousPrefecturesForDepartement'])->name('ponts.villages.sous-prefectures-options');
+    Route::get('/ponts/villages', [PontVillageController::class, 'index'])->name('ponts.villages.index');
+    Route::post('/ponts/villages', [PontVillageController::class, 'store'])->name('ponts.villages.store');
+    Route::put('/ponts/villages/{village}', [PontVillageController::class, 'update'])->name('ponts.villages.update');
+    Route::delete('/ponts/villages/{village}', [PontVillageController::class, 'destroy'])->name('ponts.villages.destroy');
+
+    Route::get('/ponts/regions/{region}/departements-options', [PontBasculeController::class, 'departementsForRegion'])->name('ponts.regions.departements-options');
+    Route::get('/ponts/departements/{departement}/sous-prefectures-options', [PontBasculeController::class, 'sousPrefecturesForDepartement'])->name('ponts.departements.sous-prefectures-options');
 
     Route::get('/ponts', [PontBasculeController::class, 'index'])->name('ponts.index');
     Route::get('/ponts/localisation/regions/{region}', [PontBasculeController::class, 'locationRegion'])->name('ponts.location.region');

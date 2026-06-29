@@ -27,7 +27,9 @@
                         <thead>
                             <tr>
                                 <th>Groupe</th>
-                                <th>Nombre d'agents</th>
+                                <th class="text-center">Particuliers</th>
+                                <th class="text-center">Professionnels</th>
+                                <th class="text-center">Total agents</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -36,11 +38,23 @@
                                     <td>
                                         <a href="{{ route('groupes.show', $groupe) }}">{{ $groupe->full_name }}</a>
                                     </td>
-                                    <td>{{ $groupe->agents_count }}</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('groupes.show', ['groupe' => $groupe, 'sous_groupe' => \App\Models\Agent::SOUS_GROUPE_PARTICULIER]) }}"
+                                            class="badge bg-info text-decoration-none">
+                                            {{ $groupe->particuliers_count }}
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('groupes.show', ['groupe' => $groupe, 'sous_groupe' => \App\Models\Agent::SOUS_GROUPE_PROFESSIONNEL]) }}"
+                                            class="badge bg-primary text-decoration-none">
+                                            {{ $groupe->professionnels_count }}
+                                        </a>
+                                    </td>
+                                    <td class="text-center">{{ $groupe->agents_count }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="2" class="text-center text-muted py-4">
+                                    <td colspan="4" class="text-center text-muted py-4">
                                         Aucun groupe trouvé.
                                     </td>
                                 </tr>

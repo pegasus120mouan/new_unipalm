@@ -162,6 +162,8 @@
                                 <th>Nom du pont</th>
                                 <th>Type</th>
                                 <th>Région</th>
+                                <th>Sous-préfecture</th>
+                                <th>Village</th>
                                 <th>Gérant</th>
                                 <th>Coopérative</th>
                                 <th>Coordonnées</th>
@@ -182,6 +184,14 @@
                                             <span class="badge bg-warning text-dark">Non définie</span>
                                         @endif
                                     </td>
+                                    <td>
+                                        @if ($pont->sousPrefecture)
+                                            {{ $pont->sousPrefecture->nom }}
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td>{{ $pont->village?->nom ?? '—' }}</td>
                                     <td>{{ $pont->gerantLabel() }}</td>
                                     <td>{{ $pont->cooperatif ?: '—' }}</td>
                                     <td>
@@ -211,6 +221,9 @@
                                                 data-nom="{{ $pont->nom_pont }}"
                                                 data-type-id="{{ $pont->id_type_pont }}"
                                                 data-id-region="{{ $pont->id_region }}"
+                                                data-id-departement="{{ $pont->id_departement }}"
+                                                data-id-sous-prefecture="{{ $pont->id_sous_prefecture }}"
+                                                data-id-village="{{ $pont->id_village }}"
                                                 data-id-agent="{{ $pont->id_agent }}"
                                                 data-gerant="{{ $pont->gerantLabel() }}"
                                                 data-cooperatif="{{ $pont->cooperatif }}"
@@ -230,7 +243,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="11" class="text-center text-muted py-4">
                                         @if ($hasFilters)
                                             Aucun pont ne correspond aux filtres.
                                         @else
@@ -291,7 +304,7 @@
                                 </select>
                                 @error('id_type_pont')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label for="id_region" class="form-label">Région *</label>
                                 <select name="id_region" id="id_region" class="form-select @error('id_region') is-invalid @enderror" required>
                                     <option value="">— Sélectionner une région —</option>
@@ -302,6 +315,27 @@
                                     @endforeach
                                 </select>
                                 @error('id_region')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_departement" class="form-label">Département *</label>
+                                <select name="id_departement" id="id_departement" class="form-select @error('id_departement') is-invalid @enderror" required disabled>
+                                    <option value="">— Choisir une région d'abord —</option>
+                                </select>
+                                @error('id_departement')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_sous_prefecture" class="form-label">Sous-préfecture *</label>
+                                <select name="id_sous_prefecture" id="id_sous_prefecture" class="form-select @error('id_sous_prefecture') is-invalid @enderror" required disabled>
+                                    <option value="">— Choisir un département d'abord —</option>
+                                </select>
+                                @error('id_sous_prefecture')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="id_village" class="form-label">Village *</label>
+                                <select name="id_village" id="id_village" class="form-select @error('id_village') is-invalid @enderror" required disabled>
+                                    <option value="">— Choisir une sous-préfecture d'abord —</option>
+                                </select>
+                                @error('id_village')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6 position-relative">
                                 <label for="gerant_search" class="form-label">Gérant *</label>
@@ -389,7 +423,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label for="edit_id_region" class="form-label">Région *</label>
                                 <select name="id_region" id="edit_id_region" class="form-select" required>
                                     <option value="">— Sélectionner une région —</option>
@@ -398,6 +432,24 @@
                                             {{ $region->nom }}{{ $region->code ? ' ('.$region->code.')' : '' }}
                                         </option>
                                     @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_id_departement" class="form-label">Département *</label>
+                                <select name="id_departement" id="edit_id_departement" class="form-select" required disabled>
+                                    <option value="">— Choisir une région d'abord —</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_id_sous_prefecture" class="form-label">Sous-préfecture *</label>
+                                <select name="id_sous_prefecture" id="edit_id_sous_prefecture" class="form-select" required disabled>
+                                    <option value="">— Choisir un département d'abord —</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_id_village" class="form-label">Village *</label>
+                                <select name="id_village" id="edit_id_village" class="form-select" required disabled>
+                                    <option value="">— Choisir une sous-préfecture d'abord —</option>
                                 </select>
                             </div>
                             <div class="col-md-6 position-relative">
@@ -500,7 +552,217 @@
             const editForm = document.getElementById('editPontForm');
             const deleteForm = document.getElementById('deletePontForm');
             const pontBaseUrl = @json(url('/ponts'));
+            const departementsOptionsUrl = @json(url('/ponts/regions'));
+            const sousPrefecturesOptionsUrl = @json(url('/ponts/departements'));
+            const villagesOptionsUrl = @json(url('/ponts/sous-prefectures'));
             const agentsForAutocomplete = @json($agentsForAutocomplete);
+
+            function setupLocationCascade(config) {
+                const regionSelect = document.getElementById(config.regionId);
+                const departementSelect = document.getElementById(config.departementId);
+                const sousPrefectureSelect = document.getElementById(config.sousPrefectureId);
+                const villageSelect = document.getElementById(config.villageId);
+
+                if (!regionSelect || !departementSelect || !sousPrefectureSelect || !villageSelect) {
+                    return { setValues: async function () {}, reset: function () {} };
+                }
+
+                function resetDepartements(placeholder) {
+                    departementSelect.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = placeholder || '— Sélectionner —';
+                    departementSelect.appendChild(option);
+                    departementSelect.value = '';
+                    departementSelect.disabled = true;
+                }
+
+                function resetSousPrefectures(placeholder) {
+                    sousPrefectureSelect.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = placeholder || '— Sélectionner —';
+                    sousPrefectureSelect.appendChild(option);
+                    sousPrefectureSelect.value = '';
+                    sousPrefectureSelect.disabled = true;
+                }
+
+                function resetVillages(placeholder) {
+                    villageSelect.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = placeholder || '— Sélectionner —';
+                    villageSelect.appendChild(option);
+                    villageSelect.value = '';
+                    villageSelect.disabled = true;
+                }
+
+                function formatLabel(item) {
+                    return item.nom + (item.code ? ' (' + item.code + ')' : '');
+                }
+
+                async function loadDepartements(regionId, selectedId) {
+                    resetDepartements();
+                    resetSousPrefectures('— Choisir un département d\'abord —');
+                    resetVillages('— Choisir une sous-préfecture d\'abord —');
+
+                    if (!regionId) {
+                        resetDepartements('— Choisir une région d\'abord —');
+                        return;
+                    }
+
+                    departementSelect.disabled = true;
+                    const res = await fetch(departementsOptionsUrl + '/' + regionId + '/departements-options', {
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-store',
+                    });
+                    const json = await res.json();
+                    const items = json.data || [];
+
+                    departementSelect.innerHTML = '';
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = items.length ? '— Sélectionner —' : '— Aucun département —';
+                    departementSelect.appendChild(placeholder);
+
+                    items.forEach(function (item) {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = formatLabel(item);
+                        departementSelect.appendChild(option);
+                    });
+
+                    departementSelect.disabled = items.length === 0;
+
+                    if (selectedId) {
+                        departementSelect.value = String(selectedId);
+                    }
+                }
+
+                async function loadSousPrefectures(departementId, selectedId) {
+                    resetSousPrefectures();
+                    resetVillages('— Choisir une sous-préfecture d\'abord —');
+
+                    if (!departementId) {
+                        resetSousPrefectures('— Choisir un département d\'abord —');
+                        return;
+                    }
+
+                    sousPrefectureSelect.disabled = true;
+                    const res = await fetch(sousPrefecturesOptionsUrl + '/' + departementId + '/sous-prefectures-options', {
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-store',
+                    });
+                    const json = await res.json();
+                    const items = json.data || [];
+
+                    sousPrefectureSelect.innerHTML = '';
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = items.length ? '— Sélectionner —' : '— Aucune sous-préfecture —';
+                    sousPrefectureSelect.appendChild(placeholder);
+
+                    items.forEach(function (item) {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = formatLabel(item);
+                        sousPrefectureSelect.appendChild(option);
+                    });
+
+                    sousPrefectureSelect.disabled = items.length === 0;
+
+                    if (selectedId) {
+                        sousPrefectureSelect.value = String(selectedId);
+                    }
+                }
+
+                async function loadVillages(sousPrefectureId, selectedId) {
+                    resetVillages();
+
+                    if (!sousPrefectureId) {
+                        resetVillages('— Choisir une sous-préfecture d\'abord —');
+                        return;
+                    }
+
+                    villageSelect.disabled = true;
+                    const res = await fetch(villagesOptionsUrl + '/' + sousPrefectureId + '/villages-options', {
+                        headers: { Accept: 'application/json' },
+                        cache: 'no-store',
+                    });
+                    const json = await res.json();
+                    const items = json.data || [];
+
+                    villageSelect.innerHTML = '';
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = items.length ? '— Sélectionner —' : '— Aucun village —';
+                    villageSelect.appendChild(placeholder);
+
+                    items.forEach(function (item) {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nom;
+                        villageSelect.appendChild(option);
+                    });
+
+                    villageSelect.disabled = items.length === 0;
+
+                    if (selectedId) {
+                        villageSelect.value = String(selectedId);
+                    }
+                }
+
+                regionSelect.addEventListener('change', async function () {
+                    await loadDepartements(regionSelect.value || null, null);
+                });
+
+                departementSelect.addEventListener('change', async function () {
+                    await loadSousPrefectures(departementSelect.value || null, null);
+                });
+
+                sousPrefectureSelect.addEventListener('change', async function () {
+                    await loadVillages(sousPrefectureSelect.value || null, null);
+                });
+
+                return {
+                    setValues: async function (regionId, departementId, sousPrefectureId, villageId) {
+                        regionSelect.value = regionId ? String(regionId) : '';
+                        await loadDepartements(regionId || null, departementId || null);
+                        if (departementId) {
+                            await loadSousPrefectures(departementId, sousPrefectureId || null);
+                        } else {
+                            resetSousPrefectures('— Choisir un département d\'abord —');
+                            resetVillages('— Choisir une sous-préfecture d\'abord —');
+                            return;
+                        }
+                        if (sousPrefectureId) {
+                            await loadVillages(sousPrefectureId, villageId || null);
+                        } else {
+                            resetVillages('— Choisir une sous-préfecture d\'abord —');
+                        }
+                    },
+                    reset: function () {
+                        regionSelect.value = '';
+                        resetDepartements('— Choisir une région d\'abord —');
+                        resetSousPrefectures('— Choisir un département d\'abord —');
+                        resetVillages('— Choisir une sous-préfecture d\'abord —');
+                    },
+                };
+            }
+
+            const addLocationCascade = setupLocationCascade({
+                regionId: 'id_region',
+                departementId: 'id_departement',
+                sousPrefectureId: 'id_sous_prefecture',
+                villageId: 'id_village',
+            });
+
+            const editLocationCascade = setupLocationCascade({
+                regionId: 'edit_id_region',
+                departementId: 'edit_id_departement',
+                sousPrefectureId: 'edit_id_sous_prefecture',
+                villageId: 'edit_id_village',
+            });
 
             function setupGerantAutocomplete(config) {
                 const searchInput = document.getElementById(config.searchId);
@@ -665,21 +927,28 @@
 
             document.getElementById('addPontModal')?.addEventListener('hidden.bs.modal', function () {
                 addGerantAutocomplete.clearSelection();
+                addLocationCascade.reset();
             });
 
             document.getElementById('editPontModal')?.addEventListener('hidden.bs.modal', function () {
                 editGerantAutocomplete.clearSelection();
+                editLocationCascade.reset();
             });
 
             document.querySelectorAll('.edit-pont-btn').forEach(function (button) {
-                button.addEventListener('click', function () {
+                button.addEventListener('click', async function () {
                     const id = button.dataset.id;
                     editForm.action = `${pontBaseUrl}/${id}`;
                     document.getElementById('edit_pont_id').value = id;
                     document.getElementById('edit_code_pont').value = button.dataset.code || '';
                     document.getElementById('edit_nom_pont').value = button.dataset.nom || '';
                     document.getElementById('edit_id_type_pont').value = button.dataset.typeId || '';
-                    document.getElementById('edit_id_region').value = button.dataset.idRegion || '';
+                    await editLocationCascade.setValues(
+                        button.dataset.idRegion || null,
+                        button.dataset.idDepartement || null,
+                        button.dataset.idSousPrefecture || null,
+                        button.dataset.idVillage || null
+                    );
                     if (button.dataset.idAgent) {
                         editGerantAutocomplete.setAgent(button.dataset.idAgent);
                     } else {
@@ -707,6 +976,15 @@
                 });
             });
 
+            @if (old('id_region') && ! old('_method'))
+                addLocationCascade.setValues(
+                    @json(old('id_region')),
+                    @json(old('id_departement')),
+                    @json(old('id_sous_prefecture')),
+                    @json(old('id_village'))
+                );
+            @endif
+
             @if (old('id_agent') && ! old('_method'))
                 addGerantAutocomplete.setAgent(@json(old('id_agent')));
             @endif
@@ -721,7 +999,12 @@
                     document.getElementById('edit_code_pont').value = @json(old('code_pont', ''));
                     document.getElementById('edit_nom_pont').value = @json(old('nom_pont', ''));
                     document.getElementById('edit_id_type_pont').value = @json(old('id_type_pont', ''));
-                    document.getElementById('edit_id_region').value = @json(old('id_region', ''));
+                    editLocationCascade.setValues(
+                        @json(old('id_region', '')),
+                        @json(old('id_departement', '')),
+                        @json(old('id_sous_prefecture', '')),
+                        @json(old('id_village', ''))
+                    );
                     document.getElementById('edit_cooperatif').value = @json(old('cooperatif', ''));
                     document.getElementById('edit_statut').value = @json(old('statut', 'Actif'));
                     document.getElementById('edit_latitude').value = @json(old('latitude', ''));

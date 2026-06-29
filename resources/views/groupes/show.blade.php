@@ -19,10 +19,24 @@
 
 @section('content')
     <section class="row mb-3">
-        <div class="col-12">
+        <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
             <a href="{{ route('groupes.index') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left"></i> Retour aux groupes
             </a>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Filtrer par sous-groupe">
+                <a href="{{ route('groupes.show', $groupe) }}"
+                    class="btn {{ $sousGroupe === '' ? 'btn-dark' : 'btn-outline-dark' }}">
+                    Tous ({{ $counts['total'] }})
+                </a>
+                <a href="{{ route('groupes.show', ['groupe' => $groupe, 'sous_groupe' => \App\Models\Agent::SOUS_GROUPE_PARTICULIER]) }}"
+                    class="btn {{ $sousGroupe === \App\Models\Agent::SOUS_GROUPE_PARTICULIER ? 'btn-info' : 'btn-outline-info' }}">
+                    Particuliers ({{ $counts['particuliers'] }})
+                </a>
+                <a href="{{ route('groupes.show', ['groupe' => $groupe, 'sous_groupe' => \App\Models\Agent::SOUS_GROUPE_PROFESSIONNEL]) }}"
+                    class="btn {{ $sousGroupe === \App\Models\Agent::SOUS_GROUPE_PROFESSIONNEL ? 'btn-primary' : 'btn-outline-primary' }}">
+                    Professionnels ({{ $counts['professionnels'] }})
+                </a>
+            </div>
         </div>
     </section>
 
@@ -40,6 +54,7 @@
                                 <th>N° Agent</th>
                                 <th>Nom</th>
                                 <th>Prénom</th>
+                                <th>Sous-groupe</th>
                                 <th>Contact</th>
                                 <th>Date de création</th>
                                 <th>Ajouté par</th>
@@ -60,6 +75,13 @@
                                     <td>{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
                                     <td>
+                                        @if ($agent->isProfessionnel())
+                                            <span class="badge bg-primary">Professionnels</span>
+                                        @else
+                                            <span class="badge bg-info">Particuliers</span>
+                                        @endif
+                                    </td>
+                                    <td>
                                         @if ($agent->contact)
                                             <span class="badge bg-info">{{ $agent->contact }}</span>
                                         @else
@@ -71,8 +93,8 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        Aucun agent associé à ce groupe.
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        Aucun agent associé à ce sous-groupe.
                                     </td>
                                 </tr>
                             @endforelse

@@ -21,7 +21,9 @@ class PontRegionController extends Controller
     {
         $search = trim((string) $request->query('search', ''));
 
-        $query = Region::query()->orderBy('nom');
+        $query = Region::query()
+            ->withCount('departements')
+            ->orderBy('nom');
 
         if ($search !== '') {
             $term = '%'.$search.'%';
@@ -66,6 +68,21 @@ class PontRegionController extends Controller
 
     public function show(Region $region): JsonResponse
     {
+        $region->load('district');
+
+        $departements = $region->departements()
+            ->whereNotNull('geojson')
+            ->where('geojson', '!=', '')
+            ->orderBy('nom')
+            ->get(['id', 'code', 'nom', 'geojson'])
+            ->map(fn ($departement) => [
+                'id' => $departement->id,
+                'code' => $departement->code,
+                'nom' => $departement->nom,
+                'geojson' => $departement->geojson,
+            ])
+            ->values();
+
         $ponts = $region->ponts()
             ->orderBy('nom_pont')
             ->get()
@@ -88,7 +105,11 @@ class PontRegionController extends Controller
                 'id' => $region->id,
                 'code' => $region->code,
                 'nom' => $region->nom,
+                'district_id' => $region->district_id,
+                'district' => $region->district?->nom,
                 'geojson' => $region->geojson,
+                'departements' => $departements,
+                'departements_count' => $departements->count(),
                 'ponts' => $ponts,
                 'ponts_count' => $ponts->count(),
                 'ponts_geolocalises' => $ponts->where('has_coordinates', true)->count(),
@@ -119,6 +140,36 @@ class PontRegionController extends Controller
             'success' => true,
             'data' => $ponts,
         ]);
+    }
+
+    public function departements(Region $region): View
+    {
+        $departements = $region->departements()
+            ->withCount('sousPrefectures')
+            ->orderBy('nom')
+            ->paginate(15)
+            ->withQueryString();
+
+        $departementsForMap = $region->departements()
+            ->whereNotNull('geojson')
+            ->where('geojson', '!=', '')
+            ->orderBy('nom')
+            ->get(['id', 'code', 'nom', 'geojson']);
+
+        $stats = [
+            'total' => $region->departements()->count(),
+            'with_geojson' => $departementsForMap->count(),
+        ];
+
+        $hasMapDepartements = $stats['with_geojson'] > 0;
+
+        return view('ponts.regions.departements', compact(
+            'region',
+            'departements',
+            'departementsForMap',
+            'stats',
+            'hasMapDepartements',
+        ));
     }
 
     public function import(Request $request): RedirectResponse
@@ -206,13 +257,14 @@ class PontRegionController extends Controller
     private function validateRegion(Request $request, ?Region $region = null): array
     {
         $validated = $request->validate([
+            'district_id' => ['nullable', 'integer', Rule::exists('districts', 'id')],
             'code' => [
                 'nullable',
                 'string',
                 'max:10',
                 Rule::unique('regions', 'code')->ignore($region?->id),
             ],
-            'nom' => ['required', 'string', 'max:100'],
+            'nom' => ['required', 'string', 'max:150'],
             'geojson' => ['nullable', 'string'],
         ]);
 
@@ -228,6 +280,7 @@ class PontRegionController extends Controller
         }
 
         return [
+            'district_id' => blank($validated['district_id'] ?? null) ? null : (int) $validated['district_id'],
             'code' => blank($validated['code'] ?? null) ? null : $validated['code'],
             'nom' => $validated['nom'],
             'geojson' => $geojson !== '' ? $geojson : null,

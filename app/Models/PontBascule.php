@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'nom_pont',
     'id_type_pont',
     'id_region',
+    'id_departement',
+    'id_sous_prefecture',
+    'id_village',
     'id_agent',
     'latitude',
     'longitude',
@@ -47,6 +50,21 @@ class PontBascule extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class, 'id_region', 'id');
+    }
+
+    public function departement(): BelongsTo
+    {
+        return $this->belongsTo(Departement::class, 'id_departement', 'id');
+    }
+
+    public function sousPrefecture(): BelongsTo
+    {
+        return $this->belongsTo(SousPrefecture::class, 'id_sous_prefecture', 'id');
+    }
+
+    public function village(): BelongsTo
+    {
+        return $this->belongsTo(Village::class, 'id_village', 'id');
     }
 
     public function gerantLabel(): string

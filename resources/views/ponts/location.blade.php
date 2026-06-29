@@ -114,8 +114,10 @@
 
             let markerGroup = L.layerGroup().addTo(map);
             let regionLayer = null;
+            let departementLayer = { layer: null };
             let filterActiveOnly = false;
             let selectedRegionId = '';
+            const palette = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22', '#34495e'];
 
             function pontHasCoordinates(pont) {
                 if (pont.has_coordinates === false) {
@@ -142,7 +144,7 @@
                 return list;
             }
 
-            function updateRegionInfo(regionPonts, regionNom) {
+            function updateRegionInfo(regionPonts, regionNom, departements) {
                 const infoEl = document.getElementById('regionMapInfo');
                 if (!infoEl) return;
 
@@ -153,8 +155,14 @@
 
                 const total = regionPonts.length;
                 const geolocalises = regionPonts.filter(pontHasCoordinates).length;
+                const departementCount = (departements || []).length;
 
                 let message = '<i class="bi bi-map"></i> <strong>' + regionNom + '</strong>';
+
+                if (departementCount) {
+                    message += ' — <span class="text-primary fw-semibold">' + departementCount + ' département(s)</span>';
+                }
+
                 message += ' — ' + total + ' pont(s)';
                 message += ', <span class="text-success fw-semibold">' + geolocalises + ' sur la carte</span>';
 
@@ -166,11 +174,89 @@
                 infoEl.classList.remove('d-none');
             }
 
+            function clearDepartementLayers() {
+                if (departementLayer.layer) {
+                    map.removeLayer(departementLayer.layer);
+                    departementLayer.layer = null;
+                }
+            }
+
+            function renderDepartementLayers(departements) {
+                clearDepartementLayers();
+
+                const group = L.layerGroup();
+
+                (departements || []).forEach(function (departement, index) {
+                    if (!departement.geojson) {
+                        return;
+                    }
+
+                    try {
+                        const geojson = JSON.parse(departement.geojson);
+                        const color = palette[index % palette.length];
+                        L.geoJSON(geojson, {
+                            style: {
+                                color: color,
+                                weight: 2,
+                                fillColor: color,
+                                fillOpacity: 0.22,
+                            },
+                        }).bindPopup(
+                            '<div class="fw-semibold">' + (departement.nom || 'Département') + '</div>' +
+                            (departement.code ? '<div><code>' + departement.code + '</code></div>' : '')
+                        ).addTo(group);
+                    } catch (e) {
+                        console.warn('GeoJSON invalide pour le département', departement.id);
+                    }
+                });
+
+                if (group.getLayers().length) {
+                    group.addTo(map);
+                    departementLayer.layer = group;
+                }
+            }
+
+            function parseGeoJsonData(raw) {
+                if (!raw) return null;
+                if (typeof raw === 'object') return raw;
+                return JSON.parse(raw);
+            }
+
+            function fitMapToContent(layers, markers) {
+                let bounds = null;
+
+                (layers || []).forEach(function (layer) {
+                    if (!layer || typeof layer.getBounds !== 'function') return;
+                    try {
+                        const layerBounds = layer.getBounds();
+                        if (layerBounds && layerBounds.isValid()) {
+                            bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
+                        }
+                    } catch (e) {}
+                });
+
+                (markers || []).forEach(function (marker) {
+                    if (!marker || typeof marker.getLatLng !== 'function') return;
+                    try {
+                        const latLng = marker.getLatLng();
+                        bounds = bounds ? bounds.extend(latLng) : L.latLngBounds(latLng, latLng);
+                    } catch (e) {}
+                });
+
+                if (bounds && bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+                    return true;
+                }
+
+                return false;
+            }
+
             function clearRegionLayer() {
                 if (regionLayer) {
                     map.removeLayer(regionLayer);
                     regionLayer = null;
                 }
+                clearDepartementLayers();
             }
 
             async function loadRegionLayer(regionId) {
@@ -186,20 +272,29 @@
                 });
                 const json = await res.json();
 
-                if (!json.success || !json.data?.geojson) {
-                    return json.data || null;
+                if (!json.success || !json.data) {
+                    return null;
                 }
 
-                try {
-                    const geojson = JSON.parse(json.data.geojson);
-                    regionLayer = L.geoJSON(geojson, {
-                        style: { color: '#435ebe', weight: 2, fillOpacity: 0.15 },
-                    }).addTo(map);
-                } catch (e) {
-                    console.warn('GeoJSON invalide pour la région', regionId);
+                const data = json.data;
+                const hasDepartements = (data.departements || []).length > 0;
+
+                renderDepartementLayers(data.departements || []);
+
+                if (data.geojson) {
+                    try {
+                        const geojson = parseGeoJsonData(data.geojson);
+                        regionLayer = L.geoJSON(geojson, {
+                            style: hasDepartements
+                                ? { color: '#435ebe', weight: 1, dashArray: '6 4', fillOpacity: 0 }
+                                : { color: '#435ebe', weight: 2, fillOpacity: 0.15 },
+                        }).addTo(map);
+                    } catch (e) {
+                        console.warn('GeoJSON invalide pour la région', regionId);
+                    }
                 }
 
-                return json.data;
+                return data;
             }
 
             function renderMarkers() {
@@ -207,7 +302,13 @@
 
                 const list = filteredPonts();
                 const markerLayers = [];
-                const regionBounds = regionLayer ? regionLayer.getBounds() : null;
+                const boundsLayers = [];
+
+                if (departementLayer.layer && departementLayer.layer.getLayers().length) {
+                    boundsLayers.push(departementLayer.layer);
+                } else if (regionLayer) {
+                    boundsLayers.push(regionLayer);
+                }
 
                 list.forEach(function (pont) {
                     if (!pontHasCoordinates(pont)) {
@@ -225,11 +326,6 @@
                         fillOpacity: 0.9,
                     });
 
-                    const outsideRegion = regionBounds && !regionBounds.contains([lat, lng]);
-                    const outsideNote = outsideRegion
-                        ? '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle"></i> Coordonnées hors de la région</div>'
-                        : '';
-
                     marker.bindPopup(
                         '<div class="pont-popup-title">' + pont.nom_pont + '</div>' +
                         '<div><code>' + pont.code_pont + '</code></div>' +
@@ -238,32 +334,18 @@
                         '<div><strong>Région:</strong> ' + (pont.region || '—') + '</div>' +
                         '<div><strong>Coopérative:</strong> ' + (pont.cooperatif || '—') + '</div>' +
                         '<div><strong>Statut:</strong> ' + pont.statut + '</div>' +
-                        outsideNote +
                         '</div>'
                     );
 
                     marker.addTo(markerGroup);
-                    if (!outsideRegion) {
-                        markerLayers.push(marker);
-                    }
+                    markerLayers.push(marker);
                 });
 
-                if (regionLayer) {
-                    const fitGroup = L.featureGroup([regionLayer]);
-                    markerLayers.forEach(function (layer) {
-                        fitGroup.addLayer(layer);
-                    });
-                    map.fitBounds(fitGroup.getBounds(), {
-                        padding: [40, 40],
-                        maxZoom: 13,
-                    });
-                } else if (markerLayers.length > 0) {
-                    const fitGroup = L.featureGroup(markerLayers);
-                    map.fitBounds(fitGroup.getBounds(), {
-                        padding: [40, 40],
-                        maxZoom: 12,
-                    });
-                } else if (!selectedRegionId) {
+                if (fitMapToContent(boundsLayers, markerLayers)) {
+                    return;
+                }
+
+                if (!selectedRegionId) {
                     map.setView([7.539989, -5.547080], 7);
                 }
             }
@@ -275,10 +357,10 @@
 
                 if (selectedRegionId) {
                     const regionData = await loadRegionLayer(selectedRegionId);
-                    updateRegionInfo(filteredPonts(), regionData?.nom || regionNom);
+                    updateRegionInfo(filteredPonts(), regionData?.nom || regionNom, regionData?.departements || []);
                 } else {
                     clearRegionLayer();
-                    updateRegionInfo([], '');
+                    updateRegionInfo([], '', []);
                 }
 
                 renderMarkers();

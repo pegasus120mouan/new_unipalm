@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'prenom',
     'contact',
     'id_chef',
+    'sous_groupe',
     'cree_par',
     'code_pin',
     'avatar',
@@ -21,6 +22,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Agent extends Model
 {
+    public const SOUS_GROUPE_PARTICULIER = 'particulier';
+
+    public const SOUS_GROUPE_PROFESSIONNEL = 'professionnel';
+
     protected $table = 'agents';
 
     protected $primaryKey = 'id_agent';
@@ -44,6 +49,29 @@ class Agent extends Model
     public function groupe(): BelongsTo
     {
         return $this->belongsTo(Groupe::class, 'id_chef', 'id_chef');
+    }
+
+    public static function sousGroupes(): array
+    {
+        return [
+            self::SOUS_GROUPE_PARTICULIER => 'Particuliers',
+            self::SOUS_GROUPE_PROFESSIONNEL => 'Professionnels',
+        ];
+    }
+
+    public function sousGroupeLabel(): string
+    {
+        return self::sousGroupes()[$this->sous_groupe] ?? '—';
+    }
+
+    public function isParticulier(): bool
+    {
+        return $this->sous_groupe === self::SOUS_GROUPE_PARTICULIER;
+    }
+
+    public function isProfessionnel(): bool
+    {
+        return $this->sous_groupe === self::SOUS_GROUPE_PROFESSIONNEL;
     }
 
     public function financements(): HasMany

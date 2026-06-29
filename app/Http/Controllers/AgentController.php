@@ -9,6 +9,7 @@ use App\Services\AgentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AgentController extends Controller
@@ -24,6 +25,7 @@ class AgentController extends Controller
             'id_agent' => $request->query('id_agent') ? (int) $request->query('id_agent') : null,
             'search_contact' => trim((string) $request->query('search_contact', '')),
             'search_groupe' => trim((string) $request->query('search_groupe', '')),
+            'sous_groupe' => trim((string) $request->query('sous_groupe', '')),
         ];
 
         $agentsQuery = Agent::query()
@@ -54,6 +56,12 @@ class AgentController extends Controller
                     ->orWhere('prenoms', 'like', $term)
                     ->orWhereRaw("CONCAT(nom, ' ', prenoms) LIKE ?", [$term]);
             });
+        }
+
+        if (in_array($filters['sous_groupe'], [Agent::SOUS_GROUPE_PARTICULIER, Agent::SOUS_GROUPE_PROFESSIONNEL], true)) {
+            $agentsQuery->where('sous_groupe', $filters['sous_groupe']);
+        } else {
+            $filters['sous_groupe'] = '';
         }
 
         $agents = $agentsQuery
@@ -87,7 +95,7 @@ class AgentController extends Controller
             'hasFilters',
             'selectedAgent',
             'searchDisplay',
-        ));
+        ))->with('sousGroupes', Agent::sousGroupes());
     }
 
     public function autocomplete(Request $request): JsonResponse
@@ -162,20 +170,25 @@ class AgentController extends Controller
             'prenom' => ['required', 'string', 'max:255'],
             'contact' => ['required', 'string', 'max:255'],
             'id_chef' => ['required', 'integer', 'exists:chef_equipe,id_chef'],
+            'sous_groupe' => ['required', Rule::in([Agent::SOUS_GROUPE_PARTICULIER, Agent::SOUS_GROUPE_PROFESSIONNEL])],
         ]);
+
+        $nom = $this->agentService->formatPersonName($validated['nom']);
+        $prenom = $this->agentService->formatPersonName($validated['prenom']);
 
         $numeroAgent = $this->agentService->generateNumeroAgent(
             (int) $validated['id_chef'],
-            $validated['nom'],
-            $validated['prenom'],
+            $nom,
+            $prenom,
         );
 
         Agent::query()->create([
             'numero_agent' => $numeroAgent,
-            'nom' => trim($validated['nom']),
-            'prenom' => trim($validated['prenom']),
+            'nom' => $nom,
+            'prenom' => $prenom,
             'contact' => trim($validated['contact']),
             'id_chef' => $validated['id_chef'],
+            'sous_groupe' => $validated['sous_groupe'],
             'cree_par' => auth()->id(),
             'code_pin' => $this->agentService->generatePin(),
             'avatar' => 'agents.png',
@@ -219,7 +232,8 @@ class AgentController extends Controller
             ->orderBy('prenoms')
             ->get();
 
-        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts'));
+        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts'))
+            ->with('sousGroupes', Agent::sousGroupes());
     }
 
     public function associatePont(Request $request, Agent $agent): RedirectResponse
@@ -261,14 +275,19 @@ class AgentController extends Controller
             'prenom' => ['required', 'string', 'max:255'],
             'contact' => ['required', 'string', 'max:255'],
             'id_chef' => ['required', 'integer', 'exists:chef_equipe,id_chef'],
+            'sous_groupe' => ['required', Rule::in([Agent::SOUS_GROUPE_PARTICULIER, Agent::SOUS_GROUPE_PROFESSIONNEL])],
             'code_pin' => ['nullable', 'digits:6'],
         ]);
 
+        $nom = $this->agentService->formatPersonName($validated['nom']);
+        $prenom = $this->agentService->formatPersonName($validated['prenom']);
+
         $data = [
-            'nom' => trim($validated['nom']),
-            'prenom' => trim($validated['prenom']),
+            'nom' => $nom,
+            'prenom' => $prenom,
             'contact' => trim($validated['contact']),
             'id_chef' => $validated['id_chef'],
+            'sous_groupe' => $validated['sous_groupe'],
             'date_modification' => now(),
         ];
 
@@ -297,6 +316,10 @@ class AgentController extends Controller
         $field = $validated['field'];
         $value = trim($validated['value']);
 
+        if (in_array($field, ['nom', 'prenom'], true)) {
+            $value = $this->agentService->formatPersonName($value);
+        }
+
         $agent->update([
             $field => $value,
             'date_modification' => now(),
@@ -306,6 +329,7 @@ class AgentController extends Controller
             'success' => true,
             'field' => $field,
             'value' => $agent->{$field},
+            'display' => $agent->{$field},
         ]);
     }
 
