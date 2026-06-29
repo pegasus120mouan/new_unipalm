@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'code_pont',
     'nom_pont',
     'id_type_pont',
+    'id_region',
     'id_agent',
     'latitude',
     'longitude',
@@ -41,6 +42,11 @@ class PontBascule extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'id_agent', 'id_agent');
+    }
+
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class, 'id_region', 'id');
     }
 
     public function gerantLabel(): string

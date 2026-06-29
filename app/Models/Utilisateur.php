@@ -7,11 +7,13 @@ use App\Services\RolePermissionService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['nom', 'prenoms', 'contact', 'login', 'avatar', 'password', 'role', 'statut_compte'])]
 #[Hidden(['password'])]
 class Utilisateur extends Authenticatable
 {
+    use HasApiTokens;
     public const DEFAULT_PASSWORD = 'Unipalm@@2026';
 
     protected $table = 'utilisateurs';

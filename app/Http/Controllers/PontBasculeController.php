@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\PontBascule;
+use App\Models\Region;
 use App\Models\TypePont;
 use App\Services\PontBasculeService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,7 +28,7 @@ class PontBasculeController extends Controller
         ];
 
         $query = PontBascule::query()
-            ->with(['typePont', 'agent'])
+            ->with(['typePont', 'agent', 'region'])
             ->orderBy('code_pont');
 
         if ($filters['search'] !== '') {
@@ -76,6 +78,7 @@ class PontBasculeController extends Controller
         $hasFilters = collect($filters)->contains(fn ($value) => $value !== '');
 
         $typesPont = TypePont::query()->orderBy('libelle')->get();
+        $regions = Region::query()->orderBy('nom')->get(['id', 'code', 'nom']);
 
         return view('ponts.index', compact(
             'ponts',
@@ -86,13 +89,14 @@ class PontBasculeController extends Controller
             'agentsForAutocomplete',
             'hasFilters',
             'typesPont',
+            'regions',
         ));
     }
 
     public function location(): View
     {
         $ponts = PontBascule::query()
-            ->with('agent')
+            ->with(['agent', 'region'])
             ->orderBy('code_pont')
             ->get()
             ->map(fn (PontBascule $pont) => [
@@ -104,16 +108,35 @@ class PontBasculeController extends Controller
                 'gerant' => $pont->gerantLabel(),
                 'cooperatif' => $pont->cooperatif,
                 'statut' => $pont->statut,
+                'id_region' => $pont->id_region,
+                'region' => $pont->region?->nom,
+                'has_coordinates' => $pont->hasCoordinates(),
             ]);
 
         $stats = [
             'total' => $ponts->count(),
             'actifs' => $ponts->where('statut', 'Actif')->count(),
             'inactifs' => $ponts->where('statut', 'Inactif')->count(),
-            'geolocalises' => $ponts->filter(fn (array $pont) => $pont['latitude'] && $pont['longitude'])->count(),
+            'geolocalises' => $ponts->where('has_coordinates', true)->count(),
         ];
 
-        return view('ponts.location', compact('ponts', 'stats'));
+        $regions = Region::query()
+            ->orderBy('nom')
+            ->get(['id', 'nom']);
+
+        return view('ponts.location', compact('ponts', 'stats', 'regions'));
+    }
+
+    public function locationRegion(Region $region): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $region->id,
+                'nom' => $region->nom,
+                'geojson' => $region->geojson,
+            ],
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -121,6 +144,7 @@ class PontBasculeController extends Controller
         $validated = $request->validate([
             'nom_pont' => ['required', 'string', 'max:255'],
             'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
+            'id_region' => ['required', 'integer', Rule::exists('regions', 'id')],
             'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
@@ -146,7 +170,8 @@ class PontBasculeController extends Controller
             ],
             'nom_pont' => ['required', 'string', 'max:255'],
             'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
-            'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')],
+            'id_region' => ['required', 'integer', Rule::exists('regions', 'id')],
+            'id_agent' => ['nullable', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
             'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],

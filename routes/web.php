@@ -9,6 +9,7 @@ use App\Http\Controllers\FinancementController;
 use App\Http\Controllers\GroupeController;
 use App\Http\Controllers\PretController;
 use App\Http\Controllers\PontBasculeController;
+use App\Http\Controllers\PontRegionController;
 use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\CollecteurController;
 use App\Http\Controllers\RegionController;
@@ -105,7 +106,17 @@ Route::middleware('auth')->group(function () {
     Route::put('/ponts/types/{typePont:id_type_pont}', [TypePontController::class, 'update'])->name('ponts.types.update');
     Route::delete('/ponts/types/{typePont:id_type_pont}', [TypePontController::class, 'destroy'])->name('ponts.types.destroy');
 
+    Route::get('/ponts/regions/ponts-map-data', [PontRegionController::class, 'pontsMapData'])->name('ponts.regions.ponts-map-data');
+    Route::get('/ponts/regions/map-data', [PontRegionController::class, 'mapData'])->name('ponts.regions.map-data');
+    Route::get('/ponts/regions/{region}', [PontRegionController::class, 'show'])->name('ponts.regions.show');
+    Route::post('/ponts/regions/import', [PontRegionController::class, 'import'])->name('ponts.regions.import');
+    Route::get('/ponts/regions', [PontRegionController::class, 'index'])->name('ponts.regions.index');
+    Route::post('/ponts/regions', [PontRegionController::class, 'store'])->name('ponts.regions.store');
+    Route::put('/ponts/regions/{region}', [PontRegionController::class, 'update'])->name('ponts.regions.update');
+    Route::delete('/ponts/regions/{region}', [PontRegionController::class, 'destroy'])->name('ponts.regions.destroy');
+
     Route::get('/ponts', [PontBasculeController::class, 'index'])->name('ponts.index');
+    Route::get('/ponts/localisation/regions/{region}', [PontBasculeController::class, 'locationRegion'])->name('ponts.location.region');
     Route::get('/ponts/localisation', [PontBasculeController::class, 'location'])->name('ponts.location');
     Route::post('/ponts', [PontBasculeController::class, 'store'])->name('ponts.store');
     Route::put('/ponts/{pont:id_pont}', [PontBasculeController::class, 'update'])->name('ponts.update');

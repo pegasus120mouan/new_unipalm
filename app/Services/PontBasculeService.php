@@ -50,6 +50,7 @@ class PontBasculeService
             'code_pont' => $this->generateCode(),
             'nom_pont' => trim($data['nom_pont']),
             'id_type_pont' => $data['id_type_pont'] ?? null,
+            'id_region' => $data['id_region'] ?? null,
             'id_agent' => $agent->id_agent,
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,
@@ -61,19 +62,24 @@ class PontBasculeService
 
     public function update(PontBascule $pont, array $data): PontBascule
     {
-        $agent = Agent::query()->findOrFail((int) $data['id_agent']);
-
-        $pont->update([
+        $payload = [
             'code_pont' => trim($data['code_pont']),
             'nom_pont' => trim($data['nom_pont']),
             'id_type_pont' => $data['id_type_pont'] ?? null,
-            'id_agent' => $agent->id_agent,
+            'id_region' => $data['id_region'] ?? null,
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,
-            'gerant' => $agent->full_name,
             'cooperatif' => filled($data['cooperatif'] ?? null) ? trim($data['cooperatif']) : null,
             'statut' => $data['statut'] ?? 'Actif',
-        ]);
+        ];
+
+        if (filled($data['id_agent'] ?? null)) {
+            $agent = Agent::query()->findOrFail((int) $data['id_agent']);
+            $payload['id_agent'] = $agent->id_agent;
+            $payload['gerant'] = $agent->full_name;
+        }
+
+        $pont->update($payload);
 
         return $pont->fresh();
     }

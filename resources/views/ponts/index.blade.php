@@ -161,6 +161,7 @@
                                 <th>Code</th>
                                 <th>Nom du pont</th>
                                 <th>Type</th>
+                                <th>Région</th>
                                 <th>Gérant</th>
                                 <th>Coopérative</th>
                                 <th>Coordonnées</th>
@@ -174,6 +175,13 @@
                                     <td><code>{{ $pont->code_pont }}</code></td>
                                     <td class="fw-semibold">{{ $pont->nom_pont }}</td>
                                     <td>{{ $pont->typePont?->libelle ?? '—' }}</td>
+                                    <td>
+                                        @if ($pont->region)
+                                            <span class="badge bg-info text-dark">{{ $pont->region->nom }}</span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">Non définie</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $pont->gerantLabel() }}</td>
                                     <td>{{ $pont->cooperatif ?: '—' }}</td>
                                     <td>
@@ -202,7 +210,9 @@
                                                 data-code="{{ $pont->code_pont }}"
                                                 data-nom="{{ $pont->nom_pont }}"
                                                 data-type-id="{{ $pont->id_type_pont }}"
+                                                data-id-region="{{ $pont->id_region }}"
                                                 data-id-agent="{{ $pont->id_agent }}"
+                                                data-gerant="{{ $pont->gerantLabel() }}"
                                                 data-cooperatif="{{ $pont->cooperatif }}"
                                                 data-statut="{{ $pont->statut }}"
                                                 data-latitude="{{ $pont->latitude }}"
@@ -220,7 +230,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         @if ($hasFilters)
                                             Aucun pont ne correspond aux filtres.
                                         @else
@@ -253,6 +263,15 @@
                         <div class="alert alert-info small">
                             <i class="bi bi-info-circle"></i> Le code pont sera généré automatiquement (ex. UNIPALM-PB-0001-CI).
                         </div>
+                        @if ($regions->isEmpty())
+                        <div class="alert alert-warning small">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Aucune région enregistrée.
+                            @if (auth()->user()->canAccessModule('ponts.regions'))
+                                <a href="{{ route('ponts.regions.index') }}">Importer les régions</a> avant d'ajouter un pont.
+                            @endif
+                        </div>
+                        @endif
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="nom_pont" class="form-label">Nom du pont *</label>
@@ -271,6 +290,18 @@
                                     @endforeach
                                 </select>
                                 @error('id_type_pont')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_region" class="form-label">Région *</label>
+                                <select name="id_region" id="id_region" class="form-select @error('id_region') is-invalid @enderror" required>
+                                    <option value="">— Sélectionner une région —</option>
+                                    @foreach ($regions as $region)
+                                        <option value="{{ $region->id }}" @selected(old('id_region') == $region->id)>
+                                            {{ $region->nom }}{{ $region->code ? ' ('.$region->code.')' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('id_region')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6 position-relative">
                                 <label for="gerant_search" class="form-label">Gérant *</label>
@@ -334,6 +365,7 @@
                 <form method="POST" id="editPontForm" action="">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="pont_id" id="edit_pont_id" value="">
                     <div class="modal-header bg-warning">
                         <h5 class="modal-title" id="editPontModalLabel">Modifier le pont-bascule</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
@@ -357,13 +389,25 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="edit_id_region" class="form-label">Région *</label>
+                                <select name="id_region" id="edit_id_region" class="form-select" required>
+                                    <option value="">— Sélectionner une région —</option>
+                                    @foreach ($regions as $region)
+                                        <option value="{{ $region->id }}">
+                                            {{ $region->nom }}{{ $region->code ? ' ('.$region->code.')' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-md-6 position-relative">
                                 <label for="edit_gerant_search" class="form-label">Gérant *</label>
                                 <input type="text" id="edit_gerant_search"
                                     class="form-control"
                                     placeholder="Rechercher par N° agent..."
                                     autocomplete="off">
-                                <input type="hidden" name="id_agent" id="edit_id_agent" required>
+                                <input type="hidden" name="id_agent" id="edit_id_agent">
+                                <div class="form-text">Optionnel si le gérant historique est déjà renseigné.</div>
                                 <div id="edit_gerant_suggestions" class="list-group position-absolute w-100 shadow-sm"
                                     style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
                                 <div id="edit_gerant_found" class="form-text mt-1" style="display: none;">
@@ -631,10 +675,20 @@
                 button.addEventListener('click', function () {
                     const id = button.dataset.id;
                     editForm.action = `${pontBaseUrl}/${id}`;
+                    document.getElementById('edit_pont_id').value = id;
                     document.getElementById('edit_code_pont').value = button.dataset.code || '';
                     document.getElementById('edit_nom_pont').value = button.dataset.nom || '';
                     document.getElementById('edit_id_type_pont').value = button.dataset.typeId || '';
-                    editGerantAutocomplete.setAgent(button.dataset.idAgent || '');
+                    document.getElementById('edit_id_region').value = button.dataset.idRegion || '';
+                    if (button.dataset.idAgent) {
+                        editGerantAutocomplete.setAgent(button.dataset.idAgent);
+                    } else {
+                        editGerantAutocomplete.clearSelection();
+                        const gerantSearch = document.getElementById('edit_gerant_search');
+                        if (gerantSearch && button.dataset.gerant) {
+                            gerantSearch.value = button.dataset.gerant;
+                        }
+                    }
                     document.getElementById('edit_cooperatif').value = button.dataset.cooperatif || '';
                     document.getElementById('edit_statut').value = button.dataset.statut || 'Actif';
                     document.getElementById('edit_latitude').value = button.dataset.latitude || '';
@@ -657,7 +711,27 @@
                 addGerantAutocomplete.setAgent(@json(old('id_agent')));
             @endif
 
-            @if ($errors->any() && ! old('_method'))
+            @if ($errors->any() && old('_method') === 'PUT')
+                (function () {
+                    const editForm = document.getElementById('editPontForm');
+                    const pontId = @json(old('pont_id'));
+                    if (editForm && pontId) {
+                        editForm.action = `${pontBaseUrl}/${pontId}`;
+                    }
+                    document.getElementById('edit_code_pont').value = @json(old('code_pont', ''));
+                    document.getElementById('edit_nom_pont').value = @json(old('nom_pont', ''));
+                    document.getElementById('edit_id_type_pont').value = @json(old('id_type_pont', ''));
+                    document.getElementById('edit_id_region').value = @json(old('id_region', ''));
+                    document.getElementById('edit_cooperatif').value = @json(old('cooperatif', ''));
+                    document.getElementById('edit_statut').value = @json(old('statut', 'Actif'));
+                    document.getElementById('edit_latitude').value = @json(old('latitude', ''));
+                    document.getElementById('edit_longitude').value = @json(old('longitude', ''));
+                    if (@json(old('id_agent'))) {
+                        editGerantAutocomplete.setAgent(@json(old('id_agent')));
+                    }
+                    new bootstrap.Modal(document.getElementById('editPontModal')).show();
+                })();
+            @elseif ($errors->any() && ! old('_method'))
                 new bootstrap.Modal(document.getElementById('addPontModal')).show();
             @endif
         });
