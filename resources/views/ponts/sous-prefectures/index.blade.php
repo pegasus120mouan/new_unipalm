@@ -215,6 +215,8 @@
                             <div class="form-text">
                                 Propriétés reconnues : <code>NomSp</code> / <code>CodSp</code>, <code>NomDep</code> / <code>CodDep</code>, <code>NomReg</code> / <code>CodReg</code>.
                                 Les départements et régions doivent déjà exister en base.
+                                Fichier volumineux en production ? Utilisez SSH :
+                                <code>php artisan geojson:import sous-prefectures /chemin/fichier.geojson</code>
                             </div>
                         </div>
                         <div class="mb-0">
