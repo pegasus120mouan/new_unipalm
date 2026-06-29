@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Concerns\ValidatesGeoJsonFile;
 use App\Models\Departement;
 use App\Services\DepartementGeoJsonImporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use InvalidArgumentException;
 
 class PontDepartementController extends Controller
 {
+    use ValidatesGeoJsonFile;
     public function __construct(
         private readonly DepartementGeoJsonImporter $geoJsonImporter,
     ) {}
@@ -103,29 +104,11 @@ class PontDepartementController extends Controller
 
     public function import(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'geojson_file' => ['required', 'file', 'max:102400'],
-            'mode' => ['nullable', Rule::in(['create', 'upsert'])],
-        ]);
-
-        $extension = strtolower($request->file('geojson_file')->getClientOriginalExtension());
-        if (! in_array($extension, ['json', 'geojson'], true)) {
-            return back()->withErrors([
-                'geojson_file' => 'Le fichier doit être au format .json ou .geojson.',
-            ]);
-        }
-
-        $content = file_get_contents($request->file('geojson_file')->getRealPath());
-        $data = json_decode($content, true);
-
-        if (! is_array($data)) {
-            return back()->withErrors([
-                'geojson_file' => 'Le fichier GeoJSON n\'est pas un JSON valide.',
-            ]);
-        }
+        $import = $this->validateGeoJsonImport($request);
+        $data = $this->decodeGeoJsonFile($import['file']);
 
         try {
-            $result = $this->geoJsonImporter->import($data, $validated['mode'] ?? 'upsert');
+            $result = $this->geoJsonImporter->import($data, $import['mode']);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors([
                 'geojson_file' => $exception->getMessage(),

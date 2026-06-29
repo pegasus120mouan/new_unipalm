@@ -212,6 +212,7 @@
                             <div class="form-text">
                                 Propriétés reconnues : <code>NomDep</code> / <code>CodDep</code>, <code>NomReg</code> / <code>CodReg</code>.
                                 La région doit déjà exister en base (page Régions).
+                                Les fichiers GeoJSON peuvent être volumineux (plusieurs Mo) : en production, PHP et nginx doivent autoriser au moins 64 Mo.
                             </div>
                         </div>
                         <div class="mb-0">
