@@ -29,9 +29,9 @@ class AgentBordereauPaymentService
         };
     }
 
-    public function pay(Bordereau $bordereau, Utilisateur $caissier, array $data): void
+    public function pay(Bordereau $bordereau, Utilisateur $caissier, array $data): int
     {
-        DB::transaction(function () use ($bordereau, $caissier, $data) {
+        return DB::transaction(function () use ($bordereau, $caissier, $data): int {
             /** @var Bordereau $locked */
             $locked = Bordereau::query()
                 ->whereKey($bordereau->id_bordereau)
@@ -64,8 +64,9 @@ class AgentBordereauPaymentService
             $source = $data['source_paiement'];
             $soldeFinancement = (float) $this->financementService->statsForAgent((int) $locked->id_agent)['solde_financement'];
             $soldeCaisse = $this->caisseService->getSolde();
+            $montantUtilisable = $this->caisseService->getMontantUtilisable();
 
-            $maxPayable = $this->maxPayableAmount($reste, $source, $soldeFinancement, $soldeCaisse);
+            $maxPayable = $this->maxPayableAmount($reste, $source, $soldeFinancement, $montantUtilisable);
             if ($montant > $maxPayable) {
                 throw new InvalidArgumentException('Le montant dépasse le maximum autorisé pour cette source de paiement.');
             }
@@ -90,9 +91,9 @@ class AgentBordereauPaymentService
                 throw new InvalidArgumentException('Solde de financement insuffisant pour cet agent.');
             }
 
-            if ($source === 'transactions' && $soldeCaisse < $montant) {
+            if ($source === 'transactions' && $montantUtilisable < $montant) {
                 throw new InvalidArgumentException(
-                    'Solde de caisse insuffisant. Solde actuel : '.number_format($soldeCaisse, 0, '', ' ').' FCFA'
+                    'Montant utilisable insuffisant. Disponible : '.number_format($montantUtilisable, 0, '', ' ').' FCFA'
                 );
             }
 
@@ -139,11 +140,15 @@ class AgentBordereauPaymentService
                     'solde' => $soldeApres,
                     'numero_cheque' => null,
                 ]);
+
+                if ($source === 'transactions') {
+                    $this->caisseService->debiterUtilisable($montant);
+                }
             }
 
             $numeroRecu = now()->format('Ymd').sprintf('%04d', random_int(1, 9999));
 
-            DB::table('recus_paiements')->insert([
+            $recuId = (int) DB::table('recus_paiements')->insertGetId([
                 'numero_recu' => $numeroRecu,
                 'type_document' => 'bordereau',
                 'id_document' => $locked->id_bordereau,
@@ -164,6 +169,8 @@ class AgentBordereauPaymentService
                 'id_transaction' => $idTransaction,
                 'date_creation' => now(),
             ]);
+
+            return $recuId;
         });
     }
 

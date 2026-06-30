@@ -20,6 +20,34 @@ class MinioStorageService
         return trim((string) config('minio.users_prefix', 'utilisateurs'), '/');
     }
 
+    public function agentsDocumentsPrefix(): string
+    {
+        return trim((string) config('minio.agents_documents_prefix', 'agents/documents'), '/');
+    }
+
+    public function uploadAgentDocument(UploadedFile $file, int $agentId, string $type): string
+    {
+        if (! $this->isConfigured()) {
+            throw new RuntimeException('MinIO n\'est pas configuré.');
+        }
+
+        $extension = $file->getClientOriginalExtension() ?: ($file->guessExtension() ?: 'bin');
+        $extension = preg_replace('/[^a-z0-9]+/i', '', strtolower($extension)) ?: 'bin';
+        $safeType = preg_replace('/[^a-z0-9_]+/i', '', $type);
+        $objectKey = $this->agentsDocumentsPrefix().'/'.$agentId.'/'.$safeType.'_'.time().'.'.$extension;
+
+        $mimeType = $file->getMimeType() ?: 'application/octet-stream';
+        $contents = file_get_contents($file->getRealPath());
+
+        if ($contents === false) {
+            throw new RuntimeException('Impossible de lire le fichier uploadé.');
+        }
+
+        $this->putObject($objectKey, $contents, $mimeType);
+
+        return $objectKey;
+    }
+
     public function isMinioObjectKey(?string $avatar): bool
     {
         if ($avatar === null || $avatar === '' || $avatar === 'default.jpg') {

@@ -16,4 +16,6 @@ return [
 
   'users_prefix' => env('MINIO_USERS_PREFIX', 'utilisateurs'),
 
+  'agents_documents_prefix' => env('MINIO_AGENTS_DOCUMENTS_PREFIX', 'agents/documents'),
+
 ];

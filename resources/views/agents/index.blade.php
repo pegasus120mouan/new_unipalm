@@ -157,6 +157,7 @@
                     <table class="table table-hover align-middle mb-0 agents-data-table">
                         <thead class="agents-table-header">
                             <tr>
+                                <th class="text-center">Avatar</th>
                                 <th>N° Agent</th>
                                 <th>Nom</th>
                                 <th>Prénom</th>
@@ -171,7 +172,33 @@
                         </thead>
                         <tbody>
                             @forelse ($agents as $agent)
+                                @php
+                                    $photoIdentite = $agent->photoIdentiteDocument;
+                                    $photoUrl = $photoIdentite && $photoIdentite->isImage()
+                                        ? route('agents.documents.show', ['agent' => $agent, 'type' => \App\Models\AgentDocument::TYPE_PHOTO_IDENTITE])
+                                        : null;
+                                    $initials = strtoupper(
+                                        mb_substr(trim((string) $agent->nom), 0, 1)
+                                        .mb_substr(trim((string) $agent->prenom), 0, 1)
+                                    ) ?: '?';
+                                @endphp
                                 <tr data-agent-row="{{ $agent->id_agent }}">
+                                    <td class="text-center">
+                                        @if ($photoUrl)
+                                            <a href="{{ route('agents.show', $agent) }}#agent-documents" title="Photo d'identité — {{ $agent->full_name }}">
+                                                <img src="{{ $photoUrl }}" alt="{{ $agent->full_name }}"
+                                                    class="rounded-circle border agent-list-avatar"
+                                                    width="40" height="40"
+                                                    loading="lazy">
+                                            </a>
+                                        @else
+                                            <a href="{{ route('agents.show', $agent) }}#agent-documents"
+                                                class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center text-decoration-none agent-list-avatar agent-list-avatar--placeholder fw-semibold"
+                                                title="Aucune photo d'identité">
+                                                {{ $initials }}
+                                            </a>
+                                        @endif
+                                    </td>
                                     <td>
                                         @if ($agent->numero_agent)
                                             <a href="{{ route('agents.show', $agent) }}" class="badge bg-primary text-decoration-none">
@@ -248,7 +275,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center text-muted py-4">
+                                    <td colspan="11" class="text-center text-muted py-4">
                                         Aucun agent trouvé.
                                     </td>
                                 </tr>
@@ -523,6 +550,19 @@
         .agent-suggestion-numero {
             color: #6c757d;
             font-size: 0.82rem;
+        }
+
+        .agent-list-avatar {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+        }
+
+        .agent-list-avatar--placeholder {
+            width: 40px;
+            height: 40px;
+            font-size: 0.8rem;
+            line-height: 1;
         }
     </style>
     <script>

@@ -169,6 +169,7 @@
     @foreach ($usines as $usine)
         @include('usines.partials.payment-modal', [
             'usine' => $usine,
+            'banques' => $banques,
             'redirectTo' => route('usines.amounts', request()->only('search', 'page')),
             'resteAPayer' => $usine->reste_a_payer,
         ])
@@ -177,7 +178,7 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/amount-input.js') }}"></script>
-    @if (session('payment_usine_id') || $errors->has('paiement') || $errors->has('montant'))
+    @if (session('payment_usine_id') || $errors->has('paiement') || $errors->has('montant') || $errors->has('id_banque'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var usineId = @json(session('payment_usine_id') ?? old('payment_usine_id'));

@@ -3,11 +3,15 @@
     $montantTotal = (float) $bordereau->montant_total;
     $montantPaye = (float) ($bordereau->montant_payer ?? 0);
     $reste = (float) ($bordereau->montant_reste ?? max($montantTotal - $montantPaye, 0));
+    $soldeCaisse = $soldeCaisse ?? 0;
+    $montantUtilisable = $montantUtilisable ?? $soldeCaisse;
+    $limiteCaisse = min((float) $soldeCaisse, (float) $montantUtilisable);
+    $redirectTo = $redirectTo ?? route('comptes-agents.show', ['agent' => $agent, 'section' => 'bordereaux']);
     $soldeFinancement = (float) ($financementStats['solde_financement'] ?? 0);
     $defaultSource = $soldeFinancement > 0 ? 'financement' : 'transactions';
     $maxDefault = match ($defaultSource) {
         'financement' => min($reste, max(0, $soldeFinancement)),
-        default => min($reste, max(0, $soldeCaisse)),
+        default => min($reste, max(0, $limiteCaisse)),
     };
     $isErrorModal = (int) old('payment_bordereau_id') === (int) $bordereau->id_bordereau;
 @endphp
@@ -18,7 +22,7 @@
             <form method="POST" action="{{ route('comptes-agents.bordereaux.payment', $bordereau) }}">
                 @csrf
                 <input type="hidden" name="payment_bordereau_id" value="{{ $bordereau->id_bordereau }}">
-                <input type="hidden" name="redirect_to" value="{{ route('comptes-agents.show', ['agent' => $agent, 'section' => 'bordereaux']) }}">
+                <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="{{ $modalId }}Label">
                         Paiement du bordereau #{{ $bordereau->numero_bordereau }}
@@ -47,7 +51,10 @@
                         <i class="bi bi-wallet2 me-2"></i>
                         <div>
                             <strong>Solde Caisse :</strong> {{ number_format($soldeCaisse, 0, '', ' ') }} FCFA
-                            @if ($soldeCaisse < $reste && $soldeFinancement <= 0)
+                            @if ($limiteCaisse < $soldeCaisse)
+                                <br><small>Utilisable : {{ number_format($limiteCaisse, 0, '', ' ') }} FCFA</small>
+                            @endif
+                            @if ($limiteCaisse < $reste && $soldeFinancement <= 0)
                                 <br><small class="text-warning">Solde insuffisant pour payer la totalité</small>
                             @endif
                         </div>
@@ -59,17 +66,17 @@
                             data-modal-id="{{ $modalId }}"
                             data-reste="{{ $reste }}"
                             data-financement="{{ $soldeFinancement }}"
-                            data-caisse="{{ $soldeCaisse }}">
+                            data-caisse="{{ $limiteCaisse }}">
                             @if ($soldeFinancement > 0)
                                 <option value="financement" @selected($isErrorModal ? old('source_paiement') === 'financement' : true)>
                                     Financement (Solde: {{ number_format($soldeFinancement, 0, '', ' ') }} FCFA)
                                 </option>
-                                <option value="transactions" @selected($isErrorModal && old('source_paiement') === 'transactions') @disabled($soldeCaisse <= 0)>
-                                    Sortie de caisse (Solde: {{ number_format($soldeCaisse, 0, '', ' ') }} FCFA)
+                                <option value="transactions" @selected($isErrorModal && old('source_paiement') === 'transactions') @disabled($limiteCaisse <= 0)>
+                                    Sortie de caisse (Utilisable: {{ number_format($limiteCaisse, 0, '', ' ') }} FCFA)
                                 </option>
                             @else
-                                <option value="transactions" @selected($isErrorModal ? old('source_paiement') === 'transactions' : true) @disabled($soldeCaisse <= 0)>
-                                    Sortie de caisse (Solde: {{ number_format($soldeCaisse, 0, '', ' ') }} FCFA)
+                                <option value="transactions" @selected($isErrorModal ? old('source_paiement') === 'transactions' : true) @disabled($limiteCaisse <= 0)>
+                                    Sortie de caisse (Utilisable: {{ number_format($limiteCaisse, 0, '', ' ') }} FCFA)
                                 </option>
                                 <option value="financement" disabled>
                                     Financement (Solde: 0 FCFA)

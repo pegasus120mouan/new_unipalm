@@ -193,6 +193,39 @@ class CompteAgentService
         return $query->paginate($perPage, ['*'], 'page_bordereaux')->withQueryString();
     }
 
+    /**
+     * @param  array<string, string>  $filters
+     */
+    public function paginatedAllValidatedBordereaux(array $filters, int $perPage = 20): LengthAwarePaginator
+    {
+        $query = Bordereau::query()
+            ->with(['agent'])
+            ->whereNotNull('date_validation_boss')
+            ->withCount(['tickets' => fn ($q) => $q->validated()])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id_bordereau');
+
+        if (($filters['search_numero'] ?? '') !== '') {
+            $query->where('numero_bordereau', 'like', '%'.$filters['search_numero'].'%');
+        }
+
+        if (($filters['search_agent'] ?? '') !== '') {
+            $query->where('id_agent', $filters['search_agent']);
+        }
+
+        if (! empty($filters['date_debut'])) {
+            $query->whereDate('created_at', '>=', $filters['date_debut']);
+        }
+
+        if (! empty($filters['date_fin'])) {
+            $query->whereDate('created_at', '<=', $filters['date_fin']);
+        }
+
+        $this->applyBordereauStatusFilter($query, $filters['statut'] ?? '');
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
     public function ticketPaymentStatusKey(?float $montantPaye, ?float $montantReste, mixed $datePaie): string
     {
         $paye = (float) ($montantPaye ?? 0);

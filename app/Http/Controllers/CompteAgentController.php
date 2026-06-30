@@ -111,7 +111,7 @@ class CompteAgentController extends Controller
         }
 
         try {
-            $this->bordereauPaymentService->pay($bordereau, $request->user(), $validated);
+            $recuId = $this->bordereauPaymentService->pay($bordereau, $request->user(), $validated);
         } catch (InvalidArgumentException $e) {
             return back()
                 ->withInput()
@@ -124,7 +124,8 @@ class CompteAgentController extends Controller
         ]);
 
         return redirect()->to($redirect)
-            ->with('success', 'Paiement du bordereau enregistré avec succès.');
+            ->with('success', 'Paiement du bordereau enregistré avec succès.')
+            ->with('last_recu_id', $recuId);
     }
 
     public function transactionsHistoryPdf(Request $request, Agent $agent): Response

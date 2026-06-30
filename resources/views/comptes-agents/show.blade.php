@@ -20,12 +20,7 @@
 @section('content')
     @inject('compteAgentService', 'App\Services\CompteAgentService')
 
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
-        </div>
-    @endif
+    @include('caisse.partials.payment-success-alert')
 
     @if ($errors->has('paiement'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">

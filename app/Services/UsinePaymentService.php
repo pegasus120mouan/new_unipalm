@@ -5,10 +5,25 @@ namespace App\Services;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\Usine;
+use App\Models\Utilisateur;
+use App\Services\ApprovisionnementService;
 use Illuminate\Support\Facades\DB;
 
 class UsinePaymentService
 {
+    public function __construct(
+        private readonly ApprovisionnementService $approvisionnementService,
+    ) {}
+
+    public function resteAPayer(int $idUsine): float
+    {
+        return (float) Ticket::query()
+            ->validated()
+            ->where('id_usine', $idUsine)
+            ->where('montant_reste', '>', 0)
+            ->sum('montant_reste');
+    }
+
     /**
      * Enregistre un paiement pour une usine et le répartit sur les tickets
      * non soldés de cette usine, du plus ancien au plus récent.
@@ -21,6 +36,8 @@ class UsinePaymentService
         string $datePaiement,
         string $modePaiement,
         ?string $referencePaiement,
+        ?Utilisateur $utilisateur = null,
+        bool $crediterCaisse = true,
     ): Payment {
         $resteTotal = Ticket::query()
             ->validated()
@@ -42,6 +59,8 @@ class UsinePaymentService
             $datePaiement,
             $modePaiement,
             $referencePaiement,
+            $utilisateur,
+            $crediterCaisse,
         ) {
             $payment = Payment::create([
                 'id_usine' => $usine->id_usine,
@@ -52,6 +71,17 @@ class UsinePaymentService
             ]);
 
             $this->distributePayment($usine, $montant, $datePaiement);
+
+            if ($crediterCaisse && $utilisateur !== null) {
+                $this->approvisionnementService->recordUsinePayment(
+                    $usine,
+                    $montant,
+                    $modePaiement,
+                    $referencePaiement,
+                    $utilisateur,
+                    \Carbon\Carbon::parse($datePaiement),
+                );
+            }
 
             return $payment;
         });

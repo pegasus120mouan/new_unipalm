@@ -670,33 +670,34 @@
                             <ul class="submenu ">
 
                                 @if ($canModule('sorties.demandes'))
-                                <li class="submenu-item ">
+                                <li class="submenu-item {{ request()->routeIs('sorties.demandes.*') ? 'active' : '' }}">
 
-                                    <a href="form-editor-quill.html">Liste des demandes</a>
+                                    <a href="{{ route('sorties.demandes.index') }}">
+                                        <i class="bi bi-list-ul submenu-icon--sorties-list"></i>
+                                        <span>Liste des demandes</span>
+                                    </a>
 
                                 </li>
                                 @endif
 
                                 @if ($canModule('sorties.pending'))
-                                <li class="submenu-item ">
+                                <li class="submenu-item {{ request()->routeIs('sorties.pending.*') ? 'active' : '' }}">
 
-                                    <a href="form-editor-ckeditor.html">Demandes en attente</a>
-
-                                </li>
-                                @endif
-
-                                @if ($canModule('sorties.validated'))
-                                <li class="submenu-item ">
-
-                                    <a href="form-editor-summernote.html">Demandes validées</a>
+                                    <a href="{{ route('sorties.pending.index') }}">
+                                        <i class="bi bi-hourglass-split submenu-icon--sorties-pending"></i>
+                                        <span>Demandes en attente</span>
+                                    </a>
 
                                 </li>
                                 @endif
 
                                 @if ($canModule('sorties.diverses'))
-                                <li class="submenu-item ">
+                                <li class="submenu-item {{ request()->routeIs('sorties.diverses.*') ? 'active' : '' }}">
 
-                                    <a href="form-editor-tinymce.html">Sorties Diverses</a>
+                                    <a href="{{ route('sorties.diverses.index') }}">
+                                        <i class="bi bi-cash-stack submenu-icon--sorties-diverses"></i>
+                                        <span>Sorties Diverses</span>
+                                    </a>
 
                                 </li>
                                 @endif
@@ -706,7 +707,47 @@
                         </li>
                         @endif
 
-                        @if ($canModuleAny(['caisse.solde', 'caisse.approvisionnement', 'caisse.banques']))
+                        @if ($canModule('caisse.banques'))
+                        <li class="sidebar-item has-sub">
+
+                            <a href="#" class='sidebar-link'>
+
+                                <span class="sidebar-icon sidebar-icon--banques"><i class="bi bi-building"></i></span>
+
+                                <span>Gestion banques</span>
+
+                            </a>
+
+                            <ul class="submenu ">
+
+                                @if ($canModule('caisse.banques'))
+                                <li class="submenu-item {{ request()->routeIs('caisse.banques.index', 'caisse.banques.show') ? 'active' : '' }}">
+
+                                    <a href="{{ route('caisse.banques.index') }}">
+                                        <i class="bi bi-building submenu-icon--caisse-banques"></i>
+                                        <span>Liste des banques</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('caisse.banques'))
+                                <li class="submenu-item {{ request()->routeIs('caisse.banques.approvisionnement-caisse.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('caisse.banques.approvisionnement-caisse.index') }}">
+                                        <i class="bi bi-cash-stack submenu-icon--caisse-banques"></i>
+                                        <span>Approvisionnement caisse</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                            </ul>
+
+                        </li>
+                        @endif
+
+
+                        @if ($canModuleAny(['caisse.solde', 'caisse.approvisionnement', 'caisse.paiements']))
                         <li class="sidebar-item has-sub">
 
                             <a href="#" class='sidebar-link'>
@@ -720,25 +761,23 @@
                             <ul class="submenu ">
 
                                 @if ($canModule('caisse.solde'))
-                                <li class="submenu-item ">
+                                <li class="submenu-item {{ request()->routeIs('caisse.solde.*') ? 'active' : '' }}">
 
-                                    <a href="ui-widgets-chatbox.html">Solde de la caisse</a>
-
-                                </li>
-                                @endif
-
-                                @if ($canModule('caisse.approvisionnement'))
-                                <li class="submenu-item ">
-
-                                    <a href="ui-widgets-pricing.html">Approvisionnement</a>
+                                    <a href="{{ route('caisse.solde.index') }}">
+                                        <i class="bi bi-wallet2 submenu-icon--caisse-solde"></i>
+                                        <span>Solde de la caisse</span>
+                                    </a>
 
                                 </li>
                                 @endif
 
-                                @if ($canModule('caisse.banques'))
-                                <li class="submenu-item ">
+                                @if ($canModule('caisse.paiements'))
+                                <li class="submenu-item {{ request()->routeIs('caisse.paiements.*') ? 'active' : '' }}">
 
-                                    <a href="ui-widgets-todolist.html">Banques</a>
+                                    <a href="{{ route('caisse.paiements.index') }}">
+                                        <i class="bi bi-credit-card submenu-icon--caisse-paiements"></i>
+                                        <span>Effectuer un paiement</span>
+                                    </a>
 
                                 </li>
                                 @endif
@@ -747,6 +786,7 @@
 
                         </li>
                         @endif
+
 
                         @if ($canModuleAny(['recus.tickets', 'recus.demandes']))
                         <li class="sidebar-item has-sub">
@@ -762,9 +802,12 @@
                             <ul class="submenu ">
 
                                 @if ($canModule('recus.tickets'))
-                                <li class="submenu-item ">
+                                <li class="submenu-item {{ request()->routeIs('recus.tickets.*') ? 'active' : '' }}">
 
-                                    <a href="ui-icons-bootstrap-icons.html">Recu paiement tickets/bordereaux</a>
+                                    <a href="{{ route('recus.tickets.index') }}">
+                                        <i class="bi bi-receipt-cutoff submenu-icon--recus-tickets"></i>
+                                        <span>Recu paiement tickets/bordereaux</span>
+                                    </a>
 
                                 </li>
                                 @endif
@@ -772,7 +815,10 @@
                                 @if ($canModule('recus.demandes'))
                                 <li class="submenu-item ">
 
-                                    <a href="ui-icons-fontawesome.html">Recu des paiements demandes et diverses</a>
+                                    <a href="ui-icons-fontawesome.html">
+                                        <i class="bi bi-file-earmark-text submenu-icon--recus-demandes"></i>
+                                        <span>Recu des paiements demandes et diverses</span>
+                                    </a>
 
                                 </li>
                                 @endif

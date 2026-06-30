@@ -31,13 +31,15 @@ class GroupeTicketPaymentService
         }
 
         return DB::transaction(function () use ($groupe, $caissier, $montant, $motif) {
-            $soldeCaisse = $this->caisseService->getSolde();
+            $montantUtilisable = $this->caisseService->getMontantUtilisable();
 
-            if ($soldeCaisse < $montant) {
+            if ($montantUtilisable < $montant) {
                 throw new InvalidArgumentException(
-                    'Solde de caisse insuffisant. Solde actuel : '.number_format($soldeCaisse, 0, '', ' ').' FCFA'
+                    'Montant utilisable insuffisant. Disponible : '.number_format($montantUtilisable, 0, '', ' ').' FCFA'
                 );
             }
+
+            $soldeCaisse = $this->caisseService->getSolde();
 
             $tickets = Ticket::query()
                 ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
@@ -114,6 +116,8 @@ class GroupeTicketPaymentService
                 'solde' => $nouveauSolde,
                 'numero_cheque' => null,
             ]);
+
+            $this->caisseService->debiterUtilisable($montantApplique);
 
             $resteGlobal = (float) Ticket::query()
                 ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')

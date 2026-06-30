@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Banque;
 use App\Models\Ticket;
 use App\Models\Usine;
+use App\Services\BanqueService;
 use App\Services\UsinePaymentPdfService;
-use App\Services\UsinePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UsineController extends Controller
 {
     public function __construct(
-        private readonly UsinePaymentService $paymentService,
+        private readonly BanqueService $banqueService,
         private readonly UsinePaymentPdfService $paymentPdfService,
     ) {}
 
@@ -74,7 +76,12 @@ class UsineController extends Controller
             ])
             ->first();
 
-        return view('usines.amounts', compact('usines', 'totals', 'search'));
+        $banques = Banque::query()
+            ->where('actif', true)
+            ->orderBy('nom_banque')
+            ->get();
+
+        return view('usines.amounts', compact('usines', 'totals', 'search', 'banques'));
     }
 
     public function amountsShow(Usine $usine): View
@@ -121,6 +128,11 @@ class UsineController extends Controller
         }
 
         $validated = $request->validate([
+            'id_banque' => [
+                'required',
+                'integer',
+                Rule::exists('banques', 'id_banque')->where('actif', true),
+            ],
             'montant' => ['required', 'numeric', 'min:0.01'],
             'date_paiement' => ['required', 'date'],
             'mode_paiement' => ['required', 'string', 'max:100'],
@@ -129,13 +141,17 @@ class UsineController extends Controller
             'payment_usine_id' => ['nullable', 'integer'],
         ]);
 
+        $banque = Banque::query()->findOrFail($validated['id_banque']);
+
         try {
-            $this->paymentService->create(
+            $this->banqueService->paiementUsine(
+                $banque,
                 $usine,
                 (float) $validated['montant'],
                 $validated['date_paiement'],
                 $validated['mode_paiement'],
                 $validated['reference_paiement'] ?? null,
+                $request->user(),
             );
         } catch (\InvalidArgumentException $e) {
             return back()
@@ -150,7 +166,9 @@ class UsineController extends Controller
         }
 
         return redirect($redirectTo)
-            ->with('success', 'Paiement enregistré avec succès.');
+            ->with('success', 'Paiement de '
+                .number_format((float) $validated['montant'], 0, ',', ' ')
+                .' FCFA enregistré pour '.$usine->nom_usine.' et crédité sur '.$banque->nom_banque.'.');
     }
 
     public function store(Request $request): RedirectResponse

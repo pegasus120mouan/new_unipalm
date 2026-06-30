@@ -6,6 +6,8 @@ use App\Models\Agent;
 use App\Models\Groupe;
 use App\Models\PontBascule;
 use App\Services\AgentService;
+use App\Services\AgentDocumentService;
+use App\Services\MinioStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,7 @@ class AgentController extends Controller
 {
     public function __construct(
         private readonly AgentService $agentService,
+        private readonly AgentDocumentService $documentService,
     ) {}
 
     public function index(Request $request): View
@@ -29,7 +32,7 @@ class AgentController extends Controller
         ];
 
         $agentsQuery = Agent::query()
-            ->with(['groupe', 'createur'])
+            ->with(['groupe', 'createur', 'photoIdentiteDocument'])
             ->withCount('ponts')
             ->whereNull('date_suppression');
 
@@ -232,7 +235,10 @@ class AgentController extends Controller
             ->orderBy('prenoms')
             ->get();
 
-        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts'))
+        $documents = $this->documentService->documentsByType($agent);
+        $minioConfigured = app(MinioStorageService::class)->isConfigured();
+
+        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts', 'documents', 'minioConfigured'))
             ->with('sousGroupes', Agent::sousGroupes());
     }
 

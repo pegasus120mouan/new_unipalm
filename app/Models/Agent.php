@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'numero_agent',
@@ -102,5 +103,16 @@ class Agent extends Model
     public function ponts(): HasMany
     {
         return $this->hasMany(PontBascule::class, 'id_agent', 'id_agent');
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(AgentDocument::class, 'id_agent', 'id_agent');
+    }
+
+    public function photoIdentiteDocument(): HasOne
+    {
+        return $this->hasOne(AgentDocument::class, 'id_agent', 'id_agent')
+            ->where('type', AgentDocument::TYPE_PHOTO_IDENTITE);
     }
 }

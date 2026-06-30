@@ -186,6 +186,8 @@
         </div>
     </section>
 
+    @include('agents.partials.documents-section')
+
     <section class="row mb-4" id="agent-ponts">
         <div class="col-12">
             <div class="card">

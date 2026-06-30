@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\AgentDocumentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BordereauController;
 use App\Http\Controllers\CompteAgentController;
@@ -25,6 +26,12 @@ use App\Http\Controllers\UsineController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\UtilisateurPhotoController;
 use App\Models\Utilisateur;
+use App\Http\Controllers\CaisseBanqueController;
+use App\Http\Controllers\CaisseSoldeController;
+use App\Http\Controllers\CaissePaiementController;
+use App\Http\Controllers\RecuPaiementController;
+use App\Http\Controllers\SortieDiverseController;
+use App\Http\Controllers\DemandeSortieController;
 use App\Http\Controllers\VehiculeController;
 use Illuminate\Support\Facades\Route;
 
@@ -88,6 +95,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/agents/autocomplete', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');
     Route::post('/agents', [AgentController::class, 'store'])->name('agents.store');
     Route::get('/agents/{agent:id_agent}', [AgentController::class, 'show'])->name('agents.show');
+    Route::post('/agents/{agent:id_agent}/documents/{type}', [AgentDocumentController::class, 'store'])->name('agents.documents.store');
+    Route::get('/agents/{agent:id_agent}/documents/{type}', [AgentDocumentController::class, 'show'])->name('agents.documents.show');
     Route::put('/agents/{agent:id_agent}', [AgentController::class, 'update'])->name('agents.update');
     Route::post('/agents/{agent:id_agent}/ponts', [AgentController::class, 'associatePont'])->name('agents.associate-pont');
     Route::patch('/agents/{agent:id_agent}/inline', [AgentController::class, 'inlineUpdate'])->name('agents.inline-update');
@@ -100,6 +109,40 @@ Route::middleware('auth')->group(function () {
     Route::get('/montants-usines/{usine:id_usine}/historique-paiements/pdf', [UsineController::class, 'paymentsHistoryPdf'])
         ->name('usines.amounts.payments.pdf');
     Route::post('/montants-usines/{usine:id_usine}/paiement', [UsineController::class, 'storePayment'])->name('usines.amounts.payment');
+
+    Route::get('/sorties/en-attente', [DemandeSortieController::class, 'pending'])->name('sorties.pending.index');
+    Route::post('/sorties/en-attente/{demandeSortie:id_demande}/approuver', [DemandeSortieController::class, 'approve'])->name('sorties.pending.approve');
+    Route::post('/sorties/en-attente/{demandeSortie:id_demande}/refuser', [DemandeSortieController::class, 'reject'])->name('sorties.pending.reject');
+
+    Route::get('/sorties/demandes', [DemandeSortieController::class, 'index'])->name('sorties.demandes.index');
+    Route::post('/sorties/demandes', [DemandeSortieController::class, 'store'])->name('sorties.demandes.store');
+    Route::put('/sorties/demandes/{demandeSortie:id_demande}', [DemandeSortieController::class, 'update'])->name('sorties.demandes.update');
+    Route::delete('/sorties/demandes/{demandeSortie:id_demande}', [DemandeSortieController::class, 'destroy'])->name('sorties.demandes.destroy');
+
+    Route::get('/sorties/diverses', [SortieDiverseController::class, 'index'])->name('sorties.diverses.index');
+    Route::post('/sorties/diverses', [SortieDiverseController::class, 'store'])->name('sorties.diverses.store');
+    Route::delete('/sorties/diverses/{sortieDiverse:id_sorties}', [SortieDiverseController::class, 'destroy'])->name('sorties.diverses.destroy');
+
+    Route::get('/caisse/banques', [CaisseBanqueController::class, 'index'])->name('caisse.banques.index');
+    Route::get('/caisse/banques/approvisionnement-caisse', [CaisseBanqueController::class, 'approvisionnementCaisseIndex'])->name('caisse.banques.approvisionnement-caisse.index');
+    Route::post('/caisse/banques/approvisionnement-caisse', [CaisseBanqueController::class, 'storeApprovisionnementCaisse'])->name('caisse.banques.approvisionnement-caisse.store');
+    Route::post('/caisse/banques', [CaisseBanqueController::class, 'store'])->name('caisse.banques.store');
+    Route::get('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'show'])->name('caisse.banques.show');
+    Route::post('/caisse/banques/{banque:id_banque}/approvisionnement', [CaisseBanqueController::class, 'storeApprovisionnement'])->name('caisse.banques.approvisionnement');
+    Route::post('/caisse/banques/{banque:id_banque}/paiement-usine', [CaisseBanqueController::class, 'storePaiementUsine'])->name('caisse.banques.paiement-usine');
+    Route::put('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'update'])->name('caisse.banques.update');
+    Route::delete('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'destroy'])->name('caisse.banques.destroy');
+
+    Route::get('/caisse/solde', [CaisseSoldeController::class, 'index'])->name('caisse.solde.index');
+    Route::post('/caisse/approvisionnement', [CaisseSoldeController::class, 'storeApprovisionnement'])->name('caisse.approvisionnement.store');
+    Route::post('/caisse/utilisable', [CaisseSoldeController::class, 'updateMontantUtilisable'])->name('caisse.utilisable.update');
+
+    Route::get('/caisse/paiements', [CaissePaiementController::class, 'index'])->name('caisse.paiements.index');
+    Route::post('/caisse/paiements/demandes/{demande:id_demande}', [CaissePaiementController::class, 'storeDemandePayment'])->name('caisse.paiements.demandes.store');
+    Route::post('/caisse/paiements/divers', [CaissePaiementController::class, 'storeSortieDiverse'])->name('caisse.paiements.divers.store');
+
+    Route::get('/recus/tickets-bordereaux', [RecuPaiementController::class, 'index'])->name('recus.tickets.index');
+    Route::get('/recus/tickets-bordereaux/{recu:id_recu}/pdf', [RecuPaiementController::class, 'pdf'])->name('recus.tickets.pdf');
 
     Route::get('/vehicules', [VehiculeController::class, 'index'])->name('vehicules.index');
     Route::post('/vehicules', [VehiculeController::class, 'store'])->name('vehicules.store');

@@ -4,43 +4,116 @@ namespace App\Services;
 
 use App\Models\Ticket;
 use App\Models\Vehicule;
+use Illuminate\Support\Collection;
 
 class VehiculeDuplicateService
 {
+    private const MIN_PREFIX_LENGTH = 6;
+
     public function __construct(
         private readonly TicketService $ticketService,
     ) {}
 
     /**
-     * @param  list<string>  $duplicateMatricules
-     * @return list<int>
+     * @return list<list<int>>
      */
-    public function deletableDuplicateIds(array $duplicateMatricules): array
+    public function duplicateGroups(): array
     {
-        if ($duplicateMatricules === []) {
+        $vehicules = Vehicule::query()
+            ->orderBy('vehicules_id')
+            ->get(['vehicules_id', 'matricule_vehicule']);
+
+        if ($vehicules->count() < 2) {
             return [];
         }
 
+        $parent = [];
+
+        foreach ($vehicules as $vehicule) {
+            $parent[(int) $vehicule->vehicules_id] = (int) $vehicule->vehicules_id;
+        }
+
+        $items = $vehicules->map(fn (Vehicule $vehicule) => [
+            'id' => (int) $vehicule->vehicules_id,
+            'normalized' => $vehicule->normalizedMatricule(),
+        ])->filter(fn (array $item) => $item['normalized'] !== '')->values();
+
+        for ($i = 0; $i < $items->count(); $i++) {
+            for ($j = $i + 1; $j < $items->count(); $j++) {
+                if ($this->matriculesAreSimilar($items[$i]['normalized'], $items[$j]['normalized'])) {
+                    $this->union($parent, $items[$i]['id'], $items[$j]['id']);
+                }
+            }
+        }
+
+        $groups = [];
+
+        foreach ($items as $item) {
+            $root = $this->find($parent, $item['id']);
+            $groups[$root] ??= [];
+            $groups[$root][] = $item['id'];
+        }
+
+        return array_values(array_filter($groups, fn (array $group) => count($group) > 1));
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function duplicateVehiculeIds(): array
+    {
+        return collect($this->duplicateGroups())
+            ->flatten()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function deletableDuplicateIds(): array
+    {
         $ids = [];
 
-        foreach ($duplicateMatricules as $normalized) {
-            $keeper = $this->keeperForNormalizedMatricule($normalized);
+        foreach ($this->duplicateGroups() as $groupIds) {
+            $keeper = $this->keeperForGroup($groupIds);
 
             if ($keeper === null) {
                 continue;
             }
 
-            $group = Vehicule::query()
-                ->whereRaw('UPPER(REPLACE(matricule_vehicule, " ", "")) = ?', [$normalized])
-                ->where('vehicules_id', '!=', $keeper->vehicules_id)
-                ->pluck('vehicules_id');
-
-            foreach ($group as $id) {
-                $ids[] = (int) $id;
+            foreach ($groupIds as $id) {
+                if ($id !== (int) $keeper->vehicules_id) {
+                    $ids[] = $id;
+                }
             }
         }
 
         return $ids;
+    }
+
+    public function isDuplicate(Vehicule $vehicule): bool
+    {
+        return in_array((int) $vehicule->vehicules_id, $this->duplicateVehiculeIds(), true);
+    }
+
+    public function isDuplicateEligibleForDeletion(Vehicule $vehicule): bool
+    {
+        return in_array((int) $vehicule->vehicules_id, $this->deletableDuplicateIds(), true);
+    }
+
+    public function keeperForVehicule(Vehicule $vehicule): ?Vehicule
+    {
+        foreach ($this->duplicateGroups() as $groupIds) {
+            if (! in_array((int) $vehicule->vehicules_id, $groupIds, true)) {
+                continue;
+            }
+
+            return $this->keeperForGroup($groupIds);
+        }
+
+        return null;
     }
 
     /**
@@ -79,25 +152,68 @@ class VehiculeDuplicateService
         ];
     }
 
-    public function keeperForNormalizedMatricule(string $normalized): ?Vehicule
+    /**
+     * @param  list<int>  $groupIds
+     */
+    public function keeperForGroup(array $groupIds): ?Vehicule
     {
+        if ($groupIds === []) {
+            return null;
+        }
+
         return Vehicule::query()
             ->withCount('tickets')
-            ->whereRaw('UPPER(REPLACE(matricule_vehicule, " ", "")) = ?', [$normalized])
+            ->whereIn('vehicules_id', $groupIds)
             ->orderByDesc('tickets_count')
             ->orderBy('vehicules_id')
             ->first();
     }
 
-    public function isDuplicateEligibleForDeletion(Vehicule $vehicule, array $duplicateMatricules): bool
+    public function duplicateGroupCount(): int
     {
-        if (! in_array($vehicule->normalizedMatricule(), $duplicateMatricules, true)) {
+        return count($this->duplicateGroups());
+    }
+
+    private function matriculesAreSimilar(string $left, string $right): bool
+    {
+        if ($left === $right) {
+            return true;
+        }
+
+        [$shorter, $longer] = strlen($left) <= strlen($right)
+            ? [$left, $right]
+            : [$right, $left];
+
+        if (strlen($shorter) < self::MIN_PREFIX_LENGTH) {
             return false;
         }
 
-        $keeper = $this->keeperForNormalizedMatricule($vehicule->normalizedMatricule());
+        return str_starts_with($longer, $shorter);
+    }
 
-        return $keeper !== null && $keeper->vehicules_id !== $vehicule->vehicules_id;
+    /**
+     * @param  array<int, int>  $parent
+     */
+    private function find(array &$parent, int $id): int
+    {
+        if ($parent[$id] !== $id) {
+            $parent[$id] = $this->find($parent, $parent[$id]);
+        }
+
+        return $parent[$id];
+    }
+
+    /**
+     * @param  array<int, int>  $parent
+     */
+    private function union(array &$parent, int $left, int $right): void
+    {
+        $rootLeft = $this->find($parent, $left);
+        $rootRight = $this->find($parent, $right);
+
+        if ($rootLeft !== $rootRight) {
+            $parent[$rootRight] = $rootLeft;
+        }
     }
 
     private function canDeleteTicket(Ticket $ticket): bool
