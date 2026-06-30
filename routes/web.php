@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/usines', [UsineController::class, 'index'])->name('usines.index');
     Route::post('/usines', [UsineController::class, 'store'])->name('usines.store');
     Route::put('/usines/{usine:id_usine}', [UsineController::class, 'update'])->name('usines.update');
+    Route::get('/usines/{usine:id_usine}/localisation', [UsineController::class, 'location'])->name('usines.location');
     Route::get('/montants-usines', [UsineController::class, 'amounts'])->name('usines.amounts');
     Route::get('/montants-usines/{usine:id_usine}', [UsineController::class, 'amountsShow'])->name('usines.amounts.show');
     Route::get('/montants-usines/{usine:id_usine}/historique-paiements/pdf', [UsineController::class, 'paymentsHistoryPdf'])

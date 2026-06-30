@@ -6,7 +6,9 @@ use App\Models\Banque;
 use App\Models\Ticket;
 use App\Models\Usine;
 use App\Services\BanqueService;
+use App\Services\UsineLocationService;
 use App\Services\UsinePaymentPdfService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,6 +21,7 @@ class UsineController extends Controller
     public function __construct(
         private readonly BanqueService $banqueService,
         private readonly UsinePaymentPdfService $paymentPdfService,
+        private readonly UsineLocationService $locationService,
     ) {}
 
     public function index(Request $request): View
@@ -169,6 +172,23 @@ class UsineController extends Controller
             ->with('success', 'Paiement de '
                 .number_format((float) $validated['montant'], 0, ',', ' ')
                 .' FCFA enregistré pour '.$usine->nom_usine.' et crédité sur '.$banque->nom_banque.'.');
+    }
+
+    public function location(Usine $usine): JsonResponse
+    {
+        $payload = $this->locationService->buildLocationPayload($usine);
+
+        if ($payload === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette usine n\'a pas de coordonnées GPS.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $payload,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

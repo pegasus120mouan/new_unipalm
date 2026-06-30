@@ -176,6 +176,7 @@ return [
         'usines.index' => 'usines',
         'usines.store' => 'usines',
         'usines.update' => 'usines',
+        'usines.location' => 'usines',
 
         'vehicules.index' => 'vehicules',
         'vehicules.store' => 'vehicules',

@@ -92,7 +92,19 @@
                         <tbody>
                             @forelse ($usines as $usine)
                                 <tr>
-                                    <td>{{ $usine->nom_usine }}</td>
+                                    <td>
+                                        @if ($usine->hasCoordinates())
+                                            <a href="#" class="usine-location-link fw-semibold text-decoration-none"
+                                                data-id="{{ $usine->id_usine }}"
+                                                data-nom="{{ $usine->nom_usine }}"
+                                                title="Voir la carte et les ponts à proximité">
+                                                <i class="bi bi-geo-alt-fill text-primary"></i>
+                                                {{ $usine->nom_usine }}
+                                            </a>
+                                        @else
+                                            {{ $usine->nom_usine }}
+                                        @endif
+                                    </td>
                                     <td>
                                         @if ($usine->hasCoordinates())
                                             <span class="text-success small">
@@ -266,4 +278,6 @@
             });
         });
     </script>
+
+    @include('usines.partials.location-modal')
 @endsection
