@@ -173,17 +173,49 @@ class UsineController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'nom_usine' => ['required', 'string', 'max:255', 'unique:usines,nom_usine'],
-        ]);
+        $validated = $request->validate($this->usineRules());
 
         Usine::query()->create([
             'nom_usine' => trim($validated['nom_usine']),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
             'created_by' => auth()->id(),
         ]);
 
         return redirect()
             ->route('usines.index')
             ->with('success', 'Usine enregistrée avec succès.');
+    }
+
+    public function update(Request $request, Usine $usine): RedirectResponse
+    {
+        $validated = $request->validate($this->usineRules($usine));
+
+        $usine->update([
+            'nom_usine' => trim($validated['nom_usine']),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('usines.index')
+            ->with('success', 'Usine modifiée avec succès.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function usineRules(?Usine $usine = null): array
+    {
+        return [
+            'nom_usine' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('usines', 'nom_usine')->ignore($usine?->id_usine, 'id_usine'),
+            ],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ];
     }
 }
