@@ -89,7 +89,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/comptes-groupes/{groupe:id_chef}/paiement', [CompteGroupeController::class, 'pay'])->name('comptes-groupes.paiement');
 
     Route::get('/groupes', [GroupeController::class, 'index'])->name('groupes.index');
-    Route::get('/groupes/{groupe}', [GroupeController::class, 'show'])->name('groupes.show');
+    Route::get('/groupes/{groupe:id_chef}', [GroupeController::class, 'show'])->name('groupes.show');
+    Route::put('/groupes/{groupe:id_chef}/credentials', [GroupeController::class, 'updateCredentials'])->name('groupes.credentials.update');
 
     Route::get('/agents', [AgentController::class, 'index'])->name('agents.index');
     Route::get('/agents/autocomplete', [AgentController::class, 'autocomplete'])->name('agents.autocomplete');

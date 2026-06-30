@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Groupe;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -22,7 +23,6 @@ class GroupeController extends Controller
                     ->whereNull('date_suppression')
                     ->where('sous_groupe', Agent::SOUS_GROUPE_PROFESSIONNEL),
             ])
-            ->whereHas('agents', fn ($query) => $query->whereNull('date_suppression'))
             ->orderBy('nom')
             ->orderBy('prenoms')
             ->get();
@@ -57,5 +57,32 @@ class GroupeController extends Controller
         ];
 
         return view('groupes.show', compact('groupe', 'agents', 'sousGroupe', 'counts'));
+    }
+
+    public function updateCredentials(Request $request, Groupe $groupe): RedirectResponse
+    {
+        $requiresPassword = ! $groupe->hasCredentials();
+
+        $validated = $request->validate([
+            'login' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('chef_equipe', 'login')->ignore($groupe->id_chef, 'id_chef'),
+            ],
+            'password' => [$requiresPassword ? 'required' : 'nullable', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        $groupe->login = trim($validated['login']);
+
+        if (! empty($validated['password'])) {
+            $groupe->setPasswordFromPlain($validated['password']);
+        }
+
+        $groupe->save();
+
+        return redirect()
+            ->route('groupes.show', $groupe)
+            ->with('success', 'Identifiants du chef d\'équipe mis à jour.');
     }
 }

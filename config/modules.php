@@ -161,6 +161,7 @@ return [
 
         'groupes.index' => 'groupes',
         'groupes.show' => 'groupes',
+        'groupes.credentials.update' => 'groupes',
 
         'agents.index' => 'agents',
         'agents.autocomplete' => 'agents',

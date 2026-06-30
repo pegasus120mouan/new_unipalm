@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[Fillable(['nom', 'prenoms', 'token', 'login', 'password'])]
+#[Hidden(['password'])]
 class Groupe extends Model
 {
     protected $table = 'chef_equipe';
@@ -16,6 +20,22 @@ class Groupe extends Model
     public function getFullNameAttribute(): string
     {
         return trim("{$this->nom} {$this->prenoms}");
+    }
+
+    public function hasCredentials(): bool
+    {
+        return trim((string) ($this->login ?? '')) !== ''
+            && trim((string) ($this->password ?? '')) !== '';
+    }
+
+    public function checkPassword(string $plainPassword): bool
+    {
+        return hash('sha256', $plainPassword) === (string) $this->password;
+    }
+
+    public function setPasswordFromPlain(string $plainPassword): void
+    {
+        $this->password = hash('sha256', $plainPassword);
     }
 
     public function agents(): HasMany

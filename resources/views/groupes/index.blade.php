@@ -15,6 +15,13 @@
 @endsection
 
 @section('content')
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     <section class="row">
         <div class="col-12">
             <div class="card">
@@ -27,6 +34,8 @@
                         <thead>
                             <tr>
                                 <th>Groupe</th>
+                                <th>Token</th>
+                                <th>Login</th>
                                 <th class="text-center">Particuliers</th>
                                 <th class="text-center">Professionnels</th>
                                 <th class="text-center">Total agents</th>
@@ -37,6 +46,20 @@
                                 <tr>
                                     <td>
                                         <a href="{{ route('groupes.show', $groupe) }}">{{ $groupe->full_name }}</a>
+                                    </td>
+                                    <td>
+                                        @if ($groupe->token)
+                                            <code class="small">{{ $groupe->token }}</code>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($groupe->login)
+                                            <span class="badge bg-success">{{ $groupe->login }}</span>
+                                        @else
+                                            <span class="badge bg-secondary">Non défini</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <a href="{{ route('groupes.show', ['groupe' => $groupe, 'sous_groupe' => \App\Models\Agent::SOUS_GROUPE_PARTICULIER]) }}"
@@ -54,7 +77,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                         Aucun groupe trouvé.
                                     </td>
                                 </tr>
