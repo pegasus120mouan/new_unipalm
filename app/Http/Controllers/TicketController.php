@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agent;
+use App\Models\PontBascule;
 use App\Models\Ticket;
 use App\Models\Usine;
 use App\Models\Vehicule;
@@ -477,7 +478,7 @@ class TicketController extends Controller
     {
         return Ticket::query()
             ->visibleToCurrentUser()
-            ->with(['agent', 'usine', 'vehicule', 'utilisateur']);
+            ->with(['agent', 'usine', 'vehicule', 'utilisateur', 'pont']);
     }
 
     private function authorizeTicketAccess(Ticket $ticket): void
@@ -551,6 +552,7 @@ class TicketController extends Controller
         $usines = Usine::query()->orderBy('nom_usine')->get();
         $agents = Agent::query()
             ->whereNull('date_suppression')
+            ->with(['ponts' => fn ($query) => $query->orderBy('nom_pont')])
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get();
@@ -561,6 +563,17 @@ class TicketController extends Controller
             'numero' => $agent->numero_agent ?? '',
             'name' => $agent->full_name,
         ])->values();
+
+        $agentsPontsMap = $agents->mapWithKeys(fn (Agent $agent) => [
+            $agent->id_agent => $agent->ponts->map(fn ($pont) => [
+                'id' => $pont->id_pont,
+                'code' => $pont->code_pont,
+                'nom' => $pont->nom_pont,
+                'label' => $pont->code_pont
+                    ? $pont->code_pont.' — '.$pont->nom_pont
+                    : $pont->nom_pont,
+            ])->values()->all(),
+        ])->all();
 
         $usinesForAutocomplete = $usines->map(fn (Usine $usine) => [
             'id' => $usine->id_usine,
@@ -590,6 +603,7 @@ class TicketController extends Controller
             'agents',
             'vehicules',
             'agentsForAutocomplete',
+            'agentsPontsMap',
             'usinesForAutocomplete',
             'vehiculesForAutocomplete',
             'selectedAgent',
@@ -607,9 +621,37 @@ class TicketController extends Controller
             'numero_ticket' => ['required', 'string', 'max:255', Rule::unique('tickets', 'numero_ticket')],
             'id_usine' => ['required', 'integer', 'exists:usines,id_usine'],
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
+            'id_pont' => ['nullable', 'integer', Rule::exists('pont_bascule', 'id_pont')],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
             'poids' => ['required', 'numeric', 'min:0'],
         ]);
+
+        $agentPontsCount = PontBascule::query()
+            ->where('id_agent', $validated['id_agent'])
+            ->count();
+
+        if ($agentPontsCount > 0) {
+            if (empty($validated['id_pont'])) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['id_pont' => 'Veuillez sélectionner le pont-bascule associé à cet agent.']);
+            }
+
+            $pontBelongsToAgent = PontBascule::query()
+                ->where('id_pont', $validated['id_pont'])
+                ->where('id_agent', $validated['id_agent'])
+                ->exists();
+
+            if (! $pontBelongsToAgent) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['id_pont' => 'Le pont sélectionné n\'est pas associé à cet agent.']);
+            }
+
+            $validated['id_pont'] = (int) $validated['id_pont'];
+        } else {
+            $validated['id_pont'] = null;
+        }
 
         try {
             $ticket = $this->ticketService->create([

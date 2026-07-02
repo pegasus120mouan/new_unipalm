@@ -41,7 +41,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/', function () {
+Route::get('/', function () {
         $user = auth()->user();
         $routes = config('modules.module_routes', []);
 

@@ -10,6 +10,7 @@
             <th>N° Ticket</th>
             <th>Usine</th>
             <th>Chargé de mission</th>
+            <th>Pont</th>
             <th>Véhicule</th>
             <th>Poids</th>
             <th>Créé par</th>
@@ -52,6 +53,13 @@
                 <td>{{ $ticket->numero_ticket ?? '-' }}</td>
                 <td>{{ $ticket->usine?->nom_usine ?? '-' }}</td>
                 <td>{{ $ticket->agent?->full_name ?? '-' }}</td>
+                <td>
+                    @if ($ticket->pont)
+                        <span title="{{ $ticket->pont->code_pont }}">{{ $ticket->pont->nom_pont }}</span>
+                    @else
+                        —
+                    @endif
+                </td>
                 <td>{{ $ticket->vehicule?->matricule_vehicule ?? '-' }}</td>
                 <td>{{ $ticket->poids ? number_format($ticket->poids, 0, '', ' ') : '-' }}</td>
                 <td>{{ $ticket->utilisateur?->full_name ?? '-' }}</td>
@@ -170,7 +178,7 @@
             </tr>
         @empty
             @php
-                $columnCount = 11
+                $columnCount = 12
                     + (empty($compactView) ? 3 : 0)
                     + (! empty($showValidateAction) ? 1 : 0)
                     + (! empty($showEditAction) ? 1 : 0)

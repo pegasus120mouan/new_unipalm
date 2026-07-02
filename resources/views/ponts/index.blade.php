@@ -405,6 +405,10 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="alert alert-light border small py-2 mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            À la modification, seuls le <strong>code</strong> et le <strong>nom</strong> du pont sont obligatoires.
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="edit_code_pont" class="form-label">Code pont *</label>
@@ -424,8 +428,8 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="edit_id_region" class="form-label">Région *</label>
-                                <select name="id_region" id="edit_id_region" class="form-select" required>
+                                <label for="edit_id_region" class="form-label">Région</label>
+                                <select name="id_region" id="edit_id_region" class="form-select">
                                     <option value="">— Sélectionner une région —</option>
                                     @foreach ($regions as $region)
                                         <option value="{{ $region->id }}">
@@ -435,25 +439,25 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="edit_id_departement" class="form-label">Département *</label>
-                                <select name="id_departement" id="edit_id_departement" class="form-select" required disabled>
+                                <label for="edit_id_departement" class="form-label">Département</label>
+                                <select name="id_departement" id="edit_id_departement" class="form-select" disabled>
                                     <option value="">— Choisir une région d'abord —</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="edit_id_sous_prefecture" class="form-label">Sous-préfecture *</label>
-                                <select name="id_sous_prefecture" id="edit_id_sous_prefecture" class="form-select" required disabled>
+                                <label for="edit_id_sous_prefecture" class="form-label">Sous-préfecture</label>
+                                <select name="id_sous_prefecture" id="edit_id_sous_prefecture" class="form-select" disabled>
                                     <option value="">— Choisir un département d'abord —</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="edit_id_village" class="form-label">Village *</label>
-                                <select name="id_village" id="edit_id_village" class="form-select" required disabled>
+                                <label for="edit_id_village" class="form-label">Village</label>
+                                <select name="id_village" id="edit_id_village" class="form-select" disabled>
                                     <option value="">— Choisir une sous-préfecture d'abord —</option>
                                 </select>
                             </div>
                             <div class="col-md-6 position-relative">
-                                <label for="edit_gerant_search" class="form-label">Gérant *</label>
+                                <label for="edit_gerant_search" class="form-label">Gérant</label>
                                 <input type="text" id="edit_gerant_search"
                                     class="form-control"
                                     placeholder="Rechercher par N° agent..."
@@ -476,8 +480,8 @@
                                 <input type="text" name="cooperatif" id="edit_cooperatif" class="form-control">
                             </div>
                             <div class="col-md-4">
-                                <label for="edit_statut" class="form-label">Statut *</label>
-                                <select name="statut" id="edit_statut" class="form-select" required>
+                                <label for="edit_statut" class="form-label">Statut</label>
+                                <select name="statut" id="edit_statut" class="form-select">
                                     <option value="Actif">Actif</option>
                                     <option value="Inactif">Inactif</option>
                                 </select>
@@ -552,6 +556,15 @@
             const editForm = document.getElementById('editPontForm');
             const deleteForm = document.getElementById('deletePontForm');
             const pontBaseUrl = @json(url('/ponts'));
+
+            editForm?.addEventListener('submit', function () {
+                ['edit_id_departement', 'edit_id_sous_prefecture', 'edit_id_village'].forEach(function (id) {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.disabled = false;
+                    }
+                });
+            });
             const departementsOptionsUrl = @json(url('/ponts/regions'));
             const sousPrefecturesOptionsUrl = @json(url('/ponts/departements'));
             const villagesOptionsUrl = @json(url('/ponts/sous-prefectures'));

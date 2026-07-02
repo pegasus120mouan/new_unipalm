@@ -247,6 +247,8 @@ class PontBasculeController extends Controller
 
     public function update(Request $request, PontBascule $pont): RedirectResponse
     {
+        $this->normalizePontOptionalIds($request);
+
         $validated = $request->validate([
             'code_pont' => [
                 'required',
@@ -256,25 +258,13 @@ class PontBasculeController extends Controller
             ],
             'nom_pont' => ['required', 'string', 'max:255'],
             'id_type_pont' => ['nullable', 'integer', Rule::exists('types_pont', 'id_type_pont')],
-            'id_region' => ['required', 'integer', Rule::exists('regions', 'id')],
-            'id_departement' => [
-                'required',
-                'integer',
-                Rule::exists('departements', 'id')->where(fn ($query) => $query->where('region_id', $request->input('id_region'))),
-            ],
-            'id_sous_prefecture' => [
-                'required',
-                'integer',
-                Rule::exists('sous_prefectures', 'id')->where(fn ($query) => $query->where('departement_id', $request->input('id_departement'))),
-            ],
-            'id_village' => [
-                'required',
-                'integer',
-                Rule::exists('villages', 'id')->where(fn ($query) => $query->where('sous_prefecture_id', $request->input('id_sous_prefecture'))),
-            ],
+            'id_region' => ['nullable', 'integer', Rule::exists('regions', 'id')],
+            'id_departement' => ['nullable', 'integer', Rule::exists('departements', 'id')],
+            'id_sous_prefecture' => ['nullable', 'integer', Rule::exists('sous_prefectures', 'id')],
+            'id_village' => ['nullable', 'integer', Rule::exists('villages', 'id')],
             'id_agent' => ['nullable', 'integer', Rule::exists('agents', 'id_agent')],
             'cooperatif' => ['nullable', 'string', 'max:100'],
-            'statut' => ['required', Rule::in(['Actif', 'Inactif'])],
+            'statut' => ['nullable', Rule::in(['Actif', 'Inactif'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
@@ -284,6 +274,15 @@ class PontBasculeController extends Controller
         return redirect()
             ->route('ponts.index')
             ->with('success', 'Pont-bascule modifié avec succès.');
+    }
+
+    private function normalizePontOptionalIds(Request $request): void
+    {
+        foreach (['id_type_pont', 'id_region', 'id_departement', 'id_sous_prefecture', 'id_village', 'id_agent'] as $field) {
+            if (! $request->filled($field)) {
+                $request->merge([$field => null]);
+            }
+        }
     }
 
     public function destroy(PontBascule $pont): RedirectResponse

@@ -76,7 +76,7 @@ class PontBasculeService
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,
             'cooperatif' => filled($data['cooperatif'] ?? null) ? trim($data['cooperatif']) : null,
-            'statut' => $data['statut'] ?? 'Actif',
+            'statut' => $data['statut'] ?? $pont->statut ?? 'Actif',
         ];
 
         if (filled($data['id_agent'] ?? null)) {

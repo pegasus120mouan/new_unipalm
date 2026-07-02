@@ -8,6 +8,7 @@
             <th>Poids</th>
             <th>Prix unitaire</th>
             <th>Nom agent</th>
+            <th>Pont</th>
             <th>Véhicule</th>
             <th>Actions</th>
         </tr>
@@ -30,6 +31,7 @@
                     @endif
                 </td>
                 <td>{{ $ticket->agent?->full_name ?? '-' }}</td>
+                <td>{{ $ticket->pont?->nom_pont ?? '—' }}</td>
                 <td>{{ $ticket->vehicule?->matricule_vehicule ?? '-' }}</td>
                 <td>
                     <button type="button"
@@ -43,6 +45,7 @@
                         data-poids="{{ $ticket->poids ? number_format($ticket->poids, 0, '', ' ') : '-' }}"
                         data-prix="{{ blank($ticket->prix_unitaire) || (float) $ticket->prix_unitaire == 0 ? 'En attente de validation' : number_format((float) $ticket->prix_unitaire, 2, '.', '') }}"
                         data-agent="{{ $ticket->agent?->full_name }}"
+                        data-pont="{{ $ticket->pont?->nom_pont }}"
                         data-vehicule="{{ $ticket->vehicule?->matricule_vehicule }}"
                         data-createur="{{ $ticket->utilisateur?->full_name }}"
                         title="Voir les détails">
@@ -52,7 +55,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="9" class="text-center text-muted py-4">
+                <td colspan="10" class="text-center text-muted py-4">
                     {{ $emptyMessage ?? 'Aucun ticket trouvé.' }}
                 </td>
             </tr>

@@ -147,7 +147,7 @@
                             <label for="agent_search" class="form-label">Sélectionner un chargé de mission</label>
                             <input type="text" id="agent_search"
                                 class="form-control @error('id_agent') is-invalid @enderror"
-                                placeholder="Rechercher par N° agent..."
+                                placeholder="Rechercher par N° agent ou nom..."
                                 autocomplete="off"
                                 value="{{ $selectedAgent?->full_name }}">
                             <input type="hidden" name="id_agent" id="id_agent"
@@ -163,6 +163,21 @@
                                 <span class="text-muted">— cliquer pour sélectionner</span>
                             </div>
                             @error('id_agent')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3 d-none" id="pont_section">
+                            <label class="form-label" for="id_pont_select">Pont-bascule</label>
+                            <input type="hidden" name="id_pont" id="id_pont" value="{{ old('id_pont') }}">
+                            <input type="text" id="pont_readonly" class="form-control bg-light d-none" readonly>
+                            <select id="id_pont_select" class="form-select d-none @error('id_pont') is-invalid @enderror">
+                                <option value="">— Sélectionner un pont —</option>
+                            </select>
+                            <div id="pont_empty" class="form-text text-muted d-none">
+                                Aucun pont-bascule associé à cet agent.
+                            </div>
+                            @error('id_pont')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
@@ -242,20 +257,22 @@
                     pendingItem = null;
                     foundBox.style.display = 'none';
                     foundName.textContent = '';
+                    config.onClear?.();
                 }
 
                 function selectItem(item) {
-                    searchInput.value = item[config.labelKey];
+                    searchInput.value = config.getLabel ? config.getLabel(item) : item[config.labelKey];
                     hiddenInput.value = item.id;
                     pendingItem = null;
                     foundBox.style.display = 'none';
                     foundName.textContent = '';
                     suggestions.style.display = 'none';
+                    config.onSelect?.(item);
                 }
 
                 function showPendingItem(item) {
                     pendingItem = item;
-                    foundName.textContent = item[config.labelKey];
+                    foundName.textContent = config.getLabel ? config.getLabel(item) : item[config.labelKey];
                     foundBox.style.display = 'block';
                 }
 
@@ -309,6 +326,7 @@
                         hiddenInput.value = '';
                         pendingItem = null;
                         foundBox.style.display = 'none';
+                        config.onClear?.();
                     }
                     showSuggestions(searchInput.value);
                 });
@@ -340,8 +358,68 @@
                     suggestions.style.display = 'none';
                 });
 
-                return { clearSelection };
+                return { clearSelection, selectItem };
             }
+
+            const agentsPontsMap = @json($agentsPontsMap ?? []);
+            const pontSection = document.getElementById('pont_section');
+            const pontHidden = document.getElementById('id_pont');
+            const pontReadonly = document.getElementById('pont_readonly');
+            const pontSelect = document.getElementById('id_pont_select');
+            const pontEmpty = document.getElementById('pont_empty');
+
+            function resetPontField() {
+                pontHidden.value = '';
+                pontReadonly.value = '';
+                pontReadonly.classList.add('d-none');
+                pontSelect.classList.add('d-none');
+                pontSelect.innerHTML = '<option value="">— Sélectionner un pont —</option>';
+                pontEmpty.classList.add('d-none');
+                pontSection.classList.add('d-none');
+            }
+
+            function updatePontField(agentId, selectedPontId = null) {
+                resetPontField();
+
+                if (!agentId) {
+                    return;
+                }
+
+                const ponts = agentsPontsMap[String(agentId)] || agentsPontsMap[agentId] || [];
+                pontSection.classList.remove('d-none');
+
+                if (ponts.length === 0) {
+                    pontEmpty.classList.remove('d-none');
+                    return;
+                }
+
+                if (ponts.length === 1) {
+                    pontReadonly.value = ponts[0].label;
+                    pontReadonly.classList.remove('d-none');
+                    pontHidden.value = String(ponts[0].id);
+                    return;
+                }
+
+                ponts.forEach((pont) => {
+                    const option = document.createElement('option');
+                    option.value = pont.id;
+                    option.textContent = pont.label;
+                    if (selectedPontId && String(selectedPontId) === String(pont.id)) {
+                        option.selected = true;
+                    }
+                    pontSelect.appendChild(option);
+                });
+
+                pontSelect.classList.remove('d-none');
+
+                if (selectedPontId) {
+                    pontHidden.value = String(selectedPontId);
+                }
+            }
+
+            pontSelect.addEventListener('change', () => {
+                pontHidden.value = pontSelect.value;
+            });
 
             setupAutocomplete({
                 items: @json($usinesForAutocomplete),
@@ -368,9 +446,16 @@
                 foundSelectId: 'agent_found_select',
                 labelKey: 'name',
                 emptyText: 'Aucun agent trouvé',
-                filter: (item, term) => item.numero.toLowerCase().includes(term),
-                isExact: (item, term) => item.numero.toLowerCase() === term,
-                renderItem: (item) => `<span class="text-muted">${item.numero}</span> — <strong>${item.name}</strong>`,
+                getLabel: (item) => item.numero ? `${item.numero} — ${item.name}` : item.name,
+                filter: (item, term) => item.numero.toLowerCase().includes(term)
+                    || item.name.toLowerCase().includes(term),
+                isExact: (item, term) => item.numero.toLowerCase() === term
+                    || item.name.toLowerCase() === term,
+                renderItem: (item) => item.numero
+                    ? `<span class="text-muted">${item.numero}</span> — <strong>${item.name}</strong>`
+                    : `<strong>${item.name}</strong>`,
+                onSelect: (item) => updatePontField(item.id),
+                onClear: () => resetPontField(),
             });
 
             setupAutocomplete({
@@ -387,6 +472,12 @@
                 isExact: (item, term) => item.label.toLowerCase() === term,
                 renderItem: (item) => `<strong>${item.label}</strong>`,
             });
+
+            const oldAgentId = @json(old('id_agent'));
+            const oldPontId = @json(old('id_pont'));
+            if (oldAgentId) {
+                updatePontField(oldAgentId, oldPontId);
+            }
         });
     </script>
 

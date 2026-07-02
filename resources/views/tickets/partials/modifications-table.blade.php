@@ -5,6 +5,7 @@
             <th>N° Ticket</th>
             <th>Usine</th>
             <th>Chargé de mission</th>
+            <th>Pont</th>
             <th>Véhicule</th>
             <th>Poids</th>
             <th>Créé par</th>
@@ -60,6 +61,7 @@
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->agent?->full_name ?? '—' }}</span>
                 </td>
+                <td>{{ $ticket->pont?->nom_pont ?? '—' }}</td>
                 <td @class(['ticket-editable' => $canEdit, 'ticket-editable-cell' => $canEdit])
                     @if ($canEdit)
                         data-field="vehicule_id"
@@ -140,7 +142,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="14" class="text-center text-muted py-4">
+                <td colspan="15" class="text-center text-muted py-4">
                     {{ $emptyMessage ?? 'Aucun ticket trouvé.' }}
                 </td>
             </tr>

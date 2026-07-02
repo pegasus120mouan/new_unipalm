@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'id_usine',
     'date_ticket',
     'id_agent',
+    'id_pont',
     'vehicule_id',
     'poids',
     'id_utilisateur',
@@ -56,6 +57,11 @@ class Ticket extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'id_agent', 'id_agent');
+    }
+
+    public function pont(): BelongsTo
+    {
+        return $this->belongsTo(PontBascule::class, 'id_pont', 'id_pont');
     }
 
     public function usine(): BelongsTo

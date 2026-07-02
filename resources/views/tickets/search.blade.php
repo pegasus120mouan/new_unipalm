@@ -66,6 +66,7 @@
                             <p class="mb-2"><strong>Poids :</strong> <span id="view_poids">-</span></p>
                             <p class="mb-2"><strong>Prix unitaire :</strong> <span id="view_prix">-</span></p>
                             <p class="mb-2"><strong>Agent :</strong> <span id="view_agent">-</span></p>
+                            <p class="mb-2"><strong>Pont :</strong> <span id="view_pont">-</span></p>
                             <p class="mb-2"><strong>Véhicule :</strong> <span id="view_vehicule">-</span></p>
                             <p class="mb-0"><strong>Créé par :</strong> <span id="view_createur">-</span></p>
                         </div>
@@ -91,6 +92,7 @@
                     document.getElementById('view_poids').textContent = button.dataset.poids || '-';
                     document.getElementById('view_prix').textContent = button.dataset.prix || '-';
                     document.getElementById('view_agent').textContent = button.dataset.agent || '-';
+                    document.getElementById('view_pont').textContent = button.dataset.pont || '-';
                     document.getElementById('view_vehicule').textContent = button.dataset.vehicule || '-';
                     document.getElementById('view_createur').textContent = button.dataset.createur || '-';
                 });

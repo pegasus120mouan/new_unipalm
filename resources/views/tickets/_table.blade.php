@@ -5,6 +5,7 @@
             <th>N° Ticket</th>
             <th>Usine</th>
             <th>Chargé de mission</th>
+            <th>Pont</th>
             <th>Véhicule</th>
             <th>Poids</th>
             <th>Créé par</th>
@@ -23,6 +24,7 @@
                 <td>{{ $ticket->numero_ticket ?? '-' }}</td>
                 <td>{{ $ticket->usine?->nom_usine ?? '-' }}</td>
                 <td>{{ $ticket->agent?->full_name ?? '-' }}</td>
+                <td>{{ $ticket->pont?->nom_pont ?? '—' }}</td>
                 <td>{{ $ticket->vehicule?->matricule_vehicule ?? '-' }}</td>
                 <td>{{ $ticket->poids ? number_format($ticket->poids, 0, '', ' ') : '-' }}</td>
                 <td>{{ $ticket->utilisateur?->full_name ?? '-' }}</td>
@@ -65,7 +67,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="13" class="text-center text-muted py-4">
+                <td colspan="14" class="text-center text-muted py-4">
                     {{ $emptyMessage ?? 'Aucun ticket trouvé.' }}
                 </td>
             </tr>

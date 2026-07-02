@@ -63,6 +63,7 @@ class TicketService
             'id_usine' => $data['id_usine'],
             'date_ticket' => $data['date_ticket'],
             'id_agent' => $data['id_agent'],
+            'id_pont' => $data['id_pont'] ?? null,
             'vehicule_id' => $data['vehicule_id'],
             'poids' => $data['poids'],
             'id_utilisateur' => $data['id_utilisateur'],
