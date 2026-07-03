@@ -93,6 +93,9 @@
         .ticket-editable-cell .form-select {
             min-width: 8rem;
         }
+        .ticket-autocomplete-editor .list-group {
+            min-width: 10rem;
+        }
         tr.ticket-row-readonly td {
             cursor: not-allowed;
         }
@@ -112,6 +115,112 @@
             const successModal = successModalEl ? new bootstrap.Modal(successModalEl) : null;
 
             let activeCell = null;
+
+            function buildInlineAutocomplete(config) {
+                const wrap = document.createElement('div');
+                wrap.className = 'ticket-cell-editor ticket-autocomplete-editor position-relative';
+
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.value = config.selectedId || '';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control form-control-sm';
+                input.value = config.selectedLabel || '';
+                input.placeholder = config.placeholder || 'Rechercher...';
+                input.autocomplete = 'off';
+
+                const suggestions = document.createElement('div');
+                suggestions.className = 'list-group position-absolute w-100 shadow-sm';
+                suggestions.style.cssText = 'z-index: 1050; display: none; max-height: 180px; overflow-y: auto; top: 100%;';
+
+                function selectItem(item) {
+                    hidden.value = String(item.id);
+                    input.value = config.getLabel(item);
+                    suggestions.style.display = 'none';
+                }
+
+                function renderSuggestions(term) {
+                    const search = term.trim().toLowerCase();
+                    suggestions.innerHTML = '';
+
+                    if (!search) {
+                        suggestions.style.display = 'none';
+                        return;
+                    }
+
+                    const matches = config.items.filter(function (item) {
+                        return config.filter(item, search);
+                    }).slice(0, 15);
+
+                    if (!matches.length) {
+                        suggestions.innerHTML = '<div class="list-group-item text-muted small">Aucun résultat</div>';
+                        suggestions.style.display = 'block';
+                        hidden.value = '';
+                        return;
+                    }
+
+                    matches.forEach(function (item) {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'list-group-item list-group-item-action py-1 small';
+                        button.textContent = config.getLabel(item);
+                        button.addEventListener('mousedown', function (event) {
+                            event.preventDefault();
+                            selectItem(item);
+                        });
+                        suggestions.appendChild(button);
+                    });
+
+                    suggestions.style.display = 'block';
+
+                    const exact = matches.find(function (item) {
+                        return config.getLabel(item).toLowerCase() === search;
+                    });
+                    if (exact) {
+                        hidden.value = String(exact.id);
+                    }
+                }
+
+                input.addEventListener('input', function () {
+                    hidden.value = '';
+                    renderSuggestions(input.value);
+                });
+
+                input.addEventListener('focus', function () {
+                    if (input.value.trim()) {
+                        renderSuggestions(input.value);
+                    }
+                });
+
+                wrap.appendChild(hidden);
+                wrap.appendChild(input);
+                wrap.appendChild(suggestions);
+
+                wrap.getEditorValue = function () {
+                    return hidden.value;
+                };
+
+                wrap.focusEditor = function () {
+                    input.focus();
+                    input.select();
+                };
+
+                wrap.getInput = function () {
+                    return input;
+                };
+
+                return wrap;
+            }
+
+            function editorValue(editor) {
+                if (typeof editor.getEditorValue === 'function') {
+                    return editor.getEditorValue();
+                }
+
+                return editor.value;
+            }
 
             function buildSelect(options, value) {
                 const select = document.createElement('select');
@@ -168,7 +277,7 @@
                     return;
                 }
 
-                let value = editor.value;
+                let value = editorValue(editor);
                 let label = display.textContent.trim();
 
                 if (field === 'id_usine') {
@@ -181,8 +290,15 @@
                     cell.dataset.label = label;
                 } else if (field === 'vehicule_id') {
                     const found = VEHICULES.find(function (v) { return String(v.id) === String(value); });
-                    label = found ? found.label : label;
+                    label = found ? found.label : (cell.dataset.label || label);
                     cell.dataset.label = label;
+                    if (!value) {
+                        alert('Veuillez sélectionner un véhicule dans la liste.');
+                        if (typeof editor.focusEditor === 'function') {
+                            editor.focusEditor();
+                        }
+                        return;
+                    }
                 } else if (field === 'prix_unitaire') {
                     if (value === '' || parseFloat(value) <= 0) {
                         display.innerHTML = '<span class="badge bg-warning ticket-prix-badge">En attente</span>';
@@ -242,7 +358,18 @@
                 } else if (field === 'id_agent') {
                     editor = buildSelect(AGENTS.map(function (a) { return { id: a.id, label: a.name }; }), value);
                 } else if (field === 'vehicule_id') {
-                    editor = buildSelect(VEHICULES, value);
+                    editor = buildInlineAutocomplete({
+                        items: VEHICULES,
+                        selectedId: value,
+                        selectedLabel: cell.dataset.label || display.textContent.trim(),
+                        placeholder: 'Rechercher un véhicule...',
+                        filter: function (item, term) {
+                            return item.label.toLowerCase().includes(term);
+                        },
+                        getLabel: function (item) {
+                            return item.label;
+                        },
+                    });
                 } else if (field === 'poids') {
                     editor = buildInput('number', value, '1');
                 } else if (field === 'prix_unitaire') {
@@ -257,10 +384,15 @@
 
                 editor.classList.add('ticket-cell-editor');
                 cell.appendChild(editor);
-                editor.focus();
+                if (typeof editor.focusEditor === 'function') {
+                    editor.focusEditor();
+                } else {
+                    editor.focus();
+                }
                 activeCell = cell;
 
-                editor.addEventListener('keydown', function (e) {
+                const keyTarget = typeof editor.getInput === 'function' ? editor.getInput() : editor;
+                keyTarget.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         saveRow(row, cell);
