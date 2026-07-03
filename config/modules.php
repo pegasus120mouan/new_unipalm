@@ -105,7 +105,7 @@ return [
         'tickets.paid' => 'tickets.paid',
         'tickets.modifications' => 'tickets.modifications',
         'tickets.search' => 'tickets.search',
-        'tickets.update' => 'tickets.index',
+        'tickets.update' => 'tickets.modifications',
         'tickets.validate' => 'tickets.pending',
         'tickets.validate-bulk' => 'tickets.pending',
         'tickets.store' => 'tickets.index',

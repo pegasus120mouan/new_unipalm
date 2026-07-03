@@ -38,7 +38,7 @@
                     @if ($canEdit)
                         data-field="date_ticket"
                         data-value="{{ $ticket->date_ticket?->format('Y-m-d') ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->date_ticket?->format('d/m/Y') ?? '—' }}</span>
                 </td>
@@ -48,7 +48,7 @@
                         data-field="id_usine"
                         data-value="{{ $ticket->id_usine }}"
                         data-label="{{ $ticket->usine?->nom_usine ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->usine?->nom_usine ?? '—' }}</span>
                 </td>
@@ -57,7 +57,7 @@
                         data-field="id_agent"
                         data-value="{{ $ticket->id_agent }}"
                         data-label="{{ $ticket->agent?->full_name ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->agent?->full_name ?? '—' }}</span>
                 </td>
@@ -67,7 +67,7 @@
                         data-field="vehicule_id"
                         data-value="{{ $ticket->vehicule_id }}"
                         data-label="{{ $ticket->vehicule?->matricule_vehicule ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->vehicule?->matricule_vehicule ?? '—' }}</span>
                 </td>
@@ -75,7 +75,7 @@
                     @if ($canEdit)
                         data-field="poids"
                         data-value="{{ $ticket->poids ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->poids ? number_format($ticket->poids, 0, '', ' ') : '—' }}</span>
                 </td>
@@ -84,7 +84,7 @@
                     @if ($canEdit)
                         data-field="created_at"
                         data-value="{{ $ticket->created_at?->format('Y-m-d') ?? '' }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->created_at?->format('d/m/Y') ?? '—' }}</span>
                 </td>
@@ -92,7 +92,7 @@
                     @if ($canEdit)
                         data-field="prix_unitaire"
                         data-value="{{ $prixRaw }}"
-                        title="Cliquer pour modifier — Entrée pour enregistrer"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
                     @endif>
                     <span class="ticket-cell-display">
                         @if (blank($ticket->prix_unitaire) || (float) $ticket->prix_unitaire == 0)

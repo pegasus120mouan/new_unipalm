@@ -41,7 +41,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <span>Liste des tickets</span>
-                        <span class="text-muted ms-2">(cliquez sur un champ modifiable, puis Entrée pour enregistrer — impossible si payé)</span>
+                        <span class="text-muted ms-2">(cliquez sur un champ modifiable — enregistrement automatique à la sortie du champ ou avec Entrée — impossible si payé)</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
@@ -255,6 +255,7 @@
                 if (!cell || !cell.classList.contains('is-editing')) {
                     return;
                 }
+                delete cell.dataset.editSnapshot;
                 const editor = cell.querySelector('.ticket-cell-editor');
                 const display = cell.querySelector('.ticket-cell-display');
                 if (editor) {
@@ -274,9 +275,10 @@
                 const editor = cell.querySelector('.ticket-cell-editor');
                 const display = cell.querySelector('.ticket-cell-display');
                 if (!editor || !display) {
-                    return;
+                    return { committed: false, changed: false };
                 }
 
+                const snapshot = cell.dataset.editSnapshot ?? cell.dataset.value ?? '';
                 let value = editorValue(editor);
                 let label = display.textContent.trim();
 
@@ -297,7 +299,7 @@
                         if (typeof editor.focusEditor === 'function') {
                             editor.focusEditor();
                         }
-                        return;
+                        return { committed: false, changed: false };
                     }
                 } else if (field === 'prix_unitaire') {
                     if (value === '' || parseFloat(value) <= 0) {
@@ -307,11 +309,13 @@
                         display.textContent = Number(value).toLocaleString('fr-FR');
                         cell.dataset.value = value;
                     }
+                    const changed = String(cell.dataset.value) !== String(snapshot);
+                    delete cell.dataset.editSnapshot;
                     editor.remove();
                     display.style.display = '';
                     cell.classList.remove('is-editing');
                     activeCell = null;
-                    return;
+                    return { committed: true, changed: changed };
                 } else if (field === 'date_ticket' || field === 'created_at') {
                     if (value) {
                         const parts = value.split('-');
@@ -325,10 +329,19 @@
                 if (field !== 'prix_unitaire') {
                     display.textContent = label || '—';
                 }
+                const changed = String(cell.dataset.value) !== String(snapshot);
+                delete cell.dataset.editSnapshot;
                 editor.remove();
                 display.style.display = '';
                 cell.classList.remove('is-editing');
                 activeCell = null;
+                return { committed: true, changed: changed };
+            }
+
+            function maybeSaveRow(row, commitResult) {
+                if (commitResult && commitResult.committed && commitResult.changed) {
+                    saveRow(row);
+                }
             }
 
             function activateEditor(cell) {
@@ -340,7 +353,11 @@
                     return;
                 }
                 if (activeCell && activeCell !== cell) {
-                    commitEditor(activeCell);
+                    const prevRow = activeCell.closest('tr');
+                    const commitResult = commitEditor(activeCell);
+                    if (prevRow) {
+                        maybeSaveRow(prevRow, commitResult);
+                    }
                 }
                 if (cell.classList.contains('is-editing')) {
                     return;
@@ -348,6 +365,7 @@
 
                 const field = cell.dataset.field;
                 const value = cell.dataset.value || '';
+                cell.dataset.editSnapshot = value;
                 const display = cell.querySelector('.ticket-cell-display');
                 display.style.display = 'none';
                 cell.classList.add('is-editing');
@@ -411,7 +429,10 @@
 
             function collectRowPayload(row) {
                 if (activeCell && activeCell.closest('tr') === row) {
-                    commitEditor(activeCell);
+                    const commitResult = commitEditor(activeCell);
+                    if (!commitResult.committed) {
+                        return null;
+                    }
                 }
 
                 function cellValue(field) {
@@ -479,10 +500,16 @@
                     return;
                 }
                 if (fromCell && fromCell.classList.contains('is-editing')) {
-                    commitEditor(fromCell);
+                    const commitResult = commitEditor(fromCell);
+                    if (!commitResult.committed) {
+                        return;
+                    }
                 }
 
                 const payload = collectRowPayload(row);
+                if (!payload) {
+                    return;
+                }
                 const ticketId = row.dataset.ticketId;
 
                 fetch(UPDATE_BASE + '/' + ticketId, {
@@ -497,11 +524,22 @@
                 })
                     .then(function (r) {
                         return r.json().then(function (body) {
-                            return { ok: r.ok, body: body };
+                            return { ok: r.ok, status: r.status, body: body };
+                        }).catch(function () {
+                            return { ok: false, status: r.status, body: {} };
                         });
                     })
                     .then(function (res) {
                         if (!res.ok || !res.body.ok) {
+                            if (res.status === 403) {
+                                alert('Vous n\'avez pas la permission de modifier ce ticket.');
+                                return;
+                            }
+                            if (res.status === 422 && res.body.errors) {
+                                const firstError = Object.values(res.body.errors).flat()[0];
+                                alert(firstError || 'Données invalides.');
+                                return;
+                            }
                             alert(res.body.message || 'Impossible d\'enregistrer les modifications.');
                             return;
                         }
@@ -526,7 +564,11 @@
                     return;
                 }
                 if (!activeCell.contains(e.target)) {
-                    commitEditor(activeCell);
+                    const row = activeCell.closest('tr');
+                    const commitResult = commitEditor(activeCell);
+                    if (row) {
+                        maybeSaveRow(row, commitResult);
+                    }
                 }
             });
         });
