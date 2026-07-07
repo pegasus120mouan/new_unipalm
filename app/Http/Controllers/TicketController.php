@@ -7,16 +7,24 @@ use App\Models\PontBascule;
 use App\Models\Ticket;
 use App\Models\Usine;
 use App\Models\Vehicule;
+use App\Services\TicketBordereauPdfService;
+use App\Services\TicketExportService;
 use App\Services\TicketService;
+use App\Services\TicketUsinePdfService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
     public function __construct(
         private readonly TicketService $ticketService,
+        private readonly TicketUsinePdfService $ticketUsinePdfService,
+        private readonly TicketBordereauPdfService $ticketBordereauPdfService,
+        private readonly TicketExportService $ticketExportService,
     ) {}
 
     public function index(Request $request): View
@@ -37,6 +45,54 @@ class TicketController extends Controller
             ->withQueryString();
 
         return view('tickets.index', $this->formData($tickets, $filters, $isSearchRequested));
+    }
+
+    public function pdfByUsine(Request $request): Response
+    {
+        $validated = $request->validate([
+            'id_usine' => ['required', 'integer', 'exists:usines,id_usine'],
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        return $this->ticketUsinePdfService->stream(
+            (int) $validated['id_usine'],
+            $validated['date_debut'],
+            $validated['date_fin'],
+        );
+    }
+
+    public function pdfBordereau(Request $request): Response
+    {
+        $validated = $request->validate([
+            'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')->whereNull('date_suppression')],
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        return $this->ticketBordereauPdfService->stream(
+            (int) $validated['id_agent'],
+            $validated['date_debut'],
+            $validated['date_fin'],
+        );
+    }
+
+    public function exportAll(): StreamedResponse
+    {
+        return $this->ticketExportService->streamAll();
+    }
+
+    public function exportPeriod(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        return $this->ticketExportService->streamPeriod(
+            $validated['date_debut'],
+            $validated['date_fin'],
+        );
     }
 
     public function today(): View

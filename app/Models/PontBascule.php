@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'code_pont',
@@ -45,6 +46,12 @@ class PontBascule extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'id_agent', 'id_agent');
+    }
+
+    public function commis(): HasOne
+    {
+        return $this->hasOne(Commis::class, 'id_pont', 'id_pont')
+            ->whereNull('date_suppression');
     }
 
     public function region(): BelongsTo

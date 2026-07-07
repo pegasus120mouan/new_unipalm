@@ -211,6 +211,7 @@
                                     <th>Nom du pont</th>
                                     <th>Type</th>
                                     <th>Coopérative</th>
+                                    <th>Commis</th>
                                     <th>Statut</th>
                                 </tr>
                             </thead>
@@ -221,6 +222,13 @@
                                         <td class="fw-semibold">{{ $pont->nom_pont }}</td>
                                         <td>{{ $pont->typePont?->libelle ?? '—' }}</td>
                                         <td>{{ $pont->cooperatif ?: '—' }}</td>
+                                        <td>
+                                            @if ($pont->commis)
+                                                {{ $pont->commis->full_name }}
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
                                         <td>
                                             @if ($pont->isActive())
                                                 <span class="badge bg-success">Actif</span>
@@ -237,6 +245,53 @@
                             Aucun pont associé à cet agent.
                             @if ($availablePonts->isNotEmpty())
                                 Cliquez sur <strong>Associer un pont</strong> pour en lier un.
+                            @endif
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="row mb-4" id="agent-commis">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span><i class="bi bi-person-badge"></i> Commis</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted">{{ $commis->count() }} commis</span>
+                        @if ($canModule('commis'))
+                            <a href="{{ route('commis.index', ['id_agent' => $agent->id_agent]) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-person-plus"></i> Gérer les commis
+                            </a>
+                        @endif
+                    </div>
+                </div>
+                <div class="card-body table-responsive">
+                    @if ($commis->isNotEmpty())
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Prénoms</th>
+                                    <th>Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($commis as $item)
+                                    <tr>
+                                        <td class="fw-semibold">{{ $item->nom }}</td>
+                                        <td>{{ $item->prenoms }}</td>
+                                        <td>{{ $item->contact }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-muted text-center mb-0 py-3">
+                            Aucun commis enregistré pour cet agent.
+                            @if ($canModule('commis') && $ponts->isNotEmpty())
+                                <br><a href="{{ route('commis.index') }}">Enregistrer un commis</a> pour un de ses ponts.
                             @endif
                         </p>
                     @endif

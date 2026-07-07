@@ -16,6 +16,7 @@ use App\Http\Controllers\PontSousPrefectureController;
 use App\Http\Controllers\PontVillageController;
 use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\CollecteurController;
+use App\Http\Controllers\CommisController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\PlantationController;
@@ -55,6 +56,10 @@ Route::get('/', function () {
     });
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/export/csv', [TicketController::class, 'exportAll'])->name('tickets.export-all');
+    Route::get('/tickets/export/csv/periode', [TicketController::class, 'exportPeriod'])->name('tickets.export-period');
+    Route::get('/tickets/impression-usine/pdf', [TicketController::class, 'pdfByUsine'])->name('tickets.pdf-by-usine');
+    Route::get('/tickets/bordereau/pdf', [TicketController::class, 'pdfBordereau'])->name('tickets.pdf-bordereau');
     Route::get('/tickets/jour', [TicketController::class, 'today'])->name('tickets.today');
     Route::get('/tickets/en-attente', [TicketController::class, 'pending'])->name('tickets.pending');
     Route::get('/tickets/valides', [TicketController::class, 'validated'])->name('tickets.validated');
@@ -102,6 +107,13 @@ Route::get('/', function () {
     Route::post('/agents/{agent:id_agent}/ponts', [AgentController::class, 'associatePont'])->name('agents.associate-pont');
     Route::patch('/agents/{agent:id_agent}/inline', [AgentController::class, 'inlineUpdate'])->name('agents.inline-update');
     Route::delete('/agents/{agent:id_agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
+
+    Route::get('/commis', [CommisController::class, 'index'])->name('commis.index');
+    Route::get('/commis/agents/autocomplete', [AgentController::class, 'autocomplete'])->name('commis.agents-autocomplete');
+    Route::get('/commis/agents/{agent:id_agent}/ponts', [CommisController::class, 'pontsForAgent'])->name('commis.ponts-for-agent');
+    Route::post('/commis', [CommisController::class, 'store'])->name('commis.store');
+    Route::put('/commis/{commis:id_commis}', [CommisController::class, 'update'])->name('commis.update');
+    Route::delete('/commis/{commis:id_commis}', [CommisController::class, 'destroy'])->name('commis.destroy');
 
     Route::get('/usines', [UsineController::class, 'index'])->name('usines.index');
     Route::post('/usines', [UsineController::class, 'store'])->name('usines.store');
@@ -189,6 +201,7 @@ Route::get('/', function () {
     Route::get('/ponts/regions/{region}/departements-options', [PontBasculeController::class, 'departementsForRegion'])->name('ponts.regions.departements-options');
     Route::get('/ponts/departements/{departement}/sous-prefectures-options', [PontBasculeController::class, 'sousPrefecturesForDepartement'])->name('ponts.departements.sous-prefectures-options');
 
+    Route::get('/ponts/agents/{agent:id_agent}/commis-options', [PontBasculeController::class, 'commisOptions'])->name('ponts.commis-options');
     Route::get('/ponts', [PontBasculeController::class, 'index'])->name('ponts.index');
     Route::get('/ponts/localisation/regions/{region}', [PontBasculeController::class, 'locationRegion'])->name('ponts.location.region');
     Route::get('/ponts/localisation', [PontBasculeController::class, 'location'])->name('ponts.location');

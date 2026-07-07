@@ -105,6 +105,12 @@ class Agent extends Model
         return $this->hasMany(PontBascule::class, 'id_agent', 'id_agent');
     }
 
+    public function commis(): HasMany
+    {
+        return $this->hasMany(Commis::class, 'id_agent', 'id_agent')
+            ->whereNull('date_suppression');
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(AgentDocument::class, 'id_agent', 'id_agent');

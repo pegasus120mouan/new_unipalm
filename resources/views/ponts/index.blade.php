@@ -166,6 +166,7 @@
                                 <th>Village</th>
                                 <th>Gérant</th>
                                 <th>Coopérative</th>
+                                <th>Commis</th>
                                 <th>Coordonnées</th>
                                 <th>Statut</th>
                                 <th class="text-end">Actions</th>
@@ -194,6 +195,7 @@
                                     <td>{{ $pont->village?->nom ?? '—' }}</td>
                                     <td>{{ $pont->gerantLabel() }}</td>
                                     <td>{{ $pont->cooperatif ?: '—' }}</td>
+                                    <td>{{ $pont->commis?->full_name ?? '—' }}</td>
                                     <td>
                                         @if ($pont->hasCoordinates())
                                             <span class="text-success small">
@@ -225,6 +227,7 @@
                                                 data-id-sous-prefecture="{{ $pont->id_sous_prefecture }}"
                                                 data-id-village="{{ $pont->id_village }}"
                                                 data-id-agent="{{ $pont->id_agent }}"
+                                                data-id-commis="{{ $pont->commis?->id_commis }}"
                                                 data-gerant="{{ $pont->gerantLabel() }}"
                                                 data-cooperatif="{{ $pont->cooperatif }}"
                                                 data-statut="{{ $pont->statut }}"
@@ -243,7 +246,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center text-muted py-4">
+                                    <td colspan="12" class="text-center text-muted py-4">
                                         @if ($hasFilters)
                                             Aucun pont ne correspond aux filtres.
                                         @else
@@ -456,6 +459,13 @@
                                     <option value="">— Choisir une sous-préfecture d'abord —</option>
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="edit_id_commis" class="form-label">Commis</label>
+                                <select name="id_commis" id="edit_id_commis" class="form-select" disabled>
+                                    <option value="">— Sélectionnez d’abord un gérant —</option>
+                                </select>
+                                <div class="form-text">Commis rattaché au gérant de ce pont.</div>
+                            </div>
                             <div class="col-md-6 position-relative">
                                 <label for="edit_gerant_search" class="form-label">Gérant</label>
                                 <input type="text" id="edit_gerant_search"
@@ -569,6 +579,51 @@
             const sousPrefecturesOptionsUrl = @json(url('/ponts/departements'));
             const villagesOptionsUrl = @json(url('/ponts/sous-prefectures'));
             const agentsForAutocomplete = @json($agentsForAutocomplete);
+            const commisOptionsUrlTemplate = @json(route('ponts.commis-options', ['agent' => '__AGENT__']));
+
+            async function loadEditCommisOptions(agentId, pontId, selectedCommisId) {
+                const select = document.getElementById('edit_id_commis');
+                if (!select) {
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Chargement...</option>';
+                select.disabled = true;
+
+                if (!agentId) {
+                    select.innerHTML = '<option value="">— Sélectionnez d’abord un gérant —</option>';
+                    return;
+                }
+
+                const url = commisOptionsUrlTemplate.replace('__AGENT__', agentId)
+                    + (pontId ? '?pont_id=' + encodeURIComponent(pontId) : '');
+
+                try {
+                    const response = await fetch(url, {
+                        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    const items = response.ok ? await response.json() : [];
+
+                    if (!Array.isArray(items) || !items.length) {
+                        select.innerHTML = '<option value="">— Aucun commis pour ce gérant —</option>';
+                        return;
+                    }
+
+                    select.innerHTML = '<option value="">— Aucun commis —</option>';
+                    items.forEach(function (item) {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.label;
+                        if (selectedCommisId && String(item.id) === String(selectedCommisId)) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                    select.disabled = false;
+                } catch (error) {
+                    select.innerHTML = '<option value="">Erreur de chargement</option>';
+                }
+            }
 
             function setupLocationCascade(config) {
                 const regionSelect = document.getElementById(config.regionId);
@@ -801,15 +856,19 @@
                     pendingItem = null;
                     foundBox.style.display = 'none';
                     foundName.textContent = '';
+                    config.onClear?.();
                 }
 
-                function selectItem(item) {
+                function selectItem(item, notifyChange) {
                     searchInput.value = formatDisplay(item);
                     hiddenInput.value = item.id;
                     pendingItem = null;
                     foundBox.style.display = 'none';
                     foundName.textContent = '';
                     suggestions.style.display = 'none';
+                    if (notifyChange !== false) {
+                        config.onSelect?.(item.id);
+                    }
                 }
 
                 function showPendingItem(item) {
@@ -906,10 +965,11 @@
                         });
 
                         if (agent) {
-                            selectItem(agent);
+                            selectItem(agent, false);
                         } else {
                             searchInput.value = '';
                             hiddenInput.value = agentId || '';
+                            config.onSelect?.(agentId || null);
                         }
                     },
                     clearSelection: function () {
@@ -936,6 +996,13 @@
                 foundId: 'edit_gerant_found',
                 foundNameId: 'edit_gerant_found_name',
                 foundSelectId: 'edit_gerant_found_select',
+                onSelect: function (agentId) {
+                    const pontId = document.getElementById('edit_pont_id')?.value;
+                    loadEditCommisOptions(agentId, pontId, null);
+                },
+                onClear: function () {
+                    loadEditCommisOptions(null, null, null);
+                },
             });
 
             document.getElementById('addPontModal')?.addEventListener('hidden.bs.modal', function () {
@@ -946,6 +1013,7 @@
             document.getElementById('editPontModal')?.addEventListener('hidden.bs.modal', function () {
                 editGerantAutocomplete.clearSelection();
                 editLocationCascade.reset();
+                loadEditCommisOptions(null, null, null);
             });
 
             document.querySelectorAll('.edit-pont-btn').forEach(function (button) {
@@ -971,6 +1039,11 @@
                             gerantSearch.value = button.dataset.gerant;
                         }
                     }
+                    await loadEditCommisOptions(
+                        button.dataset.idAgent || document.getElementById('edit_id_agent')?.value,
+                        id,
+                        button.dataset.idCommis || null
+                    );
                     document.getElementById('edit_cooperatif').value = button.dataset.cooperatif || '';
                     document.getElementById('edit_statut').value = button.dataset.statut || 'Actif';
                     document.getElementById('edit_latitude').value = button.dataset.latitude || '';

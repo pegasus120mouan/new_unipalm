@@ -217,8 +217,13 @@ class AgentController extends Controller
         ];
 
         $ponts = $agent->ponts()
-            ->with('typePont')
+            ->with(['typePont', 'commis'])
             ->orderBy('code_pont')
+            ->get();
+
+        $commis = $agent->commis()
+            ->orderBy('nom')
+            ->orderBy('prenoms')
             ->get();
 
         $availablePonts = PontBascule::query()
@@ -238,7 +243,7 @@ class AgentController extends Controller
         $documents = $this->documentService->documentsByType($agent);
         $minioConfigured = app(MinioStorageService::class)->isConfigured();
 
-        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'availablePonts', 'documents', 'minioConfigured'))
+        return view('agents.show', compact('agent', 'stats', 'groupes', 'ponts', 'commis', 'availablePonts', 'documents', 'minioConfigured'))
             ->with('sousGroupes', Agent::sousGroupes());
     }
 

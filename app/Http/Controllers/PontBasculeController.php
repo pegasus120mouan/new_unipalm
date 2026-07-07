@@ -9,6 +9,7 @@ use App\Models\Region;
 use App\Models\SousPrefecture;
 use App\Models\Village;
 use App\Models\TypePont;
+use App\Services\CommisService;
 use App\Services\PontBasculeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,7 @@ class PontBasculeController extends Controller
 {
     public function __construct(
         private readonly PontBasculeService $pontService,
+        private readonly CommisService $commisService,
     ) {}
 
     public function index(Request $request): View
@@ -31,7 +33,7 @@ class PontBasculeController extends Controller
         ];
 
         $query = PontBascule::query()
-            ->with(['typePont', 'agent', 'region', 'departement', 'sousPrefecture', 'village'])
+            ->with(['typePont', 'agent', 'commis', 'region', 'departement', 'sousPrefecture', 'village'])
             ->orderBy('code_pont');
 
         if ($filters['search'] !== '') {
@@ -267,6 +269,7 @@ class PontBasculeController extends Controller
             'statut' => ['nullable', Rule::in(['Actif', 'Inactif'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'id_commis' => ['nullable', 'integer', Rule::exists('commis', 'id_commis')->whereNull('date_suppression')],
         ]);
 
         $this->pontService->update($pont, $validated);
@@ -276,9 +279,22 @@ class PontBasculeController extends Controller
             ->with('success', 'Pont-bascule modifié avec succès.');
     }
 
+    public function commisOptions(Request $request, Agent $agent): JsonResponse
+    {
+        if ($agent->date_suppression !== null) {
+            return response()->json([], 404);
+        }
+
+        $idPont = $request->query('pont_id') ? (int) $request->query('pont_id') : null;
+
+        return response()->json(
+            $this->commisService->commisPourAgent($agent->id_agent, $idPont)
+        );
+    }
+
     private function normalizePontOptionalIds(Request $request): void
     {
-        foreach (['id_type_pont', 'id_region', 'id_departement', 'id_sous_prefecture', 'id_village', 'id_agent'] as $field) {
+        foreach (['id_type_pont', 'id_region', 'id_departement', 'id_sous_prefecture', 'id_village', 'id_agent', 'id_commis'] as $field) {
             if (! $request->filled($field)) {
                 $request->merge([$field => null]);
             }

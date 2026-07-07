@@ -47,6 +47,7 @@ return [
             'modules' => [
                 'groupes' => 'Groupes',
                 'agents' => 'Agents',
+                'commis' => 'Commis',
                 'usines' => 'Usines',
                 'vehicules' => 'Véhicules',
             ],
@@ -109,6 +110,10 @@ return [
         'tickets.validate' => 'tickets.pending',
         'tickets.validate-bulk' => 'tickets.pending',
         'tickets.store' => 'tickets.index',
+        'tickets.pdf-by-usine' => 'tickets.index',
+        'tickets.pdf-bordereau' => 'tickets.index',
+        'tickets.export-all' => 'tickets.index',
+        'tickets.export-period' => 'tickets.index',
         'tickets.destroy' => 'tickets.destroy',
 
         'prix-unitaires.index' => 'prix-unitaires',
@@ -173,6 +178,13 @@ return [
         'agents.associate-pont' => 'agents',
         'agents.inline-update' => 'agents',
         'agents.destroy' => 'agents',
+
+        'commis.index' => 'commis',
+        'commis.agents-autocomplete' => 'commis',
+        'commis.ponts-for-agent' => 'commis',
+        'commis.store' => 'commis',
+        'commis.update' => 'commis',
+        'commis.destroy' => 'commis',
 
         'usines.index' => 'usines',
         'usines.store' => 'usines',
@@ -251,6 +263,7 @@ return [
         'ponts.departements.sous-prefectures-options' => 'ponts.index',
         'ponts.sous-prefectures.villages-options' => 'ponts.index',
         'ponts.store' => 'ponts.index',
+        'ponts.commis-options' => 'ponts.index',
         'ponts.update' => 'ponts.index',
         'ponts.destroy' => 'ponts.index',
 
@@ -286,6 +299,7 @@ return [
         'utilisateurs.roles' => 'role-permissions.index',
         'groupes' => 'groupes.index',
         'agents' => 'agents.index',
+        'commis' => 'commis.index',
         'usines' => 'usines.index',
         'vehicules' => 'vehicules.index',
         'sorties.demandes' => 'sorties.demandes.index',
@@ -313,7 +327,7 @@ return [
             'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search', 'tickets.destroy',
             'prix-unitaires', 'bordereaux', 'financements', 'prets', 'usines.amounts',
             'comptes-agents', 'comptes-groupes', 'utilisateurs.index',
-            'groupes', 'agents', 'usines', 'vehicules',
+            'groupes', 'agents', 'commis', 'usines', 'vehicules',
         ],
         'validateur' => [
             'analytics', 'tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated',

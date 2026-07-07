@@ -592,14 +592,14 @@
                        
 
                         @auth
-                        @if ($canModuleAny(['groupes', 'agents', 'usines', 'vehicules']))
+                        @if ($canModuleAny(['groupes', 'agents', 'commis', 'usines', 'vehicules']))
                         <li class="sidebar-item has-sub {{ request()->routeIs(['groupes.*', 'agents.*', 'vehicules.*']) || request()->routeIs('usines.index') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
                                 <span class="sidebar-icon sidebar-icon--gestion"><i class="bi bi-grid-3x3-gap-fill"></i></span>
 
-                                <span>Gestion</span>
+                                <span>Gestions</span>
 
                             </a>
 
@@ -622,6 +622,17 @@
                                     <a href="{{ route('agents.index') }}">
                                         <i class="bi bi-person-lines-fill submenu-icon--agents"></i>
                                         <span>Agents</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('commis'))
+                                <li class="submenu-item {{ request()->routeIs('commis.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('commis.index') }}">
+                                        <i class="bi bi-person-badge submenu-icon--commis"></i>
+                                        <span>Commis</span>
                                     </a>
 
                                 </li>

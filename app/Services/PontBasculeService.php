@@ -7,6 +7,9 @@ use App\Models\PontBascule;
 
 class PontBasculeService
 {
+    public function __construct(
+        private readonly CommisService $commisService,
+    ) {}
     public function generateCode(): string
     {
         $lastCode = PontBascule::query()
@@ -87,6 +90,15 @@ class PontBasculeService
 
         $pont->update($payload);
 
-        return $pont->fresh();
+        $pont = $pont->fresh();
+
+        if (array_key_exists('id_commis', $data)) {
+            $this->commisService->assignToPont(
+                $pont,
+                filled($data['id_commis'] ?? null) ? (int) $data['id_commis'] : null
+            );
+        }
+
+        return $pont;
     }
 }
