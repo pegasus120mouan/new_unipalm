@@ -146,7 +146,7 @@ return [
 
         'comptes-groupes.index' => 'comptes-groupes',
         'comptes-groupes.show' => 'comptes-groupes',
-        'comptes-groupes.paiement' => 'comptes-groupes',
+        'comptes-groupes.bordereaux.payment' => 'comptes-groupes',
 
         'utilisateurs.index' => 'utilisateurs.index',
         'utilisateurs.store' => 'utilisateurs.index',

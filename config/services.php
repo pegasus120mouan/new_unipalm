@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'gest_camions' => [
+        'url' => rtrim((string) env('GEST_CAMIONS_URL', 'http://gest-camions.test'), '/'),
+    ],
+
 ];

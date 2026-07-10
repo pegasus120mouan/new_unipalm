@@ -3,7 +3,8 @@
 namespace App\Services;
 
 use App\Models\Agent;
-use App\Models\Bordereau;
+use App\Models\BordereauAgentGestCamions;
+use App\Models\Financement;
 use App\Models\Groupe;
 use App\Models\Ticket;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -121,6 +122,48 @@ class CompteGroupeService
     }
 
     /**
+     * Solde chef d'équipe (tickets validés), même logique que gest-camions / solde_chef_equipe.
+     *
+     * @return array{
+     *     total_montant: float,
+     *     montant_paye: float,
+     *     reste_a_payer: float,
+     *     solde_financement: float
+     * }
+     */
+    public function soldeForGroupe(int $groupeId): array
+    {
+        $row = Ticket::query()
+            ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
+            ->where('a.id_chef', $groupeId)
+            ->whereNull('a.date_suppression')
+            ->whereNotNull('tickets.montant_paie')
+            ->select([
+                DB::raw('COALESCE(SUM(tickets.montant_paie), 0) AS total_montant'),
+                DB::raw('COALESCE(SUM(tickets.montant_payer), 0) AS montant_paye'),
+                DB::raw('COALESCE(SUM(tickets.montant_paie), 0) - COALESCE(SUM(tickets.montant_payer), 0) AS reste_a_payer'),
+            ])
+            ->first();
+
+        $agentIds = $this->agentIdsForGroupe($groupeId);
+        $soldeFinancement = 0.0;
+
+        if ($agentIds->isNotEmpty()) {
+            $soldeFinancement = (float) Financement::query()
+                ->whereIn('id_agent', $agentIds)
+                ->selectRaw('GREATEST(COALESCE(SUM(montant), 0), 0) AS solde')
+                ->value('solde');
+        }
+
+        return [
+            'total_montant' => (float) ($row->total_montant ?? 0),
+            'montant_paye' => (float) ($row->montant_paye ?? 0),
+            'reste_a_payer' => (float) ($row->reste_a_payer ?? 0),
+            'solde_financement' => $soldeFinancement,
+        ];
+    }
+
+    /**
      * @param  array<string, string>  $filters
      * @return array{
      *     montant_total: float,
@@ -132,33 +175,70 @@ class CompteGroupeService
      */
     public function statsForGroupe(int $groupeId, array $filters): array
     {
-        $query = Ticket::query()
-            ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
-            ->where('a.id_chef', $groupeId)
-            ->whereNull('a.date_suppression')
-            ->validated();
-
-        $this->applyTicketDateFilters($query, $filters, 'tickets.date_ticket');
-
-        $row = $query->select([
-            DB::raw('COUNT(tickets.id_ticket) AS nombre_tickets'),
-            DB::raw('COALESCE(SUM(tickets.montant_paie), 0) AS montant_total'),
-            DB::raw('COALESCE(SUM(tickets.montant_payer), 0) AS montant_paye'),
-            DB::raw('COALESCE(SUM(tickets.montant_reste), 0) AS montant_du'),
-        ])->first();
-
         $nombreAgents = Agent::query()
             ->where('id_chef', $groupeId)
             ->whereNull('date_suppression')
             ->count();
 
+        $agentIds = $this->agentIdsForGroupe($groupeId);
+        $bordereauxStats = $this->bordereauxFinancialStats($agentIds, $filters);
+
         return [
-            'montant_total' => (float) ($row->montant_total ?? 0),
-            'montant_paye' => (float) ($row->montant_paye ?? 0),
-            'montant_du' => (float) ($row->montant_du ?? 0),
-            'nombre_tickets' => (int) ($row->nombre_tickets ?? 0),
+            'montant_total' => $bordereauxStats['montant_total'],
+            'montant_paye' => $bordereauxStats['montant_paye'],
+            'montant_du' => $bordereauxStats['montant_du'],
+            'nombre_tickets' => 0,
             'nombre_agents' => $nombreAgents,
         ];
+    }
+
+    /**
+     * @param  Collection<int, int>  $agentIds
+     * @param  array<string, string>  $filters
+     * @return array{montant_total: float, montant_paye: float, montant_du: float}
+     */
+    public function bordereauxFinancialStats(Collection $agentIds, array $filters = []): array
+    {
+        if ($agentIds->isEmpty()) {
+            return [
+                'montant_total' => 0.0,
+                'montant_paye' => 0.0,
+                'montant_du' => 0.0,
+            ];
+        }
+
+        try {
+            $query = BordereauAgentGestCamions::query()
+                ->whereIn('id_agent', $agentIds);
+
+            if (($filters['date_debut'] ?? '') !== '') {
+                $query->whereDate('date_generation', '>=', $filters['date_debut']);
+            }
+
+            if (($filters['date_fin'] ?? '') !== '') {
+                $query->whereDate('date_generation', '<=', $filters['date_fin']);
+            }
+
+            $row = $query->select([
+                DB::raw('COALESCE(SUM(montant_total), 0) AS montant_total'),
+                DB::raw('COALESCE(SUM(montant_paye), 0) AS montant_paye'),
+            ])->first();
+
+            $total = (float) ($row->montant_total ?? 0);
+            $paye = (float) ($row->montant_paye ?? 0);
+
+            return [
+                'montant_total' => $total,
+                'montant_paye' => $paye,
+                'montant_du' => max(0, $total - $paye),
+            ];
+        } catch (\Throwable) {
+            return [
+                'montant_total' => 0.0,
+                'montant_paye' => 0.0,
+                'montant_du' => 0.0,
+            ];
+        }
     }
 
     /**
@@ -167,23 +247,120 @@ class CompteGroupeService
      */
     public function countsForGroupe(int $groupeId, array $filters): array
     {
-        $stats = $this->statsForGroupe($groupeId, $filters);
+        $agentIds = $this->agentIdsForGroupe($groupeId);
 
-        $agentIds = Agent::query()
+        return [
+            'tickets' => 0,
+            'bordereaux' => $this->countBordereauxGestCamions($agentIds),
+            'agents' => $agentIds->count(),
+        ];
+    }
+
+    /**
+     * Bordereaux générés dans gest-camions pour tous les agents du chef.
+     *
+     * @param  array<string, string>  $filters
+     */
+    public function paginatedBordereauxForGroupe(int $groupeId, array $filters, int $perPage = 15): LengthAwarePaginator
+    {
+        $agentIds = $this->agentIdsForGroupe($groupeId);
+
+        if ($agentIds->isEmpty()) {
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                collect(),
+                0,
+                $perPage,
+                1,
+                ['path' => request()->url(), 'query' => request()->query(), 'pageName' => 'page_bordereaux'],
+            );
+        }
+
+        try {
+            $query = BordereauAgentGestCamions::query()
+                ->whereIn('id_agent', $agentIds)
+                ->orderByDesc('date_generation')
+                ->orderByDesc('id');
+
+            if (($filters['date_debut'] ?? '') !== '') {
+                $query->whereDate('date_generation', '>=', $filters['date_debut']);
+            }
+
+            if (($filters['date_fin'] ?? '') !== '') {
+                $query->whereDate('date_generation', '<=', $filters['date_fin']);
+            }
+
+            $this->applyGestCamionsBordereauStatusFilter($query, $filters['statut_bordereau'] ?? '');
+
+            return $query->paginate($perPage, ['*'], 'page_bordereaux')->withQueryString();
+        } catch (\Throwable) {
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                collect(),
+                0,
+                $perPage,
+                1,
+                ['path' => request()->url(), 'query' => request()->query(), 'pageName' => 'page_bordereaux'],
+            );
+        }
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    public function agentIdsForGroupe(int $groupeId): Collection
+    {
+        return Agent::query()
             ->where('id_chef', $groupeId)
             ->whereNull('date_suppression')
             ->pluck('id_agent');
+    }
 
-        return [
-            'tickets' => $stats['nombre_tickets'],
-            'bordereaux' => $agentIds->isEmpty()
-                ? 0
-                : Bordereau::query()
-                    ->whereIn('id_agent', $agentIds)
-                    ->whereNotNull('date_validation_boss')
-                    ->count(),
-            'agents' => $stats['nombre_agents'],
-        ];
+    /**
+     * @param  Collection<int, int>  $agentIds
+     */
+    private function countBordereauxGestCamions(Collection $agentIds): int
+    {
+        if ($agentIds->isEmpty()) {
+            return 0;
+        }
+
+        try {
+            return BordereauAgentGestCamions::query()
+                ->whereIn('id_agent', $agentIds)
+                ->count();
+        } catch (\Throwable) {
+            // Connexion gest-camions indisponible : ne pas casser la page.
+            return 0;
+        }
+    }
+
+    /**
+     * @param  Builder<BordereauAgentGestCamions>  $query
+     */
+    private function applyGestCamionsBordereauStatusFilter(Builder $query, string $statut): void
+    {
+        if ($statut === '') {
+            return;
+        }
+
+        if ($statut === 'solde') {
+            $query->whereRaw('COALESCE(montant_paye, 0) >= montant_total')
+                ->where('montant_total', '>', 0);
+
+            return;
+        }
+
+        if ($statut === 'en_cours') {
+            $query->where('montant_paye', '>', 0)
+                ->whereRaw('COALESCE(montant_paye, 0) < montant_total');
+
+            return;
+        }
+
+        if ($statut === 'non_paye') {
+            $query->where(function (Builder $q) {
+                $q->whereNull('montant_paye')->orWhere('montant_paye', '<=', 0);
+            });
+        }
     }
 
     /**

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BordereauAgentGestCamions;
 use App\Models\Groupe;
 use App\Services\CaisseService;
 use App\Services\CompteGroupeService;
-use App\Services\GroupeTicketPaymentService;
+use App\Services\FinancementService;
+use App\Services\GestCamionsBordereauPaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +17,8 @@ class CompteGroupeController extends Controller
 {
     public function __construct(
         private readonly CompteGroupeService $compteGroupeService,
-        private readonly GroupeTicketPaymentService $groupeTicketPaymentService,
+        private readonly GestCamionsBordereauPaymentService $gestCamionsBordereauPaymentService,
+        private readonly FinancementService $financementService,
         private readonly CaisseService $caisseService,
     ) {}
 
@@ -49,47 +52,81 @@ class CompteGroupeController extends Controller
         $filters = [
             'date_debut' => trim((string) $request->query('date_debut', '')),
             'date_fin' => trim((string) $request->query('date_fin', '')),
-            'statut' => trim((string) $request->query('statut', '')),
+            'statut_bordereau' => trim((string) $request->query('statut_bordereau', '')),
         ];
 
         $stats = $this->compteGroupeService->statsForGroupe($groupe->id_chef, $filters);
         $counts = $this->compteGroupeService->countsForGroupe($groupe->id_chef, $filters);
-        $tickets = $this->compteGroupeService->paginatedTicketsForGroupe($groupe->id_chef, $filters);
+        $soldeChef = $this->compteGroupeService->soldeForGroupe($groupe->id_chef);
+        $bordereaux = $this->compteGroupeService->paginatedBordereauxForGroupe($groupe->id_chef, $filters);
         $soldeCaisse = $this->caisseService->getSolde();
+        $montantUtilisable = $this->caisseService->getMontantUtilisable();
+        $gestCamionsUrl = (string) config('services.gest_camions.url', '');
+
+        $financementByAgent = [];
+        foreach ($bordereaux->pluck('id_agent')->unique()->filter() as $agentId) {
+            $financementByAgent[(int) $agentId] = $this->financementService->statsForAgent((int) $agentId);
+        }
 
         return view('comptes-groupes.show', compact(
             'groupe',
             'filters',
             'stats',
             'counts',
-            'tickets',
+            'soldeChef',
+            'bordereaux',
             'soldeCaisse',
+            'montantUtilisable',
+            'gestCamionsUrl',
+            'financementByAgent',
         ));
     }
 
-    public function pay(Request $request, Groupe $groupe): RedirectResponse
+    public function payBordereau(Request $request, Groupe $groupe, int $bordereau): RedirectResponse
     {
+        if ($request->has('montant')) {
+            $request->merge([
+                'montant' => preg_replace('/\s+/u', '', (string) $request->input('montant')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'montant_paiement' => ['required', 'numeric', 'min:1'],
-            'motif_paiement' => ['nullable', 'string', 'max:255'],
+            'montant' => ['required', 'numeric', 'min:0.01'],
+            'source_paiement' => ['required', 'in:transactions,financement,cheque'],
+            'numero_cheque' => ['nullable', 'string', 'max:50'],
+            'payment_bordereau_id' => ['nullable', 'integer'],
         ]);
 
-        try {
-            $details = $this->groupeTicketPaymentService->pay(
-                $groupe,
-                $request->user(),
-                (float) $validated['montant_paiement'],
-                $validated['motif_paiement'] ?? null,
-            );
+        if ($validated['source_paiement'] === 'cheque' && blank($validated['numero_cheque'] ?? null)) {
+            return back()
+                ->withInput()
+                ->withErrors(['paiement' => 'Le numéro de chèque est obligatoire.']);
+        }
 
-            return redirect()
-                ->route('comptes-groupes.show', $groupe)
-                ->with('success', 'Paiement de '.number_format($details['montant'], 0, '', ' ').' FCFA effectué avec succès.')
-                ->with('paiement_details', $details);
+        $bordereauModel = BordereauAgentGestCamions::query()->findOrFail($bordereau);
+
+        $agentIds = $this->compteGroupeService->agentIdsForGroupe($groupe->id_chef);
+        if (! $agentIds->contains((int) $bordereauModel->id_agent)) {
+            abort(403, 'Ce bordereau n\'appartient pas à un agent de ce chef.');
+        }
+
+        try {
+            $recuId = $this->gestCamionsBordereauPaymentService->pay(
+                $bordereauModel,
+                $request->user(),
+                $validated,
+            );
         } catch (InvalidArgumentException $e) {
             return back()
                 ->withInput()
+                ->with('payment_bordereau_id', $bordereauModel->id)
                 ->withErrors(['paiement' => $e->getMessage()]);
         }
+
+        return redirect()
+            ->route('comptes-groupes.show', $groupe)
+            ->with('success', 'Paiement de '.number_format((float) $validated['montant'], 0, '', ' ')
+                .' FCFA enregistré pour le bordereau '.$bordereauModel->numero.'.')
+            ->with('last_recu_id', $recuId);
     }
 }

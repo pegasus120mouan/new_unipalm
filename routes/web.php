@@ -91,7 +91,8 @@ Route::get('/', function () {
 
     Route::get('/comptes-groupes', [CompteGroupeController::class, 'index'])->name('comptes-groupes.index');
     Route::get('/comptes-groupes/{groupe:id_chef}', [CompteGroupeController::class, 'show'])->name('comptes-groupes.show');
-    Route::post('/comptes-groupes/{groupe:id_chef}/paiement', [CompteGroupeController::class, 'pay'])->name('comptes-groupes.paiement');
+    Route::post('/comptes-groupes/{groupe:id_chef}/bordereaux/{bordereau}/paiement', [CompteGroupeController::class, 'payBordereau'])
+        ->name('comptes-groupes.bordereaux.payment');
 
     Route::get('/groupes', [GroupeController::class, 'index'])->name('groupes.index');
     Route::get('/groupes/{groupe:id_chef}', [GroupeController::class, 'show'])->name('groupes.show');
