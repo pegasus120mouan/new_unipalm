@@ -53,6 +53,7 @@ class CompteGroupeController extends Controller
             'date_debut' => trim((string) $request->query('date_debut', '')),
             'date_fin' => trim((string) $request->query('date_fin', '')),
             'statut_bordereau' => trim((string) $request->query('statut_bordereau', '')),
+            'search_agent' => trim((string) $request->query('search_agent', '')),
         ];
 
         $stats = $this->compteGroupeService->statsForGroupe($groupe->id_chef, $filters);

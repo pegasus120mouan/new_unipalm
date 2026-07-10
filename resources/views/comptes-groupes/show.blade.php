@@ -179,7 +179,13 @@
                 <div class="card-body">
                     <form method="GET" action="{{ route('comptes-groupes.show', $groupe) }}" class="mb-3">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-4 col-lg-3">
+                            <div class="col-md-6 col-lg-3">
+                                <label for="search_agent" class="form-label small text-uppercase text-muted">Agent</label>
+                                <input type="text" name="search_agent" id="search_agent" class="form-control form-control-sm"
+                                    value="{{ $filters['search_agent'] }}"
+                                    placeholder="Nom, prénom ou n° agent…">
+                            </div>
+                            <div class="col-md-6 col-lg-2">
                                 <label for="statut_bordereau" class="form-label small text-uppercase text-muted">Statut du bordereau</label>
                                 <select name="statut_bordereau" id="statut_bordereau" class="form-select form-select-sm">
                                     <option value="">Tous</option>
@@ -198,7 +204,7 @@
                                 <input type="date" name="date_fin" id="bordereau_date_fin" class="form-control form-control-sm"
                                     value="{{ $filters['date_fin'] }}">
                             </div>
-                            <div class="col-md-12 col-lg-5 d-flex flex-wrap gap-2">
+                            <div class="col-md-4 col-lg-3 d-flex flex-wrap gap-2">
                                 <button type="submit" class="btn btn-primary btn-sm">
                                     <i class="bi bi-search"></i> Filtrer
                                 </button>
@@ -240,15 +246,16 @@
                                         $pdfUrl = $gestCamionsUrl
                                             ? $gestCamionsUrl.'/gestion-financiere/agent-financier/'.$bordereau->id_agent.'/bordereaux/'.$bordereau->id.'/pdf'
                                             : null;
-                                        $agentUrl = $gestCamionsUrl
-                                            ? $gestCamionsUrl.'/gestion-financiere/agent-financier/'.$bordereau->id_agent
-                                            : route('comptes-agents.show', ['agent' => $bordereau->id_agent, 'section' => 'bordereaux']);
+                                        $agentUrl = route('comptes-agents.show', [
+                                            'agent' => $bordereau->id_agent,
+                                            'section' => 'bordereaux',
+                                        ]);
                                         $financementStats = $financementByAgent[(int) $bordereau->id_agent] ?? ['solde_financement' => 0];
                                     @endphp
                                     <tr>
                                         <td class="fw-semibold">{{ $bordereau->numero }}</td>
                                         <td>
-                                            <a href="{{ $agentUrl }}" class="text-decoration-none" @if($gestCamionsUrl) target="_blank" @endif>
+                                            <a href="{{ $agentUrl }}" class="fw-semibold text-primary text-decoration-underline">
                                                 {{ $bordereau->agent_nom ?: ('Agent #'.$bordereau->id_agent) }}
                                             </a>
                                             @if ($bordereau->agent_numero)
@@ -288,7 +295,7 @@
                                                         <i class="bi bi-printer"></i>
                                                     </a>
                                                 @endif
-                                                <a href="{{ $agentUrl }}" class="btn btn-outline-secondary btn-sm" title="Voir l'agent" @if($gestCamionsUrl) target="_blank" @endif>
+                                                <a href="{{ $agentUrl }}" class="btn btn-outline-secondary btn-sm" title="Voir le compte agent">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                             </div>

@@ -289,6 +289,7 @@ class CompteGroupeService
                 $query->whereDate('date_generation', '<=', $filters['date_fin']);
             }
 
+            $this->applyGestCamionsAgentSearchFilter($query, $filters['search_agent'] ?? '', $groupeId);
             $this->applyGestCamionsBordereauStatusFilter($query, $filters['statut_bordereau'] ?? '');
 
             return $query->paginate($perPage, ['*'], 'page_bordereaux')->withQueryString();
@@ -301,6 +302,48 @@ class CompteGroupeService
                 ['path' => request()->url(), 'query' => request()->query(), 'pageName' => 'page_bordereaux'],
             );
         }
+    }
+
+    /**
+     * @param  Builder<BordereauAgentGestCamions>  $query
+     */
+    private function applyGestCamionsAgentSearchFilter(Builder $query, string $search, int $groupeId): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $term = '%'.$search.'%';
+
+        $matchingAgentIds = Agent::query()
+            ->where('id_chef', $groupeId)
+            ->whereNull('date_suppression')
+            ->where(function (Builder $q) use ($term, $search) {
+                $q->where('nom', 'like', $term)
+                    ->orWhere('prenom', 'like', $term)
+                    ->orWhereRaw("TRIM(CONCAT(COALESCE(nom, ''), ' ', COALESCE(prenom, ''))) LIKE ?", [$term])
+                    ->orWhere('numero_agent', 'like', $term);
+
+                if (ctype_digit($search)) {
+                    $q->orWhere('id_agent', (int) $search);
+                }
+            })
+            ->pluck('id_agent');
+
+        $query->where(function (Builder $q) use ($term, $search, $matchingAgentIds) {
+            $q->where('agent_nom', 'like', $term)
+                ->orWhere('agent_numero', 'like', $term)
+                ->orWhere('numero', 'like', $term);
+
+            if (ctype_digit($search)) {
+                $q->orWhere('id_agent', (int) $search);
+            }
+
+            if ($matchingAgentIds->isNotEmpty()) {
+                $q->orWhereIn('id_agent', $matchingAgentIds);
+            }
+        });
     }
 
     /**
