@@ -16,6 +16,7 @@ class PaiementAgentGestCamions extends Model
         'montant',
         'date_paiement',
         'mode_paiement',
+        'caisse',
         'reference',
         'commentaire',
         'numero_recu',

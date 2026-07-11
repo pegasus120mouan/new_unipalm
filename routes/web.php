@@ -86,6 +86,8 @@ Route::get('/', function () {
     Route::get('/comptes-agents/{agent:id_agent}', [CompteAgentController::class, 'show'])->name('comptes-agents.show');
     Route::post('/comptes-agents/bordereaux/{bordereau:id_bordereau}/paiement', [CompteAgentController::class, 'storeBordereauPayment'])
         ->name('comptes-agents.bordereaux.payment');
+    Route::post('/comptes-agents/demandes-avance/{demande}/paiement', [CompteAgentController::class, 'storeDemandeAvancePayment'])
+        ->name('comptes-agents.demandes-avance.payment');
     Route::get('/comptes-agents/{agent:id_agent}/historique-transactions/pdf', [CompteAgentController::class, 'transactionsHistoryPdf'])
         ->name('comptes-agents.transactions.pdf');
 

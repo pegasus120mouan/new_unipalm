@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Bordereau;
+use App\Models\DemandeAvanceGestCamions;
 use App\Services\AgentBordereauPaymentService;
 use App\Services\AgentTransactionsHistoryPdfService;
 use App\Services\CaisseService;
 use App\Services\CompteAgentService;
+use App\Services\DemandeAvancePaymentService;
 use App\Services\FinancementService;
 use App\Services\PretService;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +27,7 @@ class CompteAgentController extends Controller
         private readonly CaisseService $caisseService,
         private readonly AgentBordereauPaymentService $bordereauPaymentService,
         private readonly AgentTransactionsHistoryPdfService $transactionsHistoryPdfService,
+        private readonly DemandeAvancePaymentService $demandeAvancePaymentService,
     ) {}
 
     public function index(Request $request): View
@@ -61,7 +64,10 @@ class CompteAgentController extends Controller
             'statut_bordereau' => trim((string) $request->query('statut_bordereau', '')),
         ];
 
-        $activeSection = $request->query('section', 'tickets') === 'bordereaux' ? 'bordereaux' : 'tickets';
+        $section = (string) $request->query('section', 'tickets');
+        $activeSection = in_array($section, ['tickets', 'bordereaux', 'financement'], true)
+            ? $section
+            : 'tickets';
 
         $financementStats = $this->financementService->statsForAgent($agent->id_agent);
         $pretStats = $this->pretService->statsForAgent($agent->id_agent);
@@ -74,6 +80,19 @@ class CompteAgentController extends Controller
         $tickets = $this->compteAgentService->paginatedAgentTickets($agent->id_agent, $filters);
         $bordereaux = $this->compteAgentService->paginatedAgentBordereaux($agent->id_agent, $filters);
         $soldeCaisse = $this->caisseService->getSolde();
+        $montantUtilisable = $this->caisseService->getMontantUtilisable();
+
+        $demandesAvance = DemandeAvanceGestCamions::query()
+            ->where('id_agent', $agent->id_agent)
+            ->orderByDesc('date_demande')
+            ->orderByDesc('id')
+            ->paginate(20, ['*'], 'demandes_page')
+            ->withQueryString();
+
+        $counts['demandes_avance'] = DemandeAvanceGestCamions::query()
+            ->where('id_agent', $agent->id_agent)
+            ->where('statut', 'en_attente')
+            ->count();
 
         return view('comptes-agents.show', compact(
             'agent',
@@ -86,7 +105,33 @@ class CompteAgentController extends Controller
             'tickets',
             'bordereaux',
             'soldeCaisse',
+            'montantUtilisable',
+            'demandesAvance',
         ));
+    }
+
+    public function storeDemandeAvancePayment(Request $request, int $demande): RedirectResponse
+    {
+        $demandeModel = DemandeAvanceGestCamions::query()->findOrFail($demande);
+
+        try {
+            $this->demandeAvancePaymentService->payer($demandeModel, $request->user());
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['paiement' => $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('comptes-agents.show', [
+                'agent' => $demandeModel->id_agent,
+                'section' => 'financement',
+            ])
+            ->with(
+                'success',
+                'Avance de '.number_format((float) $demandeModel->montant, 0, ',', ' ')
+                .' FCFA payée. Montant débité de la caisse groupe.'
+            );
     }
 
     public function storeBordereauPayment(Request $request, Bordereau $bordereau): RedirectResponse

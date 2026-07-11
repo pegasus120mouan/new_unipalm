@@ -75,19 +75,29 @@
                                 <span class="text-muted small">Tickets</span>
                                 <span class="fw-semibold">{{ $counts['tickets'] }}</span>
                             </div>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between mb-1">
                                 <span class="text-muted small">Bordereaux</span>
                                 <span class="fw-semibold">{{ $counts['bordereaux'] }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small">Avances en attente</span>
+                                <span class="fw-semibold">{{ $counts['demandes_avance'] ?? 0 }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="mt-3 pt-2 border-top">
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-primary btn-sm compte-agent-section-btn {{ $activeSection === 'tickets' ? 'active' : '' }}" data-section="tickets">
+                            <button type="button" class="btn {{ $activeSection === 'tickets' ? 'btn-primary active' : 'btn-outline-primary' }} btn-sm compte-agent-section-btn" data-section="tickets">
                                 <i class="bi bi-ticket-perforated"></i> Tickets
                             </button>
-                            <button type="button" class="btn btn-outline-primary btn-sm compte-agent-section-btn {{ $activeSection === 'bordereaux' ? 'active' : '' }}" data-section="bordereaux">
+                            <button type="button" class="btn {{ $activeSection === 'bordereaux' ? 'btn-primary active' : 'btn-outline-primary' }} btn-sm compte-agent-section-btn" data-section="bordereaux">
                                 <i class="bi bi-file-earmark-text"></i> Bordereaux
+                            </button>
+                            <button type="button" class="btn {{ $activeSection === 'financement' ? 'btn-primary active' : 'btn-outline-primary' }} btn-sm compte-agent-section-btn" data-section="financement">
+                                <i class="bi bi-wallet2"></i> Financement
+                                @if(($counts['demandes_avance'] ?? 0) > 0)
+                                    <span class="badge bg-danger ms-1">{{ $counts['demandes_avance'] }}</span>
+                                @endif
                             </button>
                             <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-bs-toggle="modal" data-bs-target="#transactionsHistoryModal">
@@ -459,6 +469,100 @@
         </div>
     </section>
 
+    <section id="financement-section" class="compte-agent-section {{ $activeSection !== 'financement' ? 'd-none' : '' }}">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="bi bi-wallet2"></i> Demandes d'avance (Financement)</span>
+                <span class="text-muted small">
+                    Caisse utilisable :
+                    <strong>{{ number_format((float) ($montantUtilisable ?? 0), 0, ',', ' ') }} FCFA</strong>
+                </span>
+            </div>
+            <div class="card-body">
+                @if ($errors->has('paiement'))
+                    <div class="alert alert-danger">{{ $errors->first('paiement') }}</div>
+                @endif
+
+                <div class="alert alert-info">
+                    Les avances demandées depuis gest-camions sur le <strong>compte API</strong> apparaissent ici.
+                    Le paiement débite la caisse du groupe (PGF).
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Montant</th>
+                                <th>Mode</th>
+                                <th>Référence</th>
+                                <th>Commentaire</th>
+                                <th>Statut</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($demandesAvance as $demande)
+                                <tr>
+                                    <td>{{ $demande->date_demande?->format('d/m/Y') ?? '—' }}</td>
+                                    <td class="text-end fw-semibold">
+                                        {{ number_format((float) $demande->montant, 0, ',', ' ') }} FCFA
+                                    </td>
+                                    <td>{{ $demande->mode_paiement ?: '—' }}</td>
+                                    <td>{{ $demande->reference ?: '—' }}</td>
+                                    <td>{{ $demande->commentaire ?: '—' }}</td>
+                                    <td>
+                                        @if ($demande->statut === 'en_attente')
+                                            <span class="badge bg-warning text-dark">En attente</span>
+                                        @elseif ($demande->statut === 'payee')
+                                            <span class="badge bg-success">Payée</span>
+                                            @if ($demande->payee_at)
+                                                <div class="small text-muted">{{ $demande->payee_at->format('d/m/Y H:i') }}</div>
+                                            @endif
+                                        @else
+                                            <span class="badge bg-secondary">{{ $demande->statut }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        @if ($demande->isEnAttente())
+                                            <button type="button"
+                                                class="btn btn-sm btn-success btn-confirm-avance-payment"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#confirmAvancePaymentModal"
+                                                data-action="{{ route('comptes-agents.demandes-avance.payment', $demande->id) }}"
+                                                data-montant="{{ number_format((float) $demande->montant, 0, ',', ' ') }} FCFA"
+                                                data-date="{{ $demande->date_demande?->format('d/m/Y') ?? '—' }}"
+                                                data-mode="{{ $demande->mode_paiement ?: '—' }}"
+                                                data-commentaire="{{ $demande->commentaire ?: '—' }}"
+                                                @disabled((float) ($montantUtilisable ?? 0) < (float) $demande->montant)>
+                                                <i class="bi bi-cash-coin"></i> Payer
+                                            </button>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        Aucune demande d'avance pour cet agent.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if ($demandesAvance->hasPages())
+                    <div class="mt-3">
+                        {{ $demandesAvance->appends(['section' => 'financement'])->links() }}
+                    </div>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    @include('comptes-agents.partials.avance-payment-confirm-modal')
     @include('comptes-agents.partials.transactions-history-modal', ['agent' => $agent])
 @endsection
 
@@ -497,6 +601,33 @@
                     updateBordereauPaymentMax(select);
                 });
             });
+
+            document.querySelectorAll('.btn-confirm-avance-payment').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var form = document.getElementById('confirmAvancePaymentForm');
+                    var submitBtn = document.getElementById('confirmAvancePaymentSubmit');
+                    form.action = btn.getAttribute('data-action') || '';
+                    document.getElementById('confirmAvanceMontant').textContent = btn.getAttribute('data-montant') || '—';
+                    document.getElementById('confirmAvanceDate').textContent = btn.getAttribute('data-date') || '—';
+                    document.getElementById('confirmAvanceMode').textContent = btn.getAttribute('data-mode') || '—';
+                    document.getElementById('confirmAvanceCommentaire').textContent = btn.getAttribute('data-commentaire') || '—';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Confirmer le paiement';
+                    }
+                });
+            });
+
+            var confirmAvanceForm = document.getElementById('confirmAvancePaymentForm');
+            if (confirmAvanceForm) {
+                confirmAvanceForm.addEventListener('submit', function () {
+                    var submitBtn = document.getElementById('confirmAvancePaymentSubmit');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Paiement…';
+                    }
+                });
+            }
 
             var buttons = document.querySelectorAll('.compte-agent-section-btn');
             var sections = document.querySelectorAll('.compte-agent-section');
