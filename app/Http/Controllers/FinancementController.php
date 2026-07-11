@@ -23,6 +23,7 @@ class FinancementController extends Controller
 
         $summaries = $this->financementService->paginatedAgentSummaries($filters);
         $financements = $this->financementService->detailedList($filters);
+        $financementsEnAttente = $this->financementService->pendingValidations();
 
         $agents = Agent::query()
             ->whereNull('date_suppression')
@@ -30,7 +31,13 @@ class FinancementController extends Controller
             ->orderBy('prenom')
             ->get();
 
-        return view('financements.index', compact('summaries', 'financements', 'filters', 'agents'));
+        return view('financements.index', compact(
+            'summaries',
+            'financements',
+            'financementsEnAttente',
+            'filters',
+            'agents',
+        ));
     }
 
     public function show(Request $request, Agent $agent): View
@@ -94,6 +101,20 @@ class FinancementController extends Controller
             ->with('success', 'Financement ajouté avec succès.');
     }
 
+    public function valider(\App\Models\Financement $financement): RedirectResponse
+    {
+        try {
+            $this->financementService->valider($financement);
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['financement' => $e->getMessage()]);
+        }
+
+        return back()->with(
+            'success',
+            'Financement '.$financement->code_affiche.' validé avec succès.'
+        );
+    }
+
     public function pdf(Request $request, Agent $agent): Response
     {
         abort_if($agent->date_suppression !== null, 404);
@@ -117,6 +138,7 @@ class FinancementController extends Controller
     {
         return [
             'search' => trim((string) $request->input('search', '')),
+            'agent' => trim((string) $request->input('agent', '')),
             'agent_id' => $request->input('agent_id'),
             'date_debut' => $request->input('date_debut'),
             'date_fin' => $request->input('date_fin'),

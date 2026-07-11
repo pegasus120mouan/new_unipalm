@@ -77,6 +77,7 @@ Route::get('/', function () {
     Route::get('/financements/agents/{agent:id_agent}', [FinancementController::class, 'show'])->name('financements.show');
     Route::get('/financements/agents/{agent:id_agent}/pdf', [FinancementController::class, 'pdf'])->name('financements.pdf');
     Route::post('/financements', [FinancementController::class, 'store'])->name('financements.store');
+    Route::post('/financements/{financement}/valider', [FinancementController::class, 'valider'])->name('financements.valider');
 
     Route::get('/prets', [PretController::class, 'index'])->name('prets.index');
     Route::get('/prets/agents/{agent:id_agent}', [PretController::class, 'show'])->name('prets.show');
@@ -84,6 +85,8 @@ Route::get('/', function () {
 
     Route::get('/comptes-agents', [CompteAgentController::class, 'index'])->name('comptes-agents.index');
     Route::get('/comptes-agents/{agent:id_agent}', [CompteAgentController::class, 'show'])->name('comptes-agents.show');
+    Route::post('/comptes-agents/{agent:id_agent}/demande-financement', [CompteAgentController::class, 'storeDemandeFinancement'])
+        ->name('comptes-agents.demande-financement.store');
     Route::post('/comptes-agents/bordereaux/{bordereau:id_bordereau}/paiement', [CompteAgentController::class, 'storeBordereauPayment'])
         ->name('comptes-agents.bordereaux.payment');
     Route::post('/comptes-agents/demandes-avance/{demande}/paiement', [CompteAgentController::class, 'storeDemandeAvancePayment'])

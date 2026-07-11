@@ -129,6 +129,39 @@ class CompteAgentController extends Controller
         ));
     }
 
+    public function storeDemandeFinancement(Request $request, Agent $agent): RedirectResponse
+    {
+        abort_if($agent->date_suppression !== null, 404);
+
+        if ($request->has('montant')) {
+            $request->merge([
+                'montant' => preg_replace('/\s+/', '', (string) $request->input('montant')),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'montant' => ['required', 'numeric', 'min:1'],
+            'motif' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $financement = $this->financementService->createDemande(
+            (int) $agent->id_agent,
+            (float) $validated['montant'],
+            $validated['motif'],
+        );
+
+        return redirect()
+            ->route('comptes-agents.show', [
+                'agent' => $agent->id_agent,
+                'section' => 'financement',
+            ])
+            ->with(
+                'success',
+                'Demande de financement '.$financement->code_affiche
+                .' enregistrée. Elle est en attente de validation.'
+            );
+    }
+
     public function storeDemandeAvancePayment(Request $request, int $demande): RedirectResponse
     {
         $demandeModel = DemandeAvanceGestCamions::query()->findOrFail($demande);

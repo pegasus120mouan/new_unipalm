@@ -21,8 +21,13 @@ class Financement extends Model
         'id_agent',
         'montant',
         'motif',
+        'statut',
         'date_financement',
     ];
+
+    public const STATUT_VALIDE = 'valide';
+
+    public const STATUT_EN_ATTENTE = 'en_attente';
 
     protected function casts(): array
     {
@@ -50,5 +55,29 @@ class Financement extends Model
     public function isRepayment(): bool
     {
         return (float) $this->montant < 0;
+    }
+
+    public function isEnAttente(): bool
+    {
+        return $this->statut === self::STATUT_EN_ATTENTE;
+    }
+
+    public function isValide(): bool
+    {
+        return $this->statut === self::STATUT_VALIDE || $this->statut === null || $this->statut === '';
+    }
+
+    public function scopeValides($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('statut', self::STATUT_VALIDE)
+                ->orWhereNull('statut')
+                ->orWhere('statut', '');
+        });
+    }
+
+    public function scopeEnAttente($query)
+    {
+        return $query->where('statut', self::STATUT_EN_ATTENTE);
     }
 }

@@ -43,15 +43,9 @@
                                 placeholder="Rechercher..." value="{{ $filters['search'] }}">
                         </div>
                         <div class="col-md-6 col-lg-3">
-                            <label for="agent_id" class="form-label">Agent</label>
-                            <select name="agent_id" id="agent_id" class="form-select">
-                                <option value="">Tous les agents</option>
-                                @foreach ($agents as $agent)
-                                    <option value="{{ $agent->id_agent }}" @selected(($filters['agent_id'] ?? '') == $agent->id_agent)>
-                                        {{ $agent->full_name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <label for="agent" class="form-label">Nom ou prénom agent</label>
+                            <input type="text" name="agent" id="agent" class="form-control"
+                                placeholder="Ex: Aka, Georges..." value="{{ $filters['agent'] ?? '' }}">
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <label for="date_debut" class="form-label">Date de début</label>
@@ -77,6 +71,63 @@
         </div>
     </section>
 
+    @if (($financementsEnAttente ?? collect())->isNotEmpty())
+    <section class="row mb-4" id="financements-en-attente">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="text-danger fw-semibold">
+                        <i class="bi bi-hourglass-split"></i>
+                        Financements en attente de validation
+                    </span>
+                    <span class="badge bg-danger">{{ $financementsEnAttente->count() }}</span>
+                </div>
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Code</th>
+                                <th>Agent</th>
+                                <th>Date</th>
+                                <th class="text-end">Montant</th>
+                                <th>Motif</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($financementsEnAttente as $financement)
+                                <tr>
+                                    <td><code>{{ $financement->code_affiche }}</code></td>
+                                    <td>{{ $financement->agent?->full_name ?? ('#'.$financement->id_agent) }}</td>
+                                    <td>{{ $financement->date_financement?->format('d/m/Y') ?? '—' }}</td>
+                                    <td class="text-end text-danger fw-semibold">
+                                        {{ number_format((float) $financement->montant, 0, '', ' ') }} FCFA
+                                    </td>
+                                    <td>{{ $financement->motif ?: '—' }}</td>
+                                    <td class="text-end">
+                                        <button type="button"
+                                            class="btn btn-success btn-sm btn-valider-financement"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#confirmValiderFinancementModal"
+                                            data-action="{{ route('financements.valider', $financement->Numero_financement) }}"
+                                            data-code="{{ $financement->code_affiche }}"
+                                            data-agent="{{ $financement->agent?->full_name ?? ('#'.$financement->id_agent) }}"
+                                            data-date="{{ $financement->date_financement?->format('d/m/Y') ?? '—' }}"
+                                            data-montant="{{ number_format((float) $financement->montant, 0, ',', ' ') }} FCFA"
+                                            data-motif="{{ $financement->motif ?: '—' }}">
+                                            <i class="bi bi-check2-circle"></i> Valider
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+    @endif
+
     <section class="row">
         <div class="col-12">
             <div class="card financement-summary-card">
@@ -86,7 +137,7 @@
                         <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#listeDetailleeModal">
                             <i class="bi bi-list-ul"></i> Liste détaillée des financements
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addFinancementModal">
+                        <button type="button" class="btn btn-secondary btn-sm" disabled title="Les financements se créent via une demande sur le compte agent">
                             <i class="bi bi-plus-lg"></i> Nouveau financement
                         </button>
                     </div>
@@ -193,9 +244,42 @@
         'agents' => $agents,
         'redirectTo' => route('financements.index'),
     ])
+    @include('financements.partials.valider-confirm-modal')
 @endsection
 
 @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var form = document.getElementById('confirmValiderFinancementForm');
+            var submitBtn = document.getElementById('confirmValiderFinancementSubmit');
+
+            document.querySelectorAll('.btn-valider-financement').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    if (form) {
+                        form.action = btn.getAttribute('data-action') || '';
+                    }
+                    document.getElementById('confirmValiderFinCode').textContent = btn.getAttribute('data-code') || '—';
+                    document.getElementById('confirmValiderFinAgent').textContent = btn.getAttribute('data-agent') || '—';
+                    document.getElementById('confirmValiderFinDate').textContent = btn.getAttribute('data-date') || '—';
+                    document.getElementById('confirmValiderFinMontant').textContent = btn.getAttribute('data-montant') || '—';
+                    document.getElementById('confirmValiderFinMotif').textContent = btn.getAttribute('data-motif') || '—';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Confirmer la validation';
+                    }
+                });
+            });
+
+            if (form) {
+                form.addEventListener('submit', function () {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Validation…';
+                    }
+                });
+            }
+        });
+    </script>
     @if ($errors->any())
         <script>
             document.addEventListener('DOMContentLoaded', function () {

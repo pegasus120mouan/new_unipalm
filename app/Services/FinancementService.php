@@ -26,11 +26,27 @@ class FinancementService
                 DB::raw('GREATEST(COALESCE(SUM(f.montant), 0), 0) AS solde_financement'),
                 DB::raw('COALESCE(COUNT(f.Numero_financement), 0) AS nombre_financements'),
             ])
-            ->leftJoin('financement as f', 'agents.id_agent', '=', 'f.id_agent')
+            ->leftJoin('financement as f', function ($join) {
+                $join->on('agents.id_agent', '=', 'f.id_agent')
+                    ->where(function ($q) {
+                        $q->where('f.statut', Financement::STATUT_VALIDE)
+                            ->orWhereNull('f.statut')
+                            ->orWhere('f.statut', '');
+                    });
+            })
             ->whereNull('agents.date_suppression');
 
         if (! empty($filters['agent_id'])) {
             $query->where('agents.id_agent', (int) $filters['agent_id']);
+        }
+
+        if (! empty($filters['agent'])) {
+            $term = '%'.$filters['agent'].'%';
+            $query->where(function (Builder $q) use ($term) {
+                $q->where('agents.nom', 'like', $term)
+                    ->orWhere('agents.prenom', 'like', $term)
+                    ->orWhereRaw("TRIM(CONCAT(agents.nom, ' ', agents.prenom)) LIKE ?", [$term]);
+            });
         }
 
         if (! empty($filters['date_debut']) && ! empty($filters['date_fin'])) {
@@ -81,6 +97,7 @@ class FinancementService
     {
         $rows = Financement::query()
             ->where('id_agent', $agentId)
+            ->valides()
             ->get(['montant']);
 
         $montantInitial = 0.0;
@@ -190,9 +207,17 @@ class FinancementService
         ];
     }
 
-    public function create(int $agentId, float $montant, string $motif): Financement
-    {
-        return DB::transaction(function () use ($agentId, $montant, $motif) {
+    public function create(
+        int $agentId,
+        float $montant,
+        string $motif,
+        string $statut = Financement::STATUT_VALIDE,
+    ): Financement {
+        $statut = $statut === Financement::STATUT_EN_ATTENTE
+            ? Financement::STATUT_EN_ATTENTE
+            : Financement::STATUT_VALIDE;
+
+        return DB::transaction(function () use ($agentId, $montant, $motif, $statut) {
             Financement::query()
                 ->orderByDesc('Numero_financement')
                 ->lockForUpdate()
@@ -207,9 +232,47 @@ class FinancementService
                 'id_agent' => $agentId,
                 'montant' => $montant,
                 'motif' => $motif,
+                'statut' => $statut,
                 'date_financement' => now(),
             ]);
         });
+    }
+
+    public function createDemande(int $agentId, float $montant, string $motif): Financement
+    {
+        return $this->create($agentId, $montant, $motif, Financement::STATUT_EN_ATTENTE);
+    }
+
+    public function valider(Financement $financement): Financement
+    {
+        if (! $financement->isEnAttente()) {
+            throw new \InvalidArgumentException('Ce financement n\'est pas en attente de validation.');
+        }
+
+        $financement->update([
+            'statut' => Financement::STATUT_VALIDE,
+            'date_financement' => now(),
+        ]);
+
+        return $financement->refresh();
+    }
+
+    public function countEnAttenteValidation(): int
+    {
+        return (int) Financement::query()->enAttente()->count();
+    }
+
+    /**
+     * @return Collection<int, Financement>
+     */
+    public function pendingValidations(): Collection
+    {
+        return Financement::query()
+            ->with('agent')
+            ->enAttente()
+            ->orderByDesc('date_financement')
+            ->orderByDesc('Numero_financement')
+            ->get();
     }
 
     public function generateCodeFinancement(?Agent $agent): string
@@ -274,6 +337,15 @@ class FinancementService
 
         if (! empty($filters['agent_id'])) {
             $query->where('id_agent', (int) $filters['agent_id']);
+        }
+
+        if (! empty($filters['agent'])) {
+            $term = '%'.$filters['agent'].'%';
+            $query->whereHas('agent', function (Builder $agentQuery) use ($term) {
+                $agentQuery->where('nom', 'like', $term)
+                    ->orWhere('prenom', 'like', $term)
+                    ->orWhereRaw("TRIM(CONCAT(nom, ' ', prenom)) LIKE ?", [$term]);
+            });
         }
 
         if (! empty($filters['date_debut']) && ! empty($filters['date_fin'])) {

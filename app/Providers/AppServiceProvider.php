@@ -41,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $demandesFinancementEnAttenteCount = 0;
+            $financementsEnAttenteValidationCount = 0;
             try {
                 $demandesFinancementEnAttenteCount = (int) \App\Models\DemandeAvanceGestCamions::query()
                     ->where('statut', 'en_attente')
@@ -50,9 +51,18 @@ class AppServiceProvider extends ServiceProvider
                 $demandesFinancementEnAttenteCount = 0;
             }
 
+            try {
+                $financementsEnAttenteValidationCount = app(\App\Services\FinancementService::class)
+                    ->countEnAttenteValidation();
+            } catch (\Throwable $e) {
+                report($e);
+                $financementsEnAttenteValidationCount = 0;
+            }
+
             $view->with([
                 'ticketStats' => app(TicketService::class)->getDashboardStats(),
                 'demandesFinancementEnAttenteCount' => $demandesFinancementEnAttenteCount,
+                'financementsEnAttenteValidationCount' => $financementsEnAttenteValidationCount,
             ]);
         });
     }

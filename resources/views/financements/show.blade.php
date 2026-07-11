@@ -48,7 +48,7 @@
                         </p>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addFinancementModal">
+                        <button type="button" class="btn btn-secondary btn-sm" disabled title="Les financements se créent via une demande sur le compte agent">
                             <i class="bi bi-plus-lg"></i> Nouveau Financement
                         </button>
                         <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#historiqueModal">
@@ -168,6 +168,7 @@
                                 <th>Date</th>
                                 <th>Numéro</th>
                                 <th>Type</th>
+                                <th>Statut</th>
                                 <th>Montant</th>
                                 <th>Motif</th>
                             </tr>
@@ -186,6 +187,13 @@
                                             <span class="badge bg-warning text-dark">
                                                 <i class="bi bi-dash-circle"></i> Remboursement
                                             </span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($financement->isEnAttente())
+                                            <span class="badge bg-danger">En attente</span>
+                                        @else
+                                            <span class="badge bg-success">Validé</span>
                                         @endif
                                     </td>
                                     <td>

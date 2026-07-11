@@ -129,6 +129,8 @@ return [
         'financements.show' => 'financements',
         'financements.pdf' => 'financements',
         'financements.store' => 'financements',
+        'financements.valider' => 'financements',
+        'comptes-agents.demande-financement.store' => 'comptes-agents',
 
         'prets.index' => 'prets',
         'prets.show' => 'prets',

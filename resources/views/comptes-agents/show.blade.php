@@ -22,6 +22,13 @@
 
     @include('caisse.partials.payment-success-alert')
 
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     @if ($errors->has('paiement'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             {{ $errors->first('paiement') }}
@@ -98,6 +105,10 @@
                                 @if(($counts['demandes_avance'] ?? 0) > 0)
                                     <span class="badge bg-danger ms-1">{{ $counts['demandes_avance'] }}</span>
                                 @endif
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#modalDemandeFinancement">
+                                <i class="bi bi-plus-circle"></i> Faire une demande de Financement
                             </button>
                             <button type="button" class="btn btn-outline-secondary btn-sm"
                                 data-bs-toggle="modal" data-bs-target="#transactionsHistoryModal">
@@ -568,6 +579,7 @@
         </div>
     </section>
 
+    @include('comptes-agents.partials.demande-financement-modal', ['agent' => $agent])
     @include('comptes-agents.partials.avance-payment-confirm-modal')
     @include('comptes-agents.partials.transactions-history-modal', ['agent' => $agent])
 @endsection
@@ -576,6 +588,12 @@
     <script src="{{ asset('assets/js/amount-input.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            @if ($errors->has('montant') || $errors->has('motif'))
+                var demandeModal = document.getElementById('modalDemandeFinancement');
+                if (demandeModal) {
+                    (bootstrap.Modal.getInstance(demandeModal) || new bootstrap.Modal(demandeModal)).show();
+                }
+            @endif
             function updateBordereauPaymentMax(select) {
                 var modalId = select.dataset.modalId;
                 var reste = parseFloat(select.dataset.reste) || 0;

@@ -350,7 +350,12 @@
 
                                     <a href="{{ route('financements.index') }}">
                                         <i class="bi bi-cash-stack submenu-icon--financement"></i>
-                                        <span>Financements</span>
+                                        <span>
+                                            Financements
+                                            @if(($financementsEnAttenteValidationCount ?? 0) > 0)
+                                                <span class="badge bg-danger rounded-pill ms-1">{{ $financementsEnAttenteValidationCount }}</span>
+                                            @endif
+                                        </span>
                                     </a>
 
                                 </li>
