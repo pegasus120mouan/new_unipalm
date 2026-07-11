@@ -228,7 +228,7 @@ class FinancementService
             $nextNumero = ((int) Financement::query()->max('Numero_financement')) + 1;
             $agent = Agent::query()->find($agentId);
 
-            return Financement::create([
+            $financement = Financement::create([
                 'Numero_financement' => $nextNumero,
                 'code_financement' => $this->generateCodeFinancement($agent),
                 'id_agent' => $agentId,
@@ -237,6 +237,22 @@ class FinancementService
                 'statut' => $statut,
                 'date_financement' => now(),
             ]);
+
+            // Tout crédit financement validé réduit le solde du chef de groupe.
+            if ($statut === Financement::STATUT_VALIDE && $montant > 0) {
+                if (! $agent || $agent->date_suppression !== null) {
+                    throw new InvalidArgumentException('Agent introuvable pour ce financement.');
+                }
+
+                $chefId = (int) ($agent->id_chef ?? 0);
+                if ($chefId <= 0) {
+                    throw new InvalidArgumentException('Cet agent n\'est rattaché à aucun chef de groupe.');
+                }
+
+                $this->debiterSoldeChef($chefId, $montant, $agentId);
+            }
+
+            return $financement;
         });
     }
 

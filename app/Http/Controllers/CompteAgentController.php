@@ -182,7 +182,7 @@ class CompteAgentController extends Controller
             ->with(
                 'success',
                 'Avance de '.number_format((float) $demandeModel->montant, 0, ',', ' ')
-                .' FCFA payée. Montant débité de la caisse groupe.'
+                .' FCFA payée. Solde chef de groupe et caisse débités.'
             );
     }
 

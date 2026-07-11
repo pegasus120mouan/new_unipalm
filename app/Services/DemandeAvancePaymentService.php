@@ -16,8 +16,8 @@ class DemandeAvancePaymentService
     ) {}
 
     /**
-     * Paie une demande d'avance API : débite la caisse Unipalm (compte groupe)
-     * et crédite le financement de l'agent.
+     * Paie une demande d'avance API : débite la caisse Unipalm,
+     * crédite le financement agent et réduit le solde du chef de groupe.
      */
     public function payer(DemandeAvanceGestCamions $demande, Utilisateur $caissier): void
     {
@@ -57,7 +57,7 @@ class DemandeAvancePaymentService
 
             $soldeApres = $soldeCaisse - $montant;
 
-            $idTransaction = DB::table('transactions')->insertGetId([
+            DB::table('transactions')->insertGetId([
                 'type_transaction' => 'paiement',
                 'montant' => $montant,
                 'date_transaction' => now(),
@@ -72,6 +72,7 @@ class DemandeAvancePaymentService
 
             $this->caisseService->debiterUtilisable($montant);
 
+            // create(VALIDE) crédite le financement ET débite le solde chef.
             $this->financementService->create(
                 (int) $locked->id_agent,
                 $montant,
