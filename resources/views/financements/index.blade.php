@@ -105,18 +105,22 @@
                                     </td>
                                     <td>{{ $financement->motif ?: '—' }}</td>
                                     <td class="text-end">
-                                        <button type="button"
-                                            class="btn btn-success btn-sm btn-valider-financement"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#confirmValiderFinancementModal"
-                                            data-action="{{ route('financements.valider', $financement->Numero_financement) }}"
-                                            data-code="{{ $financement->code_affiche }}"
-                                            data-agent="{{ $financement->agent?->full_name ?? ('#'.$financement->id_agent) }}"
-                                            data-date="{{ $financement->date_financement?->format('d/m/Y') ?? '—' }}"
-                                            data-montant="{{ number_format((float) $financement->montant, 0, ',', ' ') }} FCFA"
-                                            data-motif="{{ $financement->motif ?: '—' }}">
-                                            <i class="bi bi-check2-circle"></i> Valider
-                                        </button>
+                                        @if(auth()->user()?->canAccessModule('financements.valider'))
+                                            <button type="button"
+                                                class="btn btn-success btn-sm btn-valider-financement"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#confirmValiderFinancementModal"
+                                                data-action="{{ route('financements.valider', $financement->Numero_financement) }}"
+                                                data-code="{{ $financement->code_affiche }}"
+                                                data-agent="{{ $financement->agent?->full_name ?? ('#'.$financement->id_agent) }}"
+                                                data-date="{{ $financement->date_financement?->format('d/m/Y') ?? '—' }}"
+                                                data-montant="{{ number_format((float) $financement->montant, 0, ',', ' ') }} FCFA"
+                                                data-motif="{{ $financement->motif ?: '—' }}">
+                                                <i class="bi bi-check2-circle"></i> Valider
+                                            </button>
+                                        @else
+                                            <span class="badge bg-warning text-dark">En attente</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

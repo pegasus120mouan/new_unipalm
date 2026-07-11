@@ -352,7 +352,7 @@
                                         <i class="bi bi-cash-stack submenu-icon--financement"></i>
                                         <span>
                                             Financements
-                                            @if(($financementsEnAttenteValidationCount ?? 0) > 0)
+                                            @if(($financementsEnAttenteValidationCount ?? 0) > 0 && $canModule('financements.valider'))
                                                 <span class="badge bg-danger rounded-pill ms-1">{{ $financementsEnAttenteValidationCount }}</span>
                                             @endif
                                         </span>
