@@ -483,8 +483,14 @@
                     <div class="alert alert-danger">{{ $errors->first('paiement') }}</div>
                 @endif
 
+                @if (!empty($demandesAvanceError))
+                    <div class="alert alert-danger">
+                        <strong>Connexion gest-camions :</strong> {{ $demandesAvanceError }}
+                    </div>
+                @endif
+
                 <div class="alert alert-info">
-                    Les avances demandées depuis gest-camions sur le <strong>compte API</strong> apparaissent ici.
+                    Les avances demandées depuis gest-camions sur <strong>Caisse Unipalm</strong> apparaissent ici.
                     Le paiement débite la caisse du groupe (PGF).
                 </div>
 

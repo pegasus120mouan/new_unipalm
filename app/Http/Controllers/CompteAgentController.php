@@ -82,17 +82,35 @@ class CompteAgentController extends Controller
         $soldeCaisse = $this->caisseService->getSolde();
         $montantUtilisable = $this->caisseService->getMontantUtilisable();
 
-        $demandesAvance = DemandeAvanceGestCamions::query()
-            ->where('id_agent', $agent->id_agent)
-            ->orderByDesc('date_demande')
-            ->orderByDesc('id')
-            ->paginate(20, ['*'], 'demandes_page')
-            ->withQueryString();
+        $demandesAvance = null;
+        $demandesAvanceError = null;
+        $counts['demandes_avance'] = 0;
 
-        $counts['demandes_avance'] = DemandeAvanceGestCamions::query()
-            ->where('id_agent', $agent->id_agent)
-            ->where('statut', 'en_attente')
-            ->count();
+        try {
+            $demandesAvance = DemandeAvanceGestCamions::query()
+                ->where('id_agent', $agent->id_agent)
+                ->orderByDesc('date_demande')
+                ->orderByDesc('id')
+                ->paginate(20, ['*'], 'demandes_page')
+                ->withQueryString();
+
+            $counts['demandes_avance'] = DemandeAvanceGestCamions::query()
+                ->where('id_agent', $agent->id_agent)
+                ->where('statut', 'en_attente')
+                ->count();
+        } catch (\Throwable $e) {
+            report($e);
+            $demandesAvanceError = 'Impossible de lire les demandes d\'avance gest-camions. '
+                .'Vérifiez GEST_CAMIONS_DB_* sur Unipalm (host, base, user, mot de passe) '
+                .'et que la table demandes_avance existe sur cette base.';
+            $demandesAvance = new \Illuminate\Pagination\LengthAwarePaginator(
+                [],
+                0,
+                20,
+                1,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        }
 
         return view('comptes-agents.show', compact(
             'agent',
@@ -107,6 +125,7 @@ class CompteAgentController extends Controller
             'soldeCaisse',
             'montantUtilisable',
             'demandesAvance',
+            'demandesAvanceError',
         ));
     }
 
