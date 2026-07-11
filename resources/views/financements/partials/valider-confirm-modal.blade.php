@@ -10,7 +10,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title mb-0" id="confirmValiderFinancementModalLabel">Valider le financement</h5>
-                        <small class="text-muted">Confirmation avant crédit du solde agent</small>
+                        <small class="text-muted">Crédit agent + débit solde chef de groupe</small>
                     </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
@@ -18,7 +18,8 @@
             <div class="modal-body pt-3">
                 <p class="mb-3">
                     Vous allez <strong>valider</strong> cette demande.
-                    Le montant sera ajouté au <strong>solde financement</strong> de l’agent.
+                    Le montant sera ajouté au <strong>solde financement</strong> de l’agent
+                    et déduit du <strong>solde du chef de groupe</strong> associé.
                 </p>
 
                 <div class="rounded-3 border bg-light p-3 mb-0">

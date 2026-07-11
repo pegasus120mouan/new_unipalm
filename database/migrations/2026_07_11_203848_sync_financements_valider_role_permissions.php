@@ -18,12 +18,10 @@ return new class extends Migration
             ->values()
             ->all();
 
-        // Admin : synchroniser tous les modules courants
         foreach ($allModules as $module) {
             $this->ensurePermission('admin', $module, $now);
         }
 
-        // Rôles ayant déjà "financements" : ajouter la validation des demandes
         $rolesWithFinancements = DB::table('role_permissions')
             ->where('module', 'financements')
             ->pluck('role')
@@ -33,7 +31,6 @@ return new class extends Migration
             $this->ensurePermission((string) $role, 'financements.valider', $now);
         }
 
-        // Appliquer aussi les defaults pour directeur / caissiere
         foreach (['directeur', 'caissiere'] as $role) {
             $defaults = config('modules.defaults.'.$role, []);
             if (! is_array($defaults)) {

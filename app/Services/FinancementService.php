@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\Financement;
+use App\Models\Ticket;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class FinancementService
 {
@@ -246,15 +248,122 @@ class FinancementService
     public function valider(Financement $financement): Financement
     {
         if (! $financement->isEnAttente()) {
-            throw new \InvalidArgumentException('Ce financement n\'est pas en attente de validation.');
+            throw new InvalidArgumentException('Ce financement n\'est pas en attente de validation.');
         }
 
-        $financement->update([
-            'statut' => Financement::STATUT_VALIDE,
-            'date_financement' => now(),
-        ]);
+        $montant = (float) $financement->montant;
+        if ($montant <= 0) {
+            throw new InvalidArgumentException('Le montant du financement doit être supérieur à 0.');
+        }
 
-        return $financement->refresh();
+        return DB::transaction(function () use ($financement, $montant) {
+            /** @var Financement $locked */
+            $locked = Financement::query()
+                ->whereKey($financement->Numero_financement)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! $locked->isEnAttente()) {
+                throw new InvalidArgumentException('Ce financement n\'est pas en attente de validation.');
+            }
+
+            $agent = Agent::query()->find($locked->id_agent);
+            if (! $agent || $agent->date_suppression !== null) {
+                throw new InvalidArgumentException('Agent introuvable pour ce financement.');
+            }
+
+            $chefId = (int) ($agent->id_chef ?? 0);
+            if ($chefId <= 0) {
+                throw new InvalidArgumentException('Cet agent n\'est rattaché à aucun chef de groupe.');
+            }
+
+            $this->debiterSoldeChef($chefId, $montant, (int) $agent->id_agent);
+
+            $locked->update([
+                'statut' => Financement::STATUT_VALIDE,
+                'date_financement' => now(),
+            ]);
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
+     * Réduit le solde du chef (tickets non soldés) du montant validé.
+     * Priorité aux tickets de l'agent demandeur, puis aux autres agents du groupe.
+     */
+    private function debiterSoldeChef(int $chefId, float $montant, int $agentPrioritaireId): void
+    {
+        $resteChef = (float) Ticket::query()
+            ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
+            ->where('a.id_chef', $chefId)
+            ->whereNull('a.date_suppression')
+            ->whereNotNull('tickets.montant_paie')
+            ->where('tickets.montant_paie', '>', 0)
+            ->selectRaw('COALESCE(SUM(tickets.montant_paie - COALESCE(tickets.montant_payer, 0)), 0) AS reste')
+            ->value('reste');
+
+        if ($resteChef + 0.0001 < $montant) {
+            throw new InvalidArgumentException(
+                'Solde du chef de groupe insuffisant. Disponible : '
+                .number_format(max(0, $resteChef), 0, '', ' ')
+                .' FCFA, demandé : '
+                .number_format($montant, 0, '', ' ')
+                .' FCFA.'
+            );
+        }
+
+        $tickets = Ticket::query()
+            ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
+            ->where('a.id_chef', $chefId)
+            ->whereNull('a.date_suppression')
+            ->whereNotNull('tickets.montant_paie')
+            ->where('tickets.montant_paie', '>', 0)
+            ->whereRaw('COALESCE(tickets.montant_paie, 0) > COALESCE(tickets.montant_payer, 0)')
+            ->select('tickets.*')
+            ->orderByRaw('CASE WHEN tickets.id_agent = ? THEN 0 ELSE 1 END', [$agentPrioritaireId])
+            ->orderBy('tickets.date_ticket')
+            ->orderBy('tickets.id_ticket')
+            ->lockForUpdate()
+            ->get();
+
+        $remaining = $montant;
+        $datePaie = now();
+
+        foreach ($tickets as $ticket) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $montantTicket = (float) $ticket->montant_paie;
+            $dejaPaye = (float) ($ticket->montant_payer ?? 0);
+            $resteTicket = max($montantTicket - $dejaPaye, 0);
+
+            if ($resteTicket <= 0) {
+                continue;
+            }
+
+            $toApply = min($remaining, $resteTicket);
+            $nouveauPaye = $dejaPaye + $toApply;
+            $nouveauReste = max($montantTicket - $nouveauPaye, 0);
+
+            $ticket->update([
+                'montant_payer' => $nouveauPaye,
+                'montant_reste' => $nouveauReste,
+                'date_paie' => $nouveauReste <= 0 ? $datePaie : ($ticket->date_paie ?: null),
+                'statut_ticket' => $nouveauReste <= 0 ? 'soldé' : 'non soldé',
+            ]);
+
+            $remaining -= $toApply;
+        }
+
+        if ($remaining > 0.0001) {
+            throw new InvalidArgumentException(
+                'Impossible d\'imputer le financement sur le solde du chef de groupe ('
+                .number_format($remaining, 0, '', ' ')
+                .' FCFA non couverts).'
+            );
+        }
     }
 
     public function countEnAttenteValidation(): int

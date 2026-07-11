@@ -111,7 +111,8 @@ class FinancementController extends Controller
 
         return back()->with(
             'success',
-            'Financement '.$financement->code_affiche.' validé avec succès.'
+            'Financement '.$financement->fresh()->code_affiche
+                .' validé : solde agent crédité et solde chef de groupe débité.'
         );
     }
 
