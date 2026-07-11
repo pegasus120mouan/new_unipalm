@@ -176,7 +176,7 @@
                             @forelse ($financements as $financement)
                                 <tr>
                                     <td><strong>{{ $financement->date_financement?->format('d/m/Y') ?? '-' }}</strong></td>
-                                    <td><code>{{ $financement->Numero_financement }}</code></td>
+                                    <td><code>{{ $financement->code_affiche }}</code></td>
                                     <td>
                                         @if ($financement->isAdvance())
                                             <span class="badge bg-info">

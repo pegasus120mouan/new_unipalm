@@ -165,7 +165,7 @@
                             <tbody>
                                 @forelse ($financements as $financement)
                                     <tr>
-                                        <td>{{ $financement->Numero_financement }}</td>
+                                        <td>{{ $financement->code_affiche }}</td>
                                         <td>{{ $financement->agent?->full_name ?? '-' }}</td>
                                         <td>{{ $financement->date_financement?->format('d/m/Y') ?? '-' }}</td>
                                         <td class="text-end {{ $financement->isAdvance() ? 'text-success' : 'text-danger' }}">

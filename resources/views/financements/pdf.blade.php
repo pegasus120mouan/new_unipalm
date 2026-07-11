@@ -175,7 +175,7 @@
                 @foreach ($financements as $financement)
                     <tr>
                         <td class="text-center">{{ $financement->date_financement?->format('d/m/Y') ?? '-' }}</td>
-                        <td class="text-center">{{ $financement->Numero_financement }}</td>
+                        <td class="text-center">{{ $financement->code_affiche }}</td>
                         <td class="text-center">
                             {{ $financement->isAdvance() ? 'Financement' : 'Remboursement' }}
                         </td>

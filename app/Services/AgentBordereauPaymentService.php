@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Bordereau;
-use App\Models\Financement;
 use App\Models\Ticket;
 use App\Models\Utilisateur;
 use Illuminate\Support\Facades\DB;
@@ -100,14 +99,11 @@ class AgentBordereauPaymentService
             $locked->load('agent');
 
             if ($source === 'financement') {
-                $nextNumero = ((int) Financement::max('Numero_financement')) + 1;
-                Financement::query()->create([
-                    'Numero_financement' => $nextNumero,
-                    'id_agent' => $locked->id_agent,
-                    'montant' => -$montant,
-                    'motif' => 'Paiement du bordereau '.$locked->numero_bordereau,
-                    'date_financement' => now(),
-                ]);
+                $this->financementService->create(
+                    (int) $locked->id_agent,
+                    -$montant,
+                    'Paiement du bordereau '.$locked->numero_bordereau,
+                );
             }
 
             $nouveauMontantPaye = $montantPrecedent + $montant;

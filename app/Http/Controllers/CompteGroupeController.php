@@ -69,6 +69,28 @@ class CompteGroupeController extends Controller
             $financementByAgent[(int) $agentId] = $this->financementService->statsForAgent((int) $agentId);
         }
 
+        $demandesAvanceEnAttente = collect();
+        try {
+            $agentIds = \App\Models\Agent::query()
+                ->where('id_chef', $groupe->id_chef)
+                ->whereNull('date_suppression')
+                ->pluck('id_agent')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if ($agentIds !== []) {
+                $demandesAvanceEnAttente = \App\Models\DemandeAvanceGestCamions::query()
+                    ->whereIn('id_agent', $agentIds)
+                    ->where('statut', 'en_attente')
+                    ->orderByDesc('date_demande')
+                    ->orderByDesc('id')
+                    ->get();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $demandesAvanceEnAttente = collect();
+        }
+
         return view('comptes-groupes.show', compact(
             'groupe',
             'filters',
@@ -80,6 +102,7 @@ class CompteGroupeController extends Controller
             'montantUtilisable',
             'gestCamionsUrl',
             'financementByAgent',
+            'demandesAvanceEnAttente',
         ));
     }
 

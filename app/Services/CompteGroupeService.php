@@ -92,6 +92,7 @@ class CompteGroupeService
         $all = $this->filteredGroupeSummaries($filters);
         $page = max(1, (int) request()->query('page', 1));
         $items = $all->slice(($page - 1) * $perPage, $perPage)->values();
+        $items = $this->attachDemandesPaiementEnAttente($items);
 
         return new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
@@ -100,6 +101,74 @@ class CompteGroupeService
             $page,
             ['path' => request()->url(), 'query' => request()->query()],
         );
+    }
+
+    /**
+     * @param  Collection<int, object>  $groupes
+     * @return Collection<int, object>
+     */
+    public function attachDemandesPaiementEnAttente(Collection $groupes): Collection
+    {
+        if ($groupes->isEmpty()) {
+            return $groupes;
+        }
+
+        $chefIds = $groupes->pluck('id_chef')->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($chefIds->isEmpty()) {
+            return $groupes->map(function ($groupe) {
+                $groupe->demandes_paiement_en_attente = 0;
+
+                return $groupe;
+            });
+        }
+
+        $agents = Agent::query()
+            ->whereIn('id_chef', $chefIds->all())
+            ->whereNull('date_suppression')
+            ->get(['id_agent', 'id_chef']);
+
+        $agentIdsByChef = $agents->groupBy(fn ($a) => (int) $a->id_chef)->map(
+            fn (Collection $rows) => $rows->pluck('id_agent')->map(fn ($id) => (int) $id)->all()
+        );
+
+        $allAgentIds = $agents->pluck('id_agent')->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $countsByAgent = [];
+
+        if ($allAgentIds !== []) {
+            try {
+                $raw = \App\Models\DemandeAvanceGestCamions::query()
+                    ->whereIn('id_agent', $allAgentIds)
+                    ->where('statut', 'en_attente')
+                    ->selectRaw('id_agent, COUNT(*) as total')
+                    ->groupBy('id_agent')
+                    ->get();
+
+                foreach ($raw as $row) {
+                    $countsByAgent[(int) $row->id_agent] = (int) $row->total;
+                }
+            } catch (\Throwable $e) {
+                report($e);
+                $countsByAgent = [];
+            }
+        }
+
+        return $groupes->map(function ($groupe) use ($agentIdsByChef, $countsByAgent) {
+            $chefKey = (int) $groupe->id_chef;
+            $agentIds = $agentIdsByChef->get($chefKey, []);
+            $total = 0;
+            $firstAgentId = null;
+            foreach ($agentIds as $agentId) {
+                $n = (int) ($countsByAgent[$agentId] ?? 0);
+                if ($n > 0 && $firstAgentId === null) {
+                    $firstAgentId = $agentId;
+                }
+                $total += $n;
+            }
+            $groupe->demandes_paiement_en_attente = $total;
+            $groupe->demande_paiement_agent_id = $firstAgentId;
+
+            return $groupe;
+        });
     }
 
     /**

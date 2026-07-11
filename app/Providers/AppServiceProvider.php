@@ -40,7 +40,20 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $view->with('ticketStats', app(TicketService::class)->getDashboardStats());
+            $demandesFinancementEnAttenteCount = 0;
+            try {
+                $demandesFinancementEnAttenteCount = (int) \App\Models\DemandeAvanceGestCamions::query()
+                    ->where('statut', 'en_attente')
+                    ->count();
+            } catch (\Throwable $e) {
+                report($e);
+                $demandesFinancementEnAttenteCount = 0;
+            }
+
+            $view->with([
+                'ticketStats' => app(TicketService::class)->getDashboardStats(),
+                'demandesFinancementEnAttenteCount' => $demandesFinancementEnAttenteCount,
+            ]);
         });
     }
 }

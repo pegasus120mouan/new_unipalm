@@ -138,6 +138,7 @@
                                 <th>Chef d'Équipe</th>
                                 <th class="text-center">Agents</th>
                                 <th class="text-center">Tickets</th>
+                                <th class="text-center">Financement en attente</th>
                                 <th class="text-end">Montant Total</th>
                                 <th class="text-end">Payé</th>
                                 <th class="text-end">Montant Dû</th>
@@ -152,10 +153,13 @@
                                         'date_debut' => $filters['date_debut'] ?: null,
                                         'date_fin' => $filters['date_fin'] ?: null,
                                     ]);
+                                    $nbDemandes = (int) ($groupe->demandes_paiement_en_attente ?? 0);
+                                    $detailsUrl = route('comptes-groupes.show', $showParams)
+                                        .($nbDemandes > 0 ? '#demandes-avance-section' : '');
                                 @endphp
                                 <tr>
                                     <td>
-                                        <a href="{{ route('comptes-groupes.show', $showParams) }}" class="text-decoration-none fw-semibold">
+                                        <a href="{{ $detailsUrl }}" class="text-decoration-none fw-semibold">
                                             {{ $groupe->nom_chef }}
                                         </a>
                                     </td>
@@ -163,9 +167,18 @@
                                         <span class="badge bg-info">{{ $groupe->nombre_agents }}</span>
                                     </td>
                                     <td class="text-center">
-                                        {{ number_format((int) $groupe->nombre_tickets, 0, '', ' ') }}
+                                        <div>{{ number_format((int) $groupe->nombre_tickets, 0, '', ' ') }}</div>
                                         @if ((int) $groupe->tickets_non_payes > 0)
-                                            <br><small class="text-danger">({{ $groupe->tickets_non_payes }} non payés)</small>
+                                            <small class="text-danger d-block">({{ $groupe->tickets_non_payes }} non payés)</small>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @if ($nbDemandes > 0)
+                                            <a href="{{ $detailsUrl }}" class="badge bg-danger text-decoration-none">
+                                                {{ $nbDemandes }}
+                                            </a>
+                                        @else
+                                            <span class="text-muted">0</span>
                                         @endif
                                     </td>
                                     <td class="text-end">{{ number_format((float) $groupe->montant_total, 0, '', ' ') }} FCFA</td>
@@ -174,14 +187,14 @@
                                         {{ number_format((float) $groupe->montant_du, 0, '', ' ') }} FCFA
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('comptes-groupes.show', $showParams) }}" class="btn btn-primary btn-sm">
+                                        <a href="{{ $detailsUrl }}" class="btn btn-primary btn-sm">
                                             <i class="bi bi-eye"></i> Détails
                                         </a>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         <i class="bi bi-people fs-1 d-block mb-2"></i>
                                         Aucun chef d'équipe trouvé.
                                     </td>

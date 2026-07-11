@@ -1,8 +1,17 @@
 /* Icônes colorées — menu latéral Unipalm */
 
 .sidebar-menu .sidebar-link {
+    display: flex;
     align-items: center;
     gap: 0.65rem;
+}
+
+.sidebar-menu .sidebar-link .badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 1.35rem;
+    padding: 0.25em 0.45em;
+    line-height: 1;
 }
 
 .sidebar-menu .sidebar-icon {

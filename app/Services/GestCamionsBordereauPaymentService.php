@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\BordereauAgentGestCamions;
-use App\Models\Financement;
 use App\Models\PaiementAgentGestCamions;
 use App\Models\Ticket;
 use App\Models\Utilisateur;
@@ -110,14 +109,11 @@ class GestCamionsBordereauPaymentService
             $agent = Agent::query()->find($locked->id_agent);
 
             if ($source === 'financement') {
-                $nextNumero = ((int) Financement::max('Numero_financement')) + 1;
-                Financement::query()->create([
-                    'Numero_financement' => $nextNumero,
-                    'id_agent' => $locked->id_agent,
-                    'montant' => -$montant,
-                    'motif' => 'Paiement du bordereau '.$locked->numero.' (gest-camions)',
-                    'date_financement' => now(),
-                ]);
+                $this->financementService->create(
+                    (int) $locked->id_agent,
+                    -$montant,
+                    'Paiement du bordereau '.$locked->numero.' (gest-camions)',
+                );
             }
 
             $nouveauMontantPaye = $montantPrecedent + $montant;

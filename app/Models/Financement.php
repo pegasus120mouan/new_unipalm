@@ -17,6 +17,7 @@ class Financement extends Model
 
     protected $fillable = [
         'Numero_financement',
+        'code_financement',
         'id_agent',
         'montant',
         'motif',
@@ -34,6 +35,11 @@ class Financement extends Model
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'id_agent', 'id_agent');
+    }
+
+    public function getCodeAfficheAttribute(): string
+    {
+        return (string) ($this->code_financement ?: $this->Numero_financement);
     }
 
     public function isAdvance(): bool

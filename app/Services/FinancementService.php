@@ -119,6 +119,7 @@ class FinancementService
             $search = $filters['search'];
             $query->where(function (Builder $q) use ($search) {
                 $q->where('Numero_financement', 'like', '%'.$search.'%')
+                    ->orWhere('code_financement', 'like', '%'.$search.'%')
                     ->orWhere('motif', 'like', '%'.$search.'%');
             });
         }
@@ -191,15 +192,66 @@ class FinancementService
 
     public function create(int $agentId, float $montant, string $motif): Financement
     {
-        $nextNumero = ((int) Financement::max('Numero_financement')) + 1;
+        return DB::transaction(function () use ($agentId, $montant, $motif) {
+            Financement::query()
+                ->orderByDesc('Numero_financement')
+                ->lockForUpdate()
+                ->first();
 
-        return Financement::create([
-            'Numero_financement' => $nextNumero,
-            'id_agent' => $agentId,
-            'montant' => $montant,
-            'motif' => $motif,
-            'date_financement' => now(),
-        ]);
+            $nextNumero = ((int) Financement::query()->max('Numero_financement')) + 1;
+            $agent = Agent::query()->find($agentId);
+
+            return Financement::create([
+                'Numero_financement' => $nextNumero,
+                'code_financement' => $this->generateCodeFinancement($agent),
+                'id_agent' => $agentId,
+                'montant' => $montant,
+                'motif' => $motif,
+                'date_financement' => now(),
+            ]);
+        });
+    }
+
+    public function generateCodeFinancement(?Agent $agent): string
+    {
+        $initials = $this->agentInitials($agent);
+        $prefix = 'FIN-'.$initials;
+
+        $existing = Financement::query()
+            ->where('code_financement', 'like', $prefix.'-%')
+            ->pluck('code_financement');
+
+        $maxSeq = 0;
+        foreach ($existing as $code) {
+            if (preg_match('/-(\d{4})$/', (string) $code, $m)) {
+                $maxSeq = max($maxSeq, (int) $m[1]);
+            }
+        }
+
+        return $prefix.'-'.sprintf('%04d', $maxSeq + 1);
+    }
+
+    private function agentInitials(?Agent $agent): string
+    {
+        $nom = trim((string) ($agent?->nom ?? ''));
+        $prenom = trim((string) ($agent?->prenom ?? ''));
+        $parts = array_values(array_filter(preg_split('/\s+/u', trim($nom.' '.$prenom)) ?: []));
+        $first = $parts[0] ?? '';
+        $second = $parts[1] ?? '';
+
+        $letter = function (string $word): string {
+            if ($word === '') {
+                return '';
+            }
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $word);
+            $src = is_string($ascii) && $ascii !== '' ? $ascii : $word;
+
+            return strtoupper(substr($src, 0, 1));
+        };
+
+        $initials = $letter($first).$letter($second);
+
+        return $initials !== '' ? $initials : 'XX';
     }
 
     /**
@@ -212,6 +264,7 @@ class FinancementService
             $search = $filters['search'];
             $query->where(function (Builder $q) use ($search) {
                 $q->where('Numero_financement', 'like', '%'.$search.'%')
+                    ->orWhere('code_financement', 'like', '%'.$search.'%')
                     ->orWhere('motif', 'like', '%'.$search.'%')
                     ->orWhereHas('agent', function (Builder $agentQuery) use ($search) {
                         $agentQuery->whereRaw("CONCAT(nom, ' ', prenom) LIKE ?", ['%'.$search.'%']);

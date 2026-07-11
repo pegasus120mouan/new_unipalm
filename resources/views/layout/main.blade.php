@@ -313,8 +313,12 @@
 
                                 <span class="sidebar-icon sidebar-icon--finance"><i class="bi bi-cash-stack"></i></span>
 
-                                <span>Gestion Financière</span>
-
+                                <span>
+                                    Gestion Financière
+                                    @if(($demandesFinancementEnAttenteCount ?? 0) > 0)
+                                        <span class="badge bg-danger rounded-pill ms-1">{{ $demandesFinancementEnAttenteCount }}</span>
+                                    @endif
+                                </span>
                             </a>
 
                             <ul class="submenu {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'bordereaux.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">

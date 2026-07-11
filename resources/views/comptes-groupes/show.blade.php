@@ -133,9 +133,15 @@
                         <span class="text-muted">Bordereaux</span>
                         <span class="fw-semibold">{{ number_format($counts['bordereaux'], 0, '', ' ') }}</span>
                     </div>
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Agents</span>
                         <span class="fw-semibold">{{ $counts['agents'] }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Demandes en attente</span>
+                        <span class="fw-semibold {{ ($demandesAvanceEnAttente->count() ?? 0) > 0 ? 'text-danger' : '' }}">
+                            {{ $demandesAvanceEnAttente->count() ?? 0 }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -168,6 +174,62 @@
             </div>
         </div>
     </section>
+
+    @if(($demandesAvanceEnAttente ?? collect())->isNotEmpty())
+    <section class="row mb-4" id="demandes-avance-section">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="text-danger fw-semibold">
+                        <i class="bi bi-exclamation-circle"></i>
+                        Demandes de paiement en attente
+                    </span>
+                    <span class="badge bg-danger">{{ $demandesAvanceEnAttente->count() }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Agent</th>
+                                    <th class="text-end">Montant</th>
+                                    <th>Mode</th>
+                                    <th>Commentaire</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($demandesAvanceEnAttente as $demande)
+                                    <tr>
+                                        <td>{{ optional($demande->date_demande)->format('d/m/Y') ?? '—' }}</td>
+                                        <td>
+                                            <div class="fw-semibold">{{ $demande->agent_nom ?: ('Agent #'.$demande->id_agent) }}</div>
+                                            @if ($demande->agent_numero)
+                                                <div class="small text-muted">{{ $demande->agent_numero }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="text-end text-danger fw-semibold">
+                                            {{ number_format((float) $demande->montant, 0, ',', ' ') }} FCFA
+                                        </td>
+                                        <td>{{ $demande->mode_paiement ?: '—' }}</td>
+                                        <td>{{ $demande->commentaire ?: '—' }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ route('comptes-agents.show', ['agent' => $demande->id_agent, 'section' => 'financement']) }}"
+                                               class="btn btn-danger btn-sm">
+                                                <i class="bi bi-cash"></i> Payer
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    @endif
 
     <section class="row" id="bordereaux-section">
         <div class="col-12">

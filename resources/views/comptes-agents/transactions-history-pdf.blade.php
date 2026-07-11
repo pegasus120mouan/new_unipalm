@@ -178,7 +178,7 @@
                 @foreach ($financements as $financement)
                     <tr>
                         <td>{{ $financement->date_financement?->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ $financement->Numero_financement }}</td>
+                        <td>{{ $financement->code_affiche }}</td>
                         <td class="text-right">{{ number_format((float) $financement->montant, 0, '', ' ') }}</td>
                         <td>{{ $financement->motif }}</td>
                     </tr>
