@@ -72,13 +72,6 @@ class DemandeAvancePaymentService
 
             $this->caisseService->debiterUtilisable($montant);
 
-            // create(VALIDE) crédite le financement ET débite le solde chef.
-            $this->financementService->create(
-                (int) $locked->id_agent,
-                $montant,
-                'Avance API (demande #'.$locked->id.') — payée caisse groupe',
-            );
-
             $paiement = PaiementAgentGestCamions::query()->create([
                 'id_agent' => $locked->id_agent,
                 'id_bordereau' => null,
@@ -90,6 +83,14 @@ class DemandeAvancePaymentService
                 'commentaire' => $locked->commentaire ?: ('Avance API #'.$locked->id),
                 'numero_recu' => now()->format('Ymd').sprintf('%04d', random_int(1, 9999)),
             ]);
+
+            // Un seul financement : la sync gest-camions reconnaît AVANCE-PAIEMENT-{id}
+            // et ne doit pas en recréer un second.
+            $this->financementService->create(
+                (int) $locked->id_agent,
+                $montant,
+                'Avance API (demande #'.$locked->id.') — payée caisse groupe — AVANCE-PAIEMENT-'.$paiement->id,
+            );
 
             $locked->update([
                 'statut' => 'payee',
