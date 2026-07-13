@@ -96,6 +96,20 @@
                                 {{ number_format($soldeChef['reste_a_payer'], 0, '', ' ') }} FCFA
                             </div>
                             <small class="text-muted">Reste à payer (tickets) — diminue à chaque paiement bordereau</small>
+                            <div class="d-flex flex-wrap justify-content-end gap-3 mt-2 small">
+                                <span>
+                                    Particuliers :
+                                    <strong class="{{ ($soldeChef['reste_particuliers'] ?? 0) > 0 ? 'text-danger' : 'text-success' }}">
+                                        {{ number_format($soldeChef['reste_particuliers'] ?? 0, 0, '', ' ') }} FCFA
+                                    </strong>
+                                </span>
+                                <span>
+                                    Professionnels :
+                                    <strong class="{{ ($soldeChef['reste_professionnels'] ?? 0) > 0 ? 'text-danger' : 'text-success' }}">
+                                        {{ number_format($soldeChef['reste_professionnels'] ?? 0, 0, '', ' ') }} FCFA
+                                    </strong>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <hr class="my-3">

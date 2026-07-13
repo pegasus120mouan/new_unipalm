@@ -197,7 +197,9 @@ class CompteGroupeService
      *     total_montant: float,
      *     montant_paye: float,
      *     reste_a_payer: float,
-     *     solde_financement: float
+     *     solde_financement: float,
+     *     reste_particuliers: float,
+     *     reste_professionnels: float
      * }
      */
     public function soldeForGroupe(int $groupeId): array
@@ -211,6 +213,16 @@ class CompteGroupeService
                 DB::raw('COALESCE(SUM(tickets.montant_paie), 0) AS total_montant'),
                 DB::raw('COALESCE(SUM(tickets.montant_payer), 0) AS montant_paye'),
                 DB::raw('COALESCE(SUM(tickets.montant_paie), 0) - COALESCE(SUM(tickets.montant_payer), 0) AS reste_a_payer'),
+                DB::raw(
+                    "COALESCE(SUM(CASE WHEN a.sous_groupe = 'particulier' THEN tickets.montant_paie ELSE 0 END), 0)
+                    - COALESCE(SUM(CASE WHEN a.sous_groupe = 'particulier' THEN COALESCE(tickets.montant_payer, 0) ELSE 0 END), 0)
+                    AS reste_particuliers"
+                ),
+                DB::raw(
+                    "COALESCE(SUM(CASE WHEN a.sous_groupe = 'professionnel' THEN tickets.montant_paie ELSE 0 END), 0)
+                    - COALESCE(SUM(CASE WHEN a.sous_groupe = 'professionnel' THEN COALESCE(tickets.montant_payer, 0) ELSE 0 END), 0)
+                    AS reste_professionnels"
+                ),
             ])
             ->first();
 
@@ -229,6 +241,8 @@ class CompteGroupeService
             'montant_paye' => (float) ($row->montant_paye ?? 0),
             'reste_a_payer' => (float) ($row->reste_a_payer ?? 0),
             'solde_financement' => $soldeFinancement,
+            'reste_particuliers' => (float) ($row->reste_particuliers ?? 0),
+            'reste_professionnels' => (float) ($row->reste_professionnels ?? 0),
         ];
     }
 

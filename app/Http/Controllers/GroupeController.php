@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Groupe;
+use App\Services\CompteGroupeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,6 +12,10 @@ use Illuminate\View\View;
 
 class GroupeController extends Controller
 {
+    public function __construct(
+        private readonly CompteGroupeService $compteGroupeService,
+    ) {}
+
     public function index(): View
     {
         $groupes = Groupe::query()
@@ -32,16 +37,42 @@ class GroupeController extends Controller
 
     public function show(Request $request, Groupe $groupe): View
     {
-        $sousGroupe = trim((string) $request->query('sous_groupe', ''));
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'numero' => trim((string) $request->query('numero', '')),
+            'sous_groupe' => trim((string) $request->query('sous_groupe', '')),
+        ];
+
+        $activeSection = trim((string) $request->query('section', 'agents'));
+        if (! in_array($activeSection, ['agents', 'acces', 'solde'], true)) {
+            $activeSection = 'agents';
+        }
 
         $agentsQuery = $groupe->agents()
             ->with('createur')
             ->whereNull('date_suppression');
 
-        if (in_array($sousGroupe, [Agent::SOUS_GROUPE_PARTICULIER, Agent::SOUS_GROUPE_PROFESSIONNEL], true)) {
-            $agentsQuery->where('sous_groupe', $sousGroupe);
+        if (in_array($filters['sous_groupe'], [Agent::SOUS_GROUPE_PARTICULIER, Agent::SOUS_GROUPE_PROFESSIONNEL], true)) {
+            $agentsQuery->where('sous_groupe', $filters['sous_groupe']);
         } else {
-            $sousGroupe = '';
+            $filters['sous_groupe'] = '';
+        }
+
+        if ($filters['search'] !== '') {
+            $term = '%'.$filters['search'].'%';
+            $agentsQuery->where(function ($q) use ($term) {
+                $q->where('nom', 'like', $term)
+                    ->orWhere('prenom', 'like', $term)
+                    ->orWhereRaw("TRIM(CONCAT(COALESCE(nom, ''), ' ', COALESCE(prenom, ''))) LIKE ?", [$term]);
+            });
+        }
+
+        if ($filters['numero'] !== '') {
+            $numero = '%'.$filters['numero'].'%';
+            $agentsQuery->where(function ($q) use ($numero) {
+                $q->where('numero_agent', 'like', $numero)
+                    ->orWhere('contact', 'like', $numero);
+            });
         }
 
         $agents = $agentsQuery
@@ -56,7 +87,18 @@ class GroupeController extends Controller
             'professionnels' => $groupe->agentsProfessionnels()->whereNull('date_suppression')->count(),
         ];
 
-        return view('groupes.show', compact('groupe', 'agents', 'sousGroupe', 'counts'));
+        $soldeChef = $this->compteGroupeService->soldeForGroupe((int) $groupe->id_chef);
+        $sousGroupe = $filters['sous_groupe'];
+
+        return view('groupes.show', compact(
+            'groupe',
+            'agents',
+            'sousGroupe',
+            'filters',
+            'counts',
+            'activeSection',
+            'soldeChef',
+        ));
     }
 
     public function updateCredentials(Request $request, Groupe $groupe): RedirectResponse
@@ -82,7 +124,7 @@ class GroupeController extends Controller
         $groupe->save();
 
         return redirect()
-            ->route('groupes.show', $groupe)
+            ->route('groupes.show', ['groupe' => $groupe, 'section' => 'acces'])
             ->with('success', 'Identifiants du chef d\'équipe mis à jour.');
     }
 }
