@@ -44,13 +44,10 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
 Route::get('/', function () {
-        $user = auth()->user();
-        $routes = config('modules.module_routes', []);
+        $routeName = auth()->user()?->homeRouteName();
 
-        foreach ($routes as $module => $routeName) {
-            if ($user->canAccessModule($module)) {
-                return redirect()->route($routeName);
-            }
+        if ($routeName) {
+            return redirect()->route($routeName);
         }
 
         abort(403, 'Aucun module accessible pour votre profil.');

@@ -334,6 +334,10 @@ return [
         'plantations.doublons' => 'plantations.doublons',
     ],
 
+    'home_by_role' => [
+        'caissiere' => 'comptes-groupes',
+    ],
+
     'defaults' => [
         'admin' => '*',
         'directeur' => [

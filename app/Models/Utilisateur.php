@@ -172,6 +172,25 @@ class Utilisateur extends Authenticatable
         return false;
     }
 
+    public function homeRouteName(): ?string
+    {
+        $preferredModule = config('modules.home_by_role.'.$this->role);
+        if (is_string($preferredModule) && $this->canAccessModule($preferredModule)) {
+            $preferredRoute = config('modules.module_routes.'.$preferredModule);
+            if (is_string($preferredRoute) && $preferredRoute !== '') {
+                return $preferredRoute;
+            }
+        }
+
+        foreach (config('modules.module_routes', []) as $module => $routeName) {
+            if ($this->canAccessModule($module) && is_string($routeName) && $routeName !== '') {
+                return $routeName;
+            }
+        }
+
+        return null;
+    }
+
     public function limitsTicketsToOwn(): bool
     {
         return $this->role === 'operateur';

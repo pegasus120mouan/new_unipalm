@@ -41,7 +41,11 @@ class LoginController extends Controller
             Auth::login($utilisateur);
             $request->session()->regenerate();
 
-            return redirect()->intended('/');
+            $homeRoute = $utilisateur->homeRouteName();
+
+            return $homeRoute
+                ? redirect()->route($homeRoute)
+                : redirect('/');
         }
 
         return back()->withErrors([
