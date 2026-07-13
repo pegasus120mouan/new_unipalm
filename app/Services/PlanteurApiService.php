@@ -75,6 +75,39 @@ class PlanteurApiService
         ];
     }
 
+    public function getDoublons(): array
+    {
+        $url = (string) config('planteurs.doublons_url');
+        $response = Http::timeout(30)
+            ->acceptJson()
+            ->get($url);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Erreur lors de la récupération des doublons planteurs.');
+        }
+
+        $json = $response->json();
+
+        if (! is_array($json)) {
+            throw new RuntimeException('Réponse invalide de l\'API doublons.');
+        }
+
+        if (($json['success'] ?? false) === true && isset($json['data']['groupes']) && is_array($json['data']['groupes'])) {
+            foreach ($json['data']['groupes'] as $gIndex => $groupe) {
+                if (! is_array($groupe)) {
+                    continue;
+                }
+                foreach ($groupe as $pIndex => $planteur) {
+                    if (is_array($planteur)) {
+                        $json['data']['groupes'][$gIndex][$pIndex] = $this->enrichPlanteur($planteur);
+                    }
+                }
+            }
+        }
+
+        return $json;
+    }
+
     public function post(array $data): array
     {
         $action = $data['action'] ?? '';

@@ -29,4 +29,9 @@ return [
         'https://api.objetombrepegasus.online/api/planteur/actions/api_zones.php'
     ),
 
+    'doublons_url' => env(
+        'PLANTEUR_DOUBLONS_URL',
+        'https://api.objetombrepegasus.online/api/planteur/actions/doublons_planteurs.php'
+    ),
+
 ];

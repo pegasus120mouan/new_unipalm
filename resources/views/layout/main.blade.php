@@ -542,7 +542,7 @@
                         </li>
                         @endif
 
-                        @if ($canModuleAny(['plantations.index', 'plantations.collecteurs', 'plantations.regions', 'plantations.zones']))
+                        @if ($canModuleAny(['plantations.index', 'plantations.collecteurs', 'plantations.regions', 'plantations.zones', 'plantations.doublons']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -556,10 +556,10 @@
                             <ul class="submenu {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
 
                                 @if ($canModule('plantations.index'))
-                                <li class="submenu-item {{ request()->routeIs('plantations.index') ? 'active' : '' }}">
+                                <li class="submenu-item {{ request()->routeIs('plantations.index', 'plantations.show', 'plantations.edit') ? 'active' : '' }}">
 
                                     <a href="{{ route('plantations.index') }}">
-                                        <i class="bi bi-list-ul submenu-icon--all"></i>
+                                        <i class="bi bi-flower2 submenu-icon--all"></i>
                                         <span>Liste des plantations</span>
                                     </a>
 
@@ -569,6 +569,7 @@
                                 <li class="submenu-item {{ request()->routeIs('plantations.collecteurs') ? 'active' : '' }}">
 
                                     <a href="{{ route('plantations.collecteurs') }}">
+                                        <i class="bi bi-people submenu-icon--all"></i>
                                         <span>Liste des collecteurs</span>
                                     </a>
 
@@ -578,7 +579,8 @@
                                 <li class="submenu-item {{ request()->routeIs('plantations.regions') ? 'active' : '' }}">
 
                                     <a href="{{ route('plantations.regions') }}">
-                                        <span>Liste des régions</span>
+                                        <i class="bi bi-geo-alt-fill submenu-icon--all"></i>
+                                        <span>Régions</span>
                                     </a>
 
                                 </li>
@@ -587,7 +589,18 @@
                                 <li class="submenu-item {{ request()->routeIs('plantations.zones') ? 'active' : '' }}">
 
                                     <a href="{{ route('plantations.zones') }}">
-                                        <span>Liste des zones</span>
+                                        <i class="bi bi-map submenu-icon--all"></i>
+                                        <span>Zones</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('plantations.doublons'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.doublons') ? 'active' : '' }}">
+
+                                    <a href="{{ route('plantations.doublons') }}">
+                                        <i class="bi bi-files submenu-icon--all"></i>
+                                        <span>Gestion des doublons</span>
                                     </a>
 
                                 </li>

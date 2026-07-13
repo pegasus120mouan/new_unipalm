@@ -19,6 +19,7 @@ use App\Http\Controllers\CollecteurController;
 use App\Http\Controllers\CommisController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ZoneController;
+use App\Http\Controllers\DoublonPlanteurController;
 use App\Http\Controllers\PlantationController;
 use App\Http\Controllers\PrixUnitaireController;
 use App\Http\Controllers\RolePermissionController;
@@ -216,6 +217,8 @@ Route::get('/', function () {
     Route::delete('/ponts/{pont:id_pont}', [PontBasculeController::class, 'destroy'])->name('ponts.destroy');
 
     Route::get('/plantations', [PlantationController::class, 'index'])->name('plantations.index');
+    Route::get('/plantations/{id}', [PlantationController::class, 'show'])->name('plantations.show')->whereNumber('id');
+    Route::get('/plantations/{id}/edit', [PlantationController::class, 'edit'])->name('plantations.edit')->whereNumber('id');
     Route::match(['get', 'post'], '/api/planteurs', [PlantationController::class, 'api'])->name('plantations.api');
 
     Route::get('/plantations/collecteurs', [CollecteurController::class, 'index'])->name('plantations.collecteurs');
@@ -227,6 +230,9 @@ Route::get('/', function () {
 
     Route::get('/plantations/zones', [ZoneController::class, 'index'])->name('plantations.zones');
     Route::match(['get', 'post'], '/api/zones', [ZoneController::class, 'api'])->name('plantations.zones.api');
+
+    Route::get('/plantations/doublons', [DoublonPlanteurController::class, 'index'])->name('plantations.doublons');
+    Route::match(['get', 'post'], '/api/doublons-planteurs', [DoublonPlanteurController::class, 'api'])->name('plantations.doublons.api');
 
     Route::get('/utilisateurs', [UtilisateurController::class, 'index'])->name('utilisateurs.index');
     Route::post('/utilisateurs', [UtilisateurController::class, 'store'])->name('utilisateurs.store');

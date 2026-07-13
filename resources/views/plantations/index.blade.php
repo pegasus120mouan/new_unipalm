@@ -134,9 +134,25 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="parcellesMapModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-geo-alt me-2"></i>Cartographie des parcelles</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="parcellesMapHint" class="alert alert-info d-none mb-2"></div>
+                    <div id="parcellesMap" style="height:70vh;width:100%;background:#fff;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <style>
         .plantations-table-header {
             background: #111;
@@ -159,10 +175,46 @@
             border-radius: 50%;
             border: 2px solid #e9ecef;
         }
+
+        .action-buttons {
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .action-btn {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .action-btn.view,
+        .action-btn.map,
+        .action-btn.edit {
+            background: #4dabf7;
+        }
+
+        .action-btn.delete {
+            background: #fa5252;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+            color: #fff;
+        }
     </style>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const apiBaseUrl = @json(route('plantations.api'));
+            const showUrlTemplate = @json(url('/plantations'));
             const csrfToken = @json(csrf_token());
             const errorEl = document.getElementById('planteursError');
             const loaderEl = document.getElementById('loader');
@@ -179,6 +231,8 @@
             let totalPages = 1;
             let totalCount = 0;
             let deletePlanteurId = null;
+            let pendingMapPlanteur = null;
+            let mapInstance = null;
             const limit = 15;
 
             function buildApiUrl(params) {
@@ -228,6 +282,8 @@
                         : '—';
                     const exploitation = planteur.exploitation || {};
                     const photoSrc = getPhotoValue(planteur) || defaultPhoto;
+                    const id = escapeHtml(planteur.id);
+                    const name = escapeHtml(planteur.nom_prenoms || planteur.numero_fiche || planteur.id);
 
                     return `
                         <tr>
@@ -235,7 +291,7 @@
                                 <img src="${escapeHtml(photoSrc)}" alt="Photo" class="planteur-photo"
                                     onerror="this.onerror=null;this.src='${defaultPhoto}';">
                             </td>
-                            <td><code>${escapeHtml(planteur.numero_fiche || '—')}</code></td>
+                            <td><code class="text-danger">${escapeHtml(planteur.numero_fiche || '—')}</code></td>
                             <td class="fw-semibold">${escapeHtml(planteur.nom_prenoms || '—')}</td>
                             <td>${escapeHtml(planteur.telephone || '—')}</td>
                             <td>${escapeHtml(collecteur)}</td>
@@ -244,23 +300,25 @@
                             <td>${escapeHtml(exploitation.village || '—')}</td>
                             <td>${escapeHtml(fmtDate(planteur.created_at))}</td>
                             <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger delete-planteur-btn"
-                                    data-id="${escapeHtml(planteur.id)}"
-                                    data-name="${escapeHtml(planteur.nom_prenoms || planteur.numero_fiche || planteur.id)}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                <div class="action-buttons">
+                                    <a class="action-btn view" href="${showUrlTemplate}/${id}" title="Voir">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button" class="action-btn map" data-action="map" data-id="${id}" title="Voir sur la carte">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </button>
+                                    <a class="action-btn edit" href="${showUrlTemplate}/${id}/edit" title="Modifier">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button type="button" class="action-btn delete" data-action="delete"
+                                        data-id="${id}" data-name="${name}" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
                 }).join('');
-
-                document.querySelectorAll('.delete-planteur-btn').forEach(function (button) {
-                    button.addEventListener('click', function () {
-                        deletePlanteurId = button.dataset.id;
-                        document.getElementById('deletePlanteurName').textContent = button.dataset.name || '';
-                        new bootstrap.Modal(document.getElementById('deletePlanteurModal')).show();
-                    });
-                });
             }
 
             function applyFilter() {
@@ -379,6 +437,81 @@
                 load(page);
             });
 
+            async function fetchPlanteurDetails(id) {
+                const res = await fetch(buildApiUrl({ action: 'planteurs', id: String(id) }), { cache: 'no-store' });
+                const json = await res.json();
+                if (!res.ok || !json?.success) {
+                    throw new Error(json?.error || json?.message || 'Erreur API');
+                }
+                const planteur = json?.data?.planteurs?.[0] || json?.data;
+                if (!planteur || !planteur.id) {
+                    throw new Error('Planteur introuvable.');
+                }
+                return planteur;
+            }
+
+            function drawParcelles(planteur) {
+                const hintEl = document.getElementById('parcellesMapHint');
+                const mapDiv = document.getElementById('parcellesMap');
+                mapDiv.innerHTML = '';
+                hintEl.classList.add('d-none');
+
+                if (mapInstance) {
+                    mapInstance.remove();
+                    mapInstance = null;
+                }
+
+                const cultures = Array.isArray(planteur?.cultures) ? planteur.cultures : [];
+                const fromCultures = cultures.flatMap((c) => Array.isArray(c?.parcelles) ? c.parcelles : []);
+                const parcellesList = fromCultures.length
+                    ? fromCultures
+                    : (Array.isArray(planteur?.parcelles) ? planteur.parcelles
+                        : (Array.isArray(planteur?.exploitation?.parcelles) ? planteur.exploitation.parcelles : []));
+
+                const boundsPoints = [];
+                const paths = [];
+
+                parcellesList.forEach((parcelle) => {
+                    let points = parcelle?.points;
+                    if (typeof points === 'string') {
+                        try { points = JSON.parse(points); } catch (e) { points = null; }
+                    }
+                    const list = Array.isArray(points) ? points : (points && typeof points === 'object' ? Object.values(points) : []);
+                    const latlngs = list.map((pt) => {
+                        if (Array.isArray(pt) && pt.length >= 2) {
+                            const la = Number(pt[0]); const lo = Number(pt[1]);
+                            if (Number.isFinite(la) && Number.isFinite(lo)) { boundsPoints.push([la, lo]); return [la, lo]; }
+                        }
+                        const la = Number(pt?.latitude ?? pt?.lat);
+                        const lo = Number(pt?.longitude ?? pt?.lng ?? pt?.lon);
+                        if (Number.isFinite(la) && Number.isFinite(lo)) { boundsPoints.push([la, lo]); return [la, lo]; }
+                        return null;
+                    }).filter(Boolean);
+                    if (latlngs.length >= 2) paths.push(latlngs);
+                });
+
+                hintEl.textContent = `ID: ${planteur?.id ?? ''} | Parcelles: ${parcellesList.length} | Points: ${boundsPoints.length}`;
+                hintEl.classList.remove('d-none');
+                if (!boundsPoints.length) return;
+
+                mapInstance = L.map(mapDiv);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(mapInstance);
+
+                paths.forEach((latlngs) => {
+                    if (latlngs.length >= 3) {
+                        L.polygon(latlngs, { color: '#1f6feb', weight: 3, fillOpacity: 0.2 }).addTo(mapInstance);
+                    } else {
+                        L.polyline(latlngs, { color: '#1f6feb', weight: 3 }).addTo(mapInstance);
+                    }
+                });
+
+                mapInstance.fitBounds(L.latLngBounds(boundsPoints), { padding: [30, 30] });
+                setTimeout(() => mapInstance.invalidateSize(), 200);
+            }
+
             async function load(page = 1) {
                 hideError();
                 loaderEl.classList.remove('d-none');
@@ -410,6 +543,46 @@
                     loaderEl.classList.add('d-none');
                 }
             }
+
+            tbodyEl.addEventListener('click', async function (e) {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+
+                const action = btn.getAttribute('data-action');
+                const id = btn.getAttribute('data-id');
+
+                if (action === 'delete') {
+                    deletePlanteurId = id;
+                    document.getElementById('deletePlanteurName').textContent = btn.dataset.name || '';
+                    new bootstrap.Modal(document.getElementById('deletePlanteurModal')).show();
+                    return;
+                }
+
+                if (action === 'map') {
+                    try {
+                        pendingMapPlanteur = null;
+                        new bootstrap.Modal(document.getElementById('parcellesMapModal')).show();
+                        document.getElementById('parcellesMapHint').textContent = 'Chargement de la carte...';
+                        document.getElementById('parcellesMapHint').classList.remove('d-none');
+                        pendingMapPlanteur = await fetchPlanteurDetails(id);
+                        if (document.getElementById('parcellesMapModal').classList.contains('show')) {
+                            drawParcelles(pendingMapPlanteur);
+                            pendingMapPlanteur = null;
+                        }
+                    } catch (error) {
+                        showError(error?.message || String(error));
+                    }
+                }
+            });
+
+            document.getElementById('parcellesMapModal').addEventListener('shown.bs.modal', function () {
+                if (pendingMapPlanteur) {
+                    drawParcelles(pendingMapPlanteur);
+                    pendingMapPlanteur = null;
+                } else if (mapInstance) {
+                    setTimeout(() => mapInstance.invalidateSize(), 100);
+                }
+            });
 
             document.getElementById('planteursRefresh').addEventListener('click', applyFilter);
             document.getElementById('planteursReset').addEventListener('click', function () {

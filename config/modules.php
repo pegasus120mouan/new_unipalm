@@ -67,8 +67,9 @@ return [
             'modules' => [
                 'plantations.index' => 'Liste des plantations',
                 'plantations.collecteurs' => 'Liste des collecteurs',
-                'plantations.regions' => 'Liste des régions',
-                'plantations.zones' => 'Liste des zones',
+                'plantations.regions' => 'Régions',
+                'plantations.zones' => 'Zones',
+                'plantations.doublons' => 'Gestion des doublons',
             ],
         ],
         'sorties' => [
@@ -273,6 +274,8 @@ return [
         'ponts.destroy' => 'ponts.index',
 
         'plantations.index' => 'plantations.index',
+        'plantations.show' => 'plantations.index',
+        'plantations.edit' => 'plantations.index',
         'plantations.api' => 'plantations.index',
         'plantations.collecteurs' => 'plantations.collecteurs',
         'plantations.collecteurs.api' => 'plantations.collecteurs',
@@ -281,6 +284,8 @@ return [
         'plantations.regions.api' => 'plantations.regions',
         'plantations.zones' => 'plantations.zones',
         'plantations.zones.api' => 'plantations.zones',
+        'plantations.doublons' => 'plantations.doublons',
+        'plantations.doublons.api' => 'plantations.doublons',
     ],
 
     'module_routes' => [
@@ -326,6 +331,7 @@ return [
         'plantations.collecteurs' => 'plantations.collecteurs',
         'plantations.regions' => 'plantations.regions',
         'plantations.zones' => 'plantations.zones',
+        'plantations.doublons' => 'plantations.doublons',
     ],
 
     'defaults' => [

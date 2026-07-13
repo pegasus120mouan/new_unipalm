@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use RuntimeException;
 
-class PlantationController extends Controller
+class DoublonPlanteurController extends Controller
 {
     public function __construct(
         private readonly PlanteurApiService $planteurApi,
@@ -16,17 +16,7 @@ class PlantationController extends Controller
 
     public function index(): View
     {
-        return view('plantations.index');
-    }
-
-    public function show(int $id): View
-    {
-        return view('plantations.show', ['planteurId' => $id]);
-    }
-
-    public function edit(int $id): View
-    {
-        return view('plantations.edit', ['planteurId' => $id]);
+        return view('plantations.doublons.index');
     }
 
     public function api(Request $request): JsonResponse
@@ -36,17 +26,7 @@ class PlantationController extends Controller
                 return response()->json($this->planteurApi->post($request->all()));
             }
 
-            $action = (string) $request->query('action', 'planteurs');
-
-            if ($action === 'regions') {
-                return response()->json($this->planteurApi->getRegions());
-            }
-
-            if ($action === 'stats') {
-                return response()->json($this->planteurApi->getGlobalStats());
-            }
-
-            return response()->json($this->planteurApi->getPlanteurs($request->query()));
+            return response()->json($this->planteurApi->getDoublons());
         } catch (RuntimeException $exception) {
             return response()->json([
                 'success' => false,
