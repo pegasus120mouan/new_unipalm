@@ -171,6 +171,7 @@ return [
         'role-permissions.update' => 'utilisateurs.roles',
 
         'groupes.index' => 'groupes',
+        'groupes.store' => 'groupes',
         'groupes.show' => 'groupes',
         'groupes.credentials.update' => 'groupes',
 

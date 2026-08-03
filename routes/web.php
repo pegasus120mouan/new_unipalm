@@ -98,6 +98,7 @@ Route::get('/', function () {
         ->name('comptes-groupes.bordereaux.payment');
 
     Route::get('/groupes', [GroupeController::class, 'index'])->name('groupes.index');
+    Route::post('/groupes', [GroupeController::class, 'store'])->name('groupes.store');
     Route::get('/groupes/{groupe:id_chef}', [GroupeController::class, 'show'])->name('groupes.show');
     Route::put('/groupes/{groupe:id_chef}/credentials', [GroupeController::class, 'updateCredentials'])->name('groupes.credentials.update');
 

@@ -35,6 +35,38 @@ class GroupeController extends Controller
         return view('groupes.index', compact('groupes'));
     }
 
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nom' => ['required', 'string', 'max:100'],
+            'prenoms' => ['required', 'string', 'max:150'],
+            'token' => ['nullable', 'string', 'max:50', Rule::unique('chef_equipe', 'token')],
+            'login' => ['nullable', 'string', 'max:100', Rule::unique('chef_equipe', 'login')],
+            'password' => ['nullable', 'required_with:login', 'string', 'min:6', 'confirmed'],
+        ], [
+            'password.required_with' => 'Le mot de passe est obligatoire lorsque le login est renseigné.',
+        ]);
+
+        $groupe = new Groupe();
+        $groupe->nom = trim($validated['nom']);
+        $groupe->prenoms = trim($validated['prenoms']);
+        $groupe->token = filled($validated['token'] ?? null)
+            ? strtoupper(trim((string) $validated['token']))
+            : $this->generateUniqueToken();
+
+        $login = trim((string) ($validated['login'] ?? ''));
+        if ($login !== '') {
+            $groupe->login = $login;
+            $groupe->setPasswordFromPlain((string) $validated['password']);
+        }
+
+        $groupe->save();
+
+        return redirect()
+            ->route('groupes.index')
+            ->with('success', "Chef d'équipe « {$groupe->full_name} » enregistré avec succès.");
+    }
+
     public function show(Request $request, Groupe $groupe): View
     {
         $filters = [
@@ -126,5 +158,14 @@ class GroupeController extends Controller
         return redirect()
             ->route('groupes.show', ['groupe' => $groupe, 'section' => 'acces'])
             ->with('success', 'Identifiants du chef d\'équipe mis à jour.');
+    }
+
+    private function generateUniqueToken(): string
+    {
+        do {
+            $token = strtoupper(bin2hex(random_bytes(4)));
+        } while (Groupe::query()->where('token', $token)->exists());
+
+        return $token;
     }
 }
