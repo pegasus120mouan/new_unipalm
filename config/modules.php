@@ -199,6 +199,7 @@ return [
 
         'vehicules.index' => 'vehicules',
         'vehicules.store' => 'vehicules',
+        'vehicules.update' => 'vehicules',
         'vehicules.destroy' => 'vehicules',
         'vehicules.bulk-destroy' => 'vehicules',
 

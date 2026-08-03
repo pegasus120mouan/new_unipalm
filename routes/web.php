@@ -165,6 +165,7 @@ Route::get('/', function () {
 
     Route::get('/vehicules', [VehiculeController::class, 'index'])->name('vehicules.index');
     Route::post('/vehicules', [VehiculeController::class, 'store'])->name('vehicules.store');
+    Route::put('/vehicules/{vehicule:vehicules_id}', [VehiculeController::class, 'update'])->name('vehicules.update');
     Route::post('/vehicules/bulk-destroy', [VehiculeController::class, 'bulkDestroy'])->name('vehicules.bulk-destroy');
     Route::delete('/vehicules/{vehicule:vehicules_id}', [VehiculeController::class, 'destroy'])->name('vehicules.destroy');
 

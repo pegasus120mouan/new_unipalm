@@ -143,7 +143,6 @@
                                 <th>Type</th>
                                 <th>Matricule</th>
                                 <th>Date d'ajout</th>
-                                <th class="text-center">Tickets</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
@@ -152,6 +151,7 @@
                                 @php
                                     $isDuplicate = in_array($vehicule->normalizedMatricule(), $duplicateMatricules ?? [], true);
                                     $canBulkDelete = in_array($vehicule->vehicules_id, $deletableDuplicateIds ?? [], true);
+                                    $canDelete = $canBulkDelete || (int) $vehicule->tickets_count === 0;
                                 @endphp
                                 <tr @class(['table-warning' => $isDuplicate])>
                                     @if (($stats['deletable_duplicates'] ?? 0) > 0)
@@ -173,27 +173,37 @@
                                         @endif
                                     </td>
                                     <td>{{ $vehicule->created_at?->format('d/m/Y H:i') ?? '-' }}</td>
-                                    <td class="text-center">{{ $vehicule->tickets_count }}</td>
                                     <td class="text-end">
-                                        @if ($canBulkDelete)
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                data-bs-toggle="modal" data-bs-target="#deleteVehiculeModal"
+                                        <div class="d-inline-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-warning edit-vehicule-btn"
+                                                data-bs-toggle="modal" data-bs-target="#editVehiculeModal"
                                                 data-id="{{ $vehicule->vehicules_id }}"
-                                                data-label="{{ $vehicule->matricule_vehicule }}"
-                                                data-tickets="{{ $vehicule->tickets_count }}">
-                                                <i class="bi bi-trash"></i>
+                                                data-matricule="{{ $vehicule->matricule_vehicule }}"
+                                                data-type="{{ $vehicule->type_vehicule }}"
+                                                title="Modifier">
+                                                <i class="bi bi-pencil"></i>
                                             </button>
-                                        @else
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
-                                                title="Exemplaire conservé pour ce matricule">
-                                                <i class="bi bi-shield-check"></i>
-                                            </button>
-                                        @endif
+                                            @if ($canDelete)
+                                                <button type="button" class="btn btn-sm btn-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteVehiculeModal"
+                                                    data-id="{{ $vehicule->vehicules_id }}"
+                                                    data-label="{{ $vehicule->matricule_vehicule }}"
+                                                    data-tickets="{{ $vehicule->tickets_count }}"
+                                                    title="Supprimer">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            @else
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                    title="Impossible de supprimer : des tickets sont associés">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ ($stats['deletable_duplicates'] ?? 0) > 0 ? 6 : 5 }}" class="text-center text-muted py-4">
+                                    <td colspan="{{ ($stats['deletable_duplicates'] ?? 0) > 0 ? 5 : 4 }}" class="text-center text-muted py-4">
                                         @if ($search !== '' || $type !== '')
                                             Aucun véhicule ne correspond à votre recherche.
                                         @else
@@ -250,6 +260,42 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                         <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editVehiculeModal" tabindex="-1" aria-labelledby="editVehiculeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="editVehiculeForm" action="">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="edit_vehicule_id" id="edit_vehicule_id" value="">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title" id="editVehiculeModalLabel">Modifier le véhicule</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="edit_matricule_vehicule" class="form-label">Matricule</label>
+                            <input type="text" name="matricule_vehicule" id="edit_matricule_vehicule"
+                                class="form-control" placeholder="Ex. AB-123-CD" required>
+                            <div class="form-text">Les espaces sont ignorés. Les doublons (ex. AB123CD et AB 123 CD) sont refusés.</div>
+                        </div>
+                        <div class="mb-0">
+                            <label for="edit_type_vehicule" class="form-label">Type de véhicule</label>
+                            <select name="type_vehicule" id="edit_type_vehicule" class="form-select" required>
+                                <option value="voiture">Voiture</option>
+                                <option value="moto">Moto</option>
+                                <option value="tricycle">Tricycle</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning">Enregistrer</button>
                     </div>
                 </form>
             </div>
@@ -408,6 +454,16 @@
                 });
             }
 
+            document.querySelectorAll('.edit-vehicule-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const form = document.getElementById('editVehiculeForm');
+                    form.action = baseUrl + '/' + button.dataset.id;
+                    document.getElementById('edit_vehicule_id').value = button.dataset.id || '';
+                    document.getElementById('edit_matricule_vehicule').value = button.dataset.matricule || '';
+                    document.getElementById('edit_type_vehicule').value = button.dataset.type || 'voiture';
+                });
+            });
+
             document.querySelectorAll('[data-bs-target="#deleteVehiculeModal"]').forEach(function (button) {
                 button.addEventListener('click', function () {
                     deleteForm.action = baseUrl + '/' + button.dataset.id;
@@ -430,7 +486,18 @@
     @if ($errors->has('matricule_vehicule') || $errors->has('type_vehicule'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                new bootstrap.Modal(document.getElementById('addVehiculeModal')).show();
+                @if (old('_method') === 'PUT')
+                    const editForm = document.getElementById('editVehiculeForm');
+                    const editId = @json(old('edit_vehicule_id'));
+                    if (editForm && editId) {
+                        editForm.action = @json(url('/vehicules')) + '/' + editId;
+                    }
+                    document.getElementById('edit_matricule_vehicule').value = @json(old('matricule_vehicule', ''));
+                    document.getElementById('edit_type_vehicule').value = @json(old('type_vehicule', 'voiture'));
+                    new bootstrap.Modal(document.getElementById('editVehiculeModal')).show();
+                @else
+                    new bootstrap.Modal(document.getElementById('addVehiculeModal')).show();
+                @endif
             });
         </script>
     @endif

@@ -48,7 +48,7 @@ class VehiculeController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $deletableDuplicateIds = $this->duplicateService->deletableDuplicateIds($duplicateMatricules);
+        $deletableDuplicateIds = $this->duplicateService->deletableDuplicateIds();
 
         $stats = [
             'duplicates' => count($duplicateMatricules),
@@ -68,31 +68,7 @@ class VehiculeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'matricule_vehicule' => [
-                'required',
-                'string',
-                'max:255',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    $normalized = Vehicule::normalizeMatricule((string) $value);
-
-                    if ($normalized === '') {
-                        $fail('Le matricule est invalide.');
-
-                        return;
-                    }
-
-                    $exists = Vehicule::query()
-                        ->whereRaw('UPPER(REPLACE(matricule_vehicule, " ", "")) = ?', [$normalized])
-                        ->exists();
-
-                    if ($exists) {
-                        $fail('Ce matricule existe déjà (les espaces et la casse sont ignorés).');
-                    }
-                },
-            ],
-            'type_vehicule' => ['required', Rule::in(['voiture', 'moto', 'tricycle'])],
-        ]);
+        $validated = $this->validateVehicule($request);
 
         Vehicule::query()->create([
             'matricule_vehicule' => Vehicule::normalizeMatricule($validated['matricule_vehicule']),
@@ -104,27 +80,48 @@ class VehiculeController extends Controller
             ->with('success', 'Véhicule enregistré avec succès.');
     }
 
+    public function update(Request $request, Vehicule $vehicule): RedirectResponse
+    {
+        $validated = $this->validateVehicule($request, $vehicule);
+
+        $vehicule->update([
+            'matricule_vehicule' => Vehicule::normalizeMatricule($validated['matricule_vehicule']),
+            'type_vehicule' => $validated['type_vehicule'],
+        ]);
+
+        return redirect()
+            ->route('vehicules.index')
+            ->with('success', 'Véhicule modifié avec succès.');
+    }
+
     public function destroy(Vehicule $vehicule): RedirectResponse
     {
-        $duplicateMatricules = $this->duplicateNormalizedMatricules();
+        if ($this->duplicateService->isDuplicateEligibleForDeletion($vehicule)) {
+            $keeper = $this->duplicateService->keeperForVehicule($vehicule);
 
-        if (! $this->duplicateService->isDuplicateEligibleForDeletion($vehicule, $duplicateMatricules)) {
+            if ($keeper === null) {
+                return back()->withErrors(['vehicule' => 'Exemplaire conservé introuvable pour ce matricule.']);
+            }
+
+            $result = $this->duplicateService->deleteDuplicate($vehicule, $keeper);
+
+            return redirect()
+                ->route('vehicules.index', ['duplicates' => 1])
+                ->with('success', $this->buildDeletionMessage($vehicule->matricule_vehicule, $result['tickets_deleted'], $result['tickets_reassigned']));
+        }
+
+        if ($vehicule->tickets()->exists()) {
             return back()->withErrors([
-                'vehicule' => 'Seuls les véhicules en doublon (hors exemplaire conservé) peuvent être supprimés depuis cette page.',
+                'vehicule' => 'Impossible de supprimer ce véhicule : des tickets y sont encore associés.',
             ]);
         }
 
-        $keeper = $this->duplicateService->keeperForNormalizedMatricule($vehicule->normalizedMatricule());
-
-        if ($keeper === null) {
-            return back()->withErrors(['vehicule' => 'Exemplaire conservé introuvable pour ce matricule.']);
-        }
-
-        $result = $this->duplicateService->deleteDuplicate($vehicule, $keeper);
+        $label = $vehicule->matricule_vehicule;
+        $vehicule->delete();
 
         return redirect()
-            ->route('vehicules.index', ['duplicates' => 1])
-            ->with('success', $this->buildDeletionMessage($vehicule->matricule_vehicule, $result['tickets_deleted'], $result['tickets_reassigned']));
+            ->route('vehicules.index')
+            ->with('success', "Véhicule « {$label} » supprimé avec succès.");
     }
 
     public function bulkDestroy(Request $request): RedirectResponse
@@ -134,8 +131,7 @@ class VehiculeController extends Controller
             'vehicules_ids.*' => ['integer', Rule::exists('vehicules', 'vehicules_id')],
         ]);
 
-        $duplicateMatricules = $this->duplicateNormalizedMatricules();
-        $allowedIds = $this->duplicateService->deletableDuplicateIds($duplicateMatricules);
+        $allowedIds = $this->duplicateService->deletableDuplicateIds();
         $requestedIds = array_values(array_unique(array_map('intval', $validated['vehicules_ids'])));
 
         $deleted = 0;
@@ -152,13 +148,13 @@ class VehiculeController extends Controller
 
             $vehicule = Vehicule::query()->find($id);
 
-            if ($vehicule === null || ! $this->duplicateService->isDuplicateEligibleForDeletion($vehicule, $duplicateMatricules)) {
+            if ($vehicule === null || ! $this->duplicateService->isDuplicateEligibleForDeletion($vehicule)) {
                 $skipped++;
 
                 continue;
             }
 
-            $keeper = $this->duplicateService->keeperForNormalizedMatricule($vehicule->normalizedMatricule());
+            $keeper = $this->duplicateService->keeperForVehicule($vehicule);
 
             if ($keeper === null) {
                 $skipped++;
@@ -208,6 +204,41 @@ class VehiculeController extends Controller
             ->filter(fn ($value) => filled($value))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{matricule_vehicule: string, type_vehicule: string}
+     */
+    private function validateVehicule(Request $request, ?Vehicule $current = null): array
+    {
+        return $request->validate([
+            'matricule_vehicule' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) use ($current): void {
+                    $normalized = Vehicule::normalizeMatricule((string) $value);
+
+                    if ($normalized === '') {
+                        $fail('Le matricule est invalide.');
+
+                        return;
+                    }
+
+                    $query = Vehicule::query()
+                        ->whereRaw('UPPER(REPLACE(matricule_vehicule, " ", "")) = ?', [$normalized]);
+
+                    if ($current !== null) {
+                        $query->where('vehicules_id', '!=', $current->vehicules_id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('Ce matricule existe déjà (les espaces et la casse sont ignorés).');
+                    }
+                },
+            ],
+            'type_vehicule' => ['required', Rule::in(['voiture', 'moto', 'tricycle'])],
+        ]);
     }
 
     private function buildDeletionMessage(string $label, int $ticketsDeleted, int $ticketsReassigned): string
