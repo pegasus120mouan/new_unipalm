@@ -294,9 +294,9 @@
                     </div>
                     <div class="modal-body">
                         <div class="mb-3 position-relative">
-                            <label for="bordereau_agent_search" class="form-label">Chargé de mission</label>
+                            <label for="bordereau_agent_search" class="form-label fw-semibold">Chargé de Mission</label>
                             <input type="text" id="bordereau_agent_search" class="form-control"
-                                placeholder="Rechercher par N° agent ou nom..." autocomplete="off">
+                                placeholder="Tapez le nom du chargé de mission..." autocomplete="off">
                             <input type="hidden" name="id_agent" id="bordereau_id_agent" required>
                             <div id="bordereau_agent_suggestions" class="list-group position-absolute w-100 shadow-sm"
                                 style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
@@ -310,27 +310,39 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="bordereau_date_debut" class="form-label">Date de début</label>
-                            <input type="text" id="bordereau_date_debut" class="form-control print-date-fr"
-                                inputmode="numeric" autocomplete="off" placeholder="jj/mm/aaaa"
-                                value="{{ now()->startOfMonth()->format('d/m/Y') }}" required>
-                            <input type="hidden" name="date_debut" id="bordereau_date_debut_value"
-                                value="{{ now()->startOfMonth()->format('Y-m-d') }}">
+                            <label for="bordereau_date_debut" class="form-label fw-semibold">Date de debut</label>
+                            <div class="input-group position-relative">
+                                <input type="text" id="bordereau_date_debut" class="form-control print-date-fr"
+                                    inputmode="numeric" autocomplete="off" placeholder="jj/mm/aaaa" required>
+                                <span class="input-group-text bg-white position-relative" style="min-width: 2.75rem;">
+                                    <i class="bi bi-calendar3 text-muted"></i>
+                                    <input type="date" id="bordereau_date_debut_picker"
+                                        class="bordereau-native-datepicker" title="Choisir la date de début"
+                                        data-display="#bordereau_date_debut"
+                                        style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0;padding:0;margin:0;">
+                                </span>
+                            </div>
+                            <input type="hidden" name="date_debut" id="bordereau_date_debut_value" value="">
                         </div>
                         <div class="mb-0">
-                            <label for="bordereau_date_fin" class="form-label">Date fin</label>
-                            <input type="text" id="bordereau_date_fin" class="form-control print-date-fr"
-                                inputmode="numeric" autocomplete="off" placeholder="jj/mm/aaaa"
-                                value="{{ now()->format('d/m/Y') }}" required>
-                            <input type="hidden" name="date_fin" id="bordereau_date_fin_value"
-                                value="{{ now()->format('Y-m-d') }}">
+                            <label for="bordereau_date_fin" class="form-label fw-semibold">Date Fin</label>
+                            <div class="input-group position-relative">
+                                <input type="text" id="bordereau_date_fin" class="form-control print-date-fr"
+                                    inputmode="numeric" autocomplete="off" placeholder="jj/mm/aaaa" required>
+                                <span class="input-group-text bg-white position-relative" style="min-width: 2.75rem;">
+                                    <i class="bi bi-calendar3 text-muted"></i>
+                                    <input type="date" id="bordereau_date_fin_picker"
+                                        class="bordereau-native-datepicker" title="Choisir la date de fin"
+                                        data-display="#bordereau_date_fin"
+                                        style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0;padding:0;margin:0;">
+                                </span>
+                            </div>
+                            <input type="hidden" name="date_fin" id="bordereau_date_fin_value" value="">
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer justify-content-start">
+                        <button type="submit" class="btn btn-primary">Imprimer</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-printer"></i> Imprimer
-                        </button>
                     </div>
                 </form>
             </div>
@@ -698,12 +710,44 @@
                 ].join('-');
             }
 
+            function isoToFrenchDate(value) {
+                const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!match) {
+                    return '';
+                }
+
+                return match[3] + '/' + match[2] + '/' + match[1];
+            }
+
             document.querySelectorAll('.print-date-fr').forEach(function (input) {
                 input.addEventListener('input', function () {
                     const cursorFromEnd = input.value.length - input.selectionStart;
                     input.value = formatFrenchDateInput(input.value);
                     const nextPos = Math.max(0, input.value.length - cursorFromEnd);
                     input.setSelectionRange(nextPos, nextPos);
+
+                    const picker = document.querySelector('.bordereau-native-datepicker[data-display="#' + input.id + '"]');
+                    if (picker) {
+                        picker.value = parseFrenchDateToIso(input.value) || '';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.bordereau-native-datepicker').forEach(function (picker) {
+                picker.addEventListener('change', function () {
+                    const display = document.querySelector(picker.dataset.display);
+                    if (!display || !picker.value) {
+                        return;
+                    }
+
+                    display.value = isoToFrenchDate(picker.value);
+                });
+
+                picker.addEventListener('click', function () {
+                    const display = document.querySelector(picker.dataset.display);
+                    if (display) {
+                        picker.value = parseFrenchDateToIso(display.value) || '';
+                    }
                 });
             });
 
@@ -862,10 +906,10 @@
 
                     if (searchInput) searchInput.value = '';
                     if (hiddenInput) hiddenInput.value = '';
-                    if (dateDebutInput) dateDebutInput.value = @json(now()->startOfMonth()->format('d/m/Y'));
-                    if (dateFinInput) dateFinInput.value = @json(now()->format('d/m/Y'));
-                    if (dateDebutValue) dateDebutValue.value = @json(now()->startOfMonth()->format('Y-m-d'));
-                    if (dateFinValue) dateFinValue.value = @json(now()->format('Y-m-d'));
+                    if (dateDebutInput) dateDebutInput.value = '';
+                    if (dateFinInput) dateFinInput.value = '';
+                    if (dateDebutValue) dateDebutValue.value = '';
+                    if (dateFinValue) dateFinValue.value = '';
                     if (suggestions) {
                         suggestions.innerHTML = '';
                         suggestions.style.display = 'none';

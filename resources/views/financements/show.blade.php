@@ -202,8 +202,8 @@
                                         </strong>
                                     </td>
                                     <td>
-                                        @if ($financement->motif)
-                                            {{ $financement->motif }}
+                                        @if ($financement->motif_affiche)
+                                            {{ $financement->motif_affiche }}
                                         @else
                                             <em class="text-muted">Aucun motif</em>
                                         @endif

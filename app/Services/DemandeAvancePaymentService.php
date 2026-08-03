@@ -84,19 +84,23 @@ class DemandeAvancePaymentService
                 'numero_recu' => now()->format('Ymd').sprintf('%04d', random_int(1, 9999)),
             ]);
 
-            // Un seul financement : la sync gest-camions reconnaît AVANCE-PAIEMENT-{id}
-            // et ne doit pas en recréer un second.
+            $payeur = trim((string) ($caissier->full_name ?? trim(($caissier->nom ?? '').' '.($caissier->prenoms ?? ''))));
+            if ($payeur === '') {
+                $payeur = 'caissier Unipalm';
+            }
+
+            // AVANCE-PAIEMENT-{id} conserve l'idempotence sync gest-camions.
             $this->financementService->create(
                 (int) $locked->id_agent,
                 $montant,
-                'Avance API (demande #'.$locked->id.') — payée caisse groupe — AVANCE-PAIEMENT-'.$paiement->id,
+                'Avance Unipalm payé par '.$payeur.' — AVANCE-PAIEMENT-'.$paiement->id,
             );
 
             $locked->update([
                 'statut' => 'payee',
                 'paiement_agent_id' => $paiement->id,
                 'payee_at' => now(),
-                'payee_par' => $caissier->full_name ?? trim(($caissier->nom ?? '').' '.($caissier->prenoms ?? '')),
+                'payee_par' => $payeur,
             ]);
         });
     }

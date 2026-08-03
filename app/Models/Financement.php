@@ -67,6 +67,57 @@ class Financement extends Model
         return $this->statut === self::STATUT_VALIDE || $this->statut === null || $this->statut === '';
     }
 
+    /**
+     * Motif lisible : les anciennes lignes "Avance API" deviennent
+     * "Avance Unipalm payé par {nom}".
+     */
+    public function getMotifAfficheAttribute(): string
+    {
+        $motif = trim((string) ($this->motif ?? ''));
+        if ($motif === '') {
+            return '';
+        }
+
+        if (preg_match('/^Avance Unipalm payé par\s+(.+?)(?:\s*[—\-]\s*AVANCE-PAIEMENT-\d+)?$/ui', $motif, $matches)) {
+            return 'Avance Unipalm payé par '.trim($matches[1]);
+        }
+
+        if (str_starts_with($motif, 'Avance API')) {
+            $payeur = $this->resolveAvanceApiPayeur();
+
+            return $payeur !== ''
+                ? 'Avance Unipalm payé par '.$payeur
+                : 'Avance Unipalm';
+        }
+
+        return $motif;
+    }
+
+    private function resolveAvanceApiPayeur(): string
+    {
+        $motif = (string) ($this->motif ?? '');
+
+        if (preg_match('/demande\s*#(\d+)/i', $motif, $matches)) {
+            $demande = DemandeAvanceGestCamions::query()->find((int) $matches[1]);
+            $payeur = trim((string) ($demande->payee_par ?? ''));
+            if ($payeur !== '') {
+                return $payeur;
+            }
+        }
+
+        if (preg_match('/AVANCE-PAIEMENT-(\d+)/i', $motif, $matches)) {
+            $demande = DemandeAvanceGestCamions::query()
+                ->where('paiement_agent_id', (int) $matches[1])
+                ->first();
+            $payeur = trim((string) ($demande->payee_par ?? ''));
+            if ($payeur !== '') {
+                return $payeur;
+            }
+        }
+
+        return '';
+    }
+
     public function scopeValides($query)
     {
         return $query->where(function ($q) {

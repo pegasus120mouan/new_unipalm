@@ -182,7 +182,7 @@
                         <td class="text-right {{ $financement->isAdvance() ? 'positive' : 'negative' }}">
                             {{ $financement->isAdvance() ? '+' : '' }}{{ number_format((float) $financement->montant, 0, '', ' ') }}
                         </td>
-                        <td>{{ $financement->motif ?: 'Aucun motif' }}</td>
+                        <td>{{ $financement->motif_affiche ?: 'Aucun motif' }}</td>
                     </tr>
                 @endforeach
             </tbody>

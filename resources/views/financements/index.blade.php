@@ -103,7 +103,7 @@
                                     <td class="text-end text-danger fw-semibold">
                                         {{ number_format((float) $financement->montant, 0, '', ' ') }} FCFA
                                     </td>
-                                    <td>{{ $financement->motif ?: '—' }}</td>
+                                    <td>{{ $financement->motif_affiche ?: '—' }}</td>
                                     <td class="text-end">
                                         @if(auth()->user()?->canAccessModule('financements.valider'))
                                             <button type="button"
@@ -115,7 +115,7 @@
                                                 data-agent="{{ $financement->agent?->full_name ?? ('#'.$financement->id_agent) }}"
                                                 data-date="{{ $financement->date_financement?->format('d/m/Y') ?? '—' }}"
                                                 data-montant="{{ number_format((float) $financement->montant, 0, ',', ' ') }} FCFA"
-                                                data-motif="{{ $financement->motif ?: '—' }}">
+                                                data-motif="{{ $financement->motif_affiche ?: '—' }}">
                                                 <i class="bi bi-check2-circle"></i> Valider
                                             </button>
                                         @else
@@ -226,7 +226,7 @@
                                         <td class="text-end {{ $financement->isAdvance() ? 'text-success' : 'text-danger' }}">
                                             {{ number_format((float) $financement->montant, 0, '', ' ') }} FCFA
                                         </td>
-                                        <td>{{ $financement->motif }}</td>
+                                        <td>{{ $financement->motif_affiche }}</td>
                                     </tr>
                                 @empty
                                     <tr>

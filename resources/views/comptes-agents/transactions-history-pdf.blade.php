@@ -180,7 +180,7 @@
                         <td>{{ $financement->date_financement?->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ $financement->code_affiche }}</td>
                         <td class="text-right">{{ number_format((float) $financement->montant, 0, '', ' ') }}</td>
-                        <td>{{ $financement->motif }}</td>
+                        <td>{{ $financement->motif_affiche }}</td>
                     </tr>
                 @endforeach
                 <tr class="total-row">
