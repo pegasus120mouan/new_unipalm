@@ -25,6 +25,7 @@ use App\Http\Controllers\PrixUnitaireController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UsineController;
+use App\Http\Controllers\UsineFinancementController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\UtilisateurPhotoController;
 use App\Models\Utilisateur;
@@ -124,6 +125,19 @@ Route::get('/', function () {
     Route::post('/usines', [UsineController::class, 'store'])->name('usines.store');
     Route::put('/usines/{usine:id_usine}', [UsineController::class, 'update'])->name('usines.update');
     Route::get('/usines/{usine:id_usine}/localisation', [UsineController::class, 'location'])->name('usines.location');
+    Route::get('/usines/montants', [UsineController::class, 'montants'])->name('usines.montants');
+    Route::get('/usines/montants/{usine:id_usine}', [UsineController::class, 'montantsShow'])->name('usines.montants.show');
+    Route::post('/usines/montants/{usine:id_usine}/entrees', [UsineController::class, 'storeEntree'])->name('usines.montants.entrees.store');
+    Route::get('/usines/montants/{usine:id_usine}/tickets/{date}/pdf', [UsineController::class, 'montantsDayPdf'])
+        ->where('date', '\d{4}-\d{2}-\d{2}')
+        ->name('usines.montants.day.pdf');
+    Route::post('/usines/montants/{usine:id_usine}/paiement', [UsineController::class, 'storePayment'])
+        ->name('usines.montants.payment');
+    Route::get('/usines/montants/{usine:id_usine}/historique-paiements/pdf', [UsineController::class, 'paymentsHistoryPdf'])
+        ->name('usines.montants.payments.pdf');
+    Route::get('/usines/financements', [UsineFinancementController::class, 'index'])->name('usines.financements.index');
+    Route::get('/usines/financements/{usine:id_usine}', [UsineFinancementController::class, 'show'])->name('usines.financements.show');
+    Route::post('/usines/financements/{usine:id_usine}', [UsineFinancementController::class, 'store'])->name('usines.financements.store');
     Route::get('/montants-usines', [UsineController::class, 'amounts'])->name('usines.amounts');
     Route::get('/montants-usines/{usine:id_usine}', [UsineController::class, 'amountsShow'])->name('usines.amounts.show');
     Route::get('/montants-usines/{usine:id_usine}/historique-paiements/pdf', [UsineController::class, 'paymentsHistoryPdf'])

@@ -39,4 +39,14 @@ class Usine extends Model
     {
         return $this->hasMany(Ticket::class, 'id_usine', 'id_usine');
     }
+
+    public function entrees(): HasMany
+    {
+        return $this->hasMany(UsineEntree::class, 'id_usine', 'id_usine');
+    }
+
+    public function financements(): HasMany
+    {
+        return $this->hasMany(UsineFinancement::class, 'id_usine', 'id_usine');
+    }
 }

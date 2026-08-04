@@ -614,8 +614,8 @@
                        
 
                         @auth
-                        @if ($canModuleAny(['groupes', 'agents', 'commis', 'usines', 'vehicules']))
-                        <li class="sidebar-item has-sub {{ request()->routeIs(['groupes.*', 'agents.*', 'vehicules.*']) || request()->routeIs('usines.index') ? 'active' : '' }}">
+                        @if ($canModuleAny(['groupes', 'agents', 'commis', 'vehicules']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['groupes.*', 'agents.*', 'commis.*', 'vehicules.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -625,7 +625,7 @@
 
                             </a>
 
-                            <ul class="submenu {{ request()->routeIs(['groupes.*', 'agents.*', 'vehicules.*']) || request()->routeIs('usines.index') ? 'active' : '' }}">
+                            <ul class="submenu {{ request()->routeIs(['groupes.*', 'agents.*', 'commis.*', 'vehicules.*']) ? 'active' : '' }}">
 
                                 @if ($canModule('groupes'))
                                 <li class="submenu-item {{ request()->routeIs('groupes.*') ? 'active' : '' }}">
@@ -660,23 +660,67 @@
                                 </li>
                                 @endif
 
-                                @if ($canModule('usines'))
-                                <li class="submenu-item {{ request()->routeIs('usines.index') ? 'active' : '' }}">
-
-                                    <a href="{{ route('usines.index') }}">
-                                        <i class="bi bi-building submenu-icon--usines"></i>
-                                        <span>Usines</span>
-                                    </a>
-
-                                </li>
-                                @endif
-
                                 @if ($canModule('vehicules'))
                                 <li class="submenu-item {{ request()->routeIs('vehicules.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('vehicules.index') }}">
                                         <i class="bi bi-truck submenu-icon--vehicules"></i>
                                         <span>Vehicules</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                            </ul>
+
+                        </li>
+                        @endif
+                        @endauth
+
+
+
+                        @auth
+                        @if ($canModuleAny(['usines', 'usines.montants', 'usines.financements']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['usines.index', 'usines.location', 'usines.montants*', 'usines.financements*']) ? 'active' : '' }}">
+
+                            <a href="#" class='sidebar-link'>
+
+                                <span class="sidebar-icon sidebar-icon--usines"><i class="bi bi-building"></i></span>
+
+                                <span>Gestion des Usines</span>
+
+                            </a>
+
+                            <ul class="submenu {{ request()->routeIs(['usines.index', 'usines.location', 'usines.montants*', 'usines.financements*']) ? 'active' : '' }}">
+
+                                @if ($canModule('usines'))
+                                <li class="submenu-item {{ request()->routeIs(['usines.index', 'usines.location']) ? 'active' : '' }}">
+
+                                    <a href="{{ route('usines.index') }}">
+                                        <i class="bi bi-building submenu-icon--usines"></i>
+                                        <span>Liste des usines</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('usines.montants'))
+                                <li class="submenu-item {{ request()->routeIs('usines.montants*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('usines.montants') }}">
+                                        <i class="bi bi-geo-alt submenu-icon--usines"></i>
+                                        <span>Points des usines</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('usines.financements'))
+                                <li class="submenu-item {{ request()->routeIs('usines.financements*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('usines.financements.index') }}">
+                                        <i class="bi bi-cash-stack submenu-icon--usine-financement"></i>
+                                        <span>Financement des usines</span>
                                     </a>
 
                                 </li>

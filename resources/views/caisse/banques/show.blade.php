@@ -149,6 +149,7 @@
                                 <option value="solde_initial" @selected($filters['type'] === 'solde_initial')>Solde initial</option>
                                 <option value="approvisionnement_manuel" @selected($filters['type'] === 'approvisionnement_manuel')>Manuel</option>
                                 <option value="paiement_usine" @selected($filters['type'] === 'paiement_usine')>Paiement usine</option>
+                                <option value="financement_usine" @selected($filters['type'] === 'financement_usine')>Financement usine</option>
                             </select>
                         </div>
                         <div class="col-md-3">

@@ -44,7 +44,6 @@ class TicketBordereauPdfService
         $fin = Carbon::parse($dateFin)->endOfDay();
 
         $tickets = Ticket::query()
-            ->visibleToCurrentUser()
             ->with(['usine', 'vehicule'])
             ->where('id_agent', $idAgent)
             ->whereDate('created_at', '>=', $debut->toDateString())

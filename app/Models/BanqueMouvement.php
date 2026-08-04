@@ -27,6 +27,8 @@ class BanqueMouvement extends Model
 
     public const TYPE_USINE = 'paiement_usine';
 
+    public const TYPE_FINANCEMENT_USINE = 'financement_usine';
+
     protected $table = 'banque_mouvements';
 
     protected $primaryKey = 'id_mouvement';
@@ -64,6 +66,7 @@ class BanqueMouvement extends Model
             self::TYPE_MANUEL => 'Approvisionnement manuel',
             self::TYPE_CAISSE => 'Vers caisse',
             self::TYPE_USINE => 'Paiement usine',
+            self::TYPE_FINANCEMENT_USINE => 'Financement usine',
             default => $this->type_mouvement,
         };
     }
@@ -75,6 +78,7 @@ class BanqueMouvement extends Model
             self::TYPE_MANUEL => 'success',
             self::TYPE_CAISSE => 'warning',
             self::TYPE_USINE => 'info',
+            self::TYPE_FINANCEMENT_USINE => 'primary',
             default => 'light text-dark',
         };
     }

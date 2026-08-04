@@ -33,6 +33,7 @@
 .sidebar-icon--bridges { background: rgba(13, 202, 240, 0.16); color: #0aa2c0; }
 .sidebar-icon--plantations { background: rgba(32, 201, 151, 0.16); color: #1aab7a; }
 .sidebar-icon--gestion { background: rgba(102, 16, 242, 0.12); color: #6610f2; }
+.sidebar-icon--usines { background: rgba(25, 135, 84, 0.14); color: #198754; }
 .sidebar-icon--sorties { background: rgba(253, 126, 20, 0.16); color: #e8590c; }
 .sidebar-icon--banques { background: rgba(13, 110, 253, 0.14); color: #0d6efd; }
 .sidebar-icon--caisse { background: rgba(255, 193, 7, 0.2); color: #cc9a06; }
@@ -77,6 +78,7 @@
 .submenu-icon--groupes { color: #6610f2; }
 .submenu-icon--agents { color: #0d6efd; }
 .submenu-icon--usines { color: #198754; }
+.submenu-icon--usine-financement { color: #6f42c1; }
 .submenu-icon--vehicules { color: #fd7e14; }
 
 .submenu-icon--sorties-list { color: #435ebe; }

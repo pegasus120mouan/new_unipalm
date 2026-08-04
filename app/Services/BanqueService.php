@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Banque;
 use App\Models\BanqueMouvement;
 use App\Models\Usine;
+use App\Models\UsineFinancement;
 use App\Models\Utilisateur;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -199,6 +200,8 @@ class BanqueService
         string $modePaiement,
         ?string $referencePaiement,
         Utilisateur $utilisateur,
+        ?float $restePlafond = null,
+        bool $distributeToTickets = true,
     ): void {
         DB::transaction(function () use (
             $banque,
@@ -208,6 +211,8 @@ class BanqueService
             $modePaiement,
             $referencePaiement,
             $utilisateur,
+            $restePlafond,
+            $distributeToTickets,
         ): void {
             $this->usinePaymentService->create(
                 $usine,
@@ -217,6 +222,8 @@ class BanqueService
                 $referencePaiement,
                 $utilisateur,
                 crediterCaisse: false,
+                restePlafond: $restePlafond,
+                distributeToTickets: $distributeToTickets,
             );
 
             $libelle = 'Paiement usine '.$usine->nom_usine.' ('.$modePaiement.')';
@@ -231,6 +238,65 @@ class BanqueService
                 $referencePaiement,
                 Carbon::parse($datePaiement),
             );
+        });
+    }
+
+    /**
+     * Enregistre un financement reçu d'une usine et crédite la banque sélectionnée.
+     */
+    public function financementUsine(
+        Banque $banque,
+        Usine $usine,
+        float $montant,
+        string $dateFinancement,
+        string $modePaiement,
+        ?string $referencePaiement,
+        ?string $motif,
+        Utilisateur $utilisateur,
+    ): UsineFinancement {
+        if ($montant <= 0) {
+            throw new \InvalidArgumentException('Le montant du financement doit être supérieur à 0.');
+        }
+
+        return DB::transaction(function () use (
+            $banque,
+            $usine,
+            $montant,
+            $dateFinancement,
+            $modePaiement,
+            $referencePaiement,
+            $motif,
+            $utilisateur,
+        ): UsineFinancement {
+            $financement = UsineFinancement::query()->create([
+                'code_financement' => UsineFinancement::genererCode(),
+                'id_usine' => $usine->id_usine,
+                'montant' => $montant,
+                'motif' => $motif,
+                'date_financement' => $dateFinancement,
+                'id_banque' => $banque->id_banque,
+                'mode_paiement' => $modePaiement,
+                'reference_paiement' => $referencePaiement,
+                'id_utilisateur' => $utilisateur->id,
+            ]);
+
+            $libelle = 'Financement usine '.$usine->nom_usine;
+            if ($motif) {
+                $libelle .= ' — '.$motif;
+            }
+
+            $this->crediter(
+                $banque,
+                $montant,
+                BanqueMouvement::TYPE_FINANCEMENT_USINE,
+                $libelle,
+                $utilisateur,
+                $usine->id_usine,
+                $referencePaiement,
+                Carbon::parse($dateFinancement),
+            );
+
+            return $financement;
         });
     }
 
