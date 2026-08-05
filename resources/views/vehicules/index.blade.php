@@ -93,7 +93,7 @@
                                 <option value="">Tous les types</option>
                                 <option value="voiture" @selected($type === 'voiture')>Voiture</option>
                                 <option value="moto" @selected($type === 'moto')>Moto</option>
-                                <option value="tricycle" @selected($type === 'tricycle')>Tricycle</option>
+                                <option value="tricycle" @selected($type === 'tricycle')>Tricyclette</option>
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-5 d-flex flex-wrap gap-2">
@@ -162,9 +162,11 @@
                                             @endif
                                         </td>
                                     @endif
-                                    <td class="d-flex align-items-center">
-                                        @include('vehicules.partials.type-icon', ['type' => $vehicule->type_vehicule])
-                                        {{ $vehicule->type_label }}
+                                    <td class="align-middle">
+                                        @include('vehicules.partials.type-icon', [
+                                            'type' => $vehicule->type_vehicule,
+                                            'label' => $vehicule->type_label,
+                                        ])
                                     </td>
                                     <td class="fw-semibold">
                                         {{ $vehicule->matricule_vehicule }}
@@ -250,7 +252,7 @@
                                 class="form-select @error('type_vehicule') is-invalid @enderror" required>
                                 <option value="voiture" @selected(old('type_vehicule', 'voiture') === 'voiture')>Voiture</option>
                                 <option value="moto" @selected(old('type_vehicule') === 'moto')>Moto</option>
-                                <option value="tricycle" @selected(old('type_vehicule') === 'tricycle')>Tricycle</option>
+                                <option value="tricycle" @selected(old('type_vehicule') === 'tricycle')>Tricyclette</option>
                             </select>
                             @error('type_vehicule')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -289,7 +291,7 @@
                             <select name="type_vehicule" id="edit_type_vehicule" class="form-select" required>
                                 <option value="voiture">Voiture</option>
                                 <option value="moto">Moto</option>
-                                <option value="tricycle">Tricycle</option>
+                                <option value="tricycle">Tricyclette</option>
                             </select>
                         </div>
                     </div>

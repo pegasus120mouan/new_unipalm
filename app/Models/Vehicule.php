@@ -35,7 +35,7 @@ class Vehicule extends Model
     {
         return match (strtolower(trim((string) $this->type_vehicule))) {
             'moto' => 'Moto',
-            'tricycle' => 'Tricycle',
+            'tricycle' => 'Tricyclette',
             'voiture' => 'Voiture',
             default => ucfirst((string) $this->type_vehicule),
         };
