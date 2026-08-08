@@ -109,6 +109,7 @@
             const USINES = @json($usinesForAutocomplete);
             const AGENTS = @json($agentsForAutocomplete);
             const VEHICULES = @json($vehiculesForAutocomplete);
+            const AGENTS_PONTS = @json($agentsPontsMap ?? new \stdClass());
             const UPDATE_BASE = @json(url('/tickets'));
             const CSRF = @json(csrf_token());
             const successModalEl = document.getElementById('ticketModifiedModal');
@@ -222,9 +223,15 @@
                 return editor.value;
             }
 
-            function buildSelect(options, value) {
+            function buildSelect(options, value, emptyLabel) {
                 const select = document.createElement('select');
                 select.className = 'form-select form-select-sm';
+                if (emptyLabel !== undefined) {
+                    const empty = document.createElement('option');
+                    empty.value = '';
+                    empty.textContent = emptyLabel;
+                    select.appendChild(empty);
+                }
                 options.forEach(function (opt) {
                     const option = document.createElement('option');
                     option.value = String(opt.id);
@@ -235,6 +242,39 @@
                     select.appendChild(option);
                 });
                 return select;
+            }
+
+            function pontsForAgent(agentId) {
+                return AGENTS_PONTS[String(agentId)] || AGENTS_PONTS[agentId] || [];
+            }
+
+            function syncPontCellForAgent(row, agentId) {
+                const pontCell = row.querySelector('[data-field="id_pont"]');
+                if (!pontCell) {
+                    return;
+                }
+                const ponts = pontsForAgent(agentId);
+                const current = String(pontCell.dataset.value || '');
+                const stillValid = ponts.some(function (p) { return String(p.id) === current; });
+
+                if (ponts.length === 1) {
+                    pontCell.dataset.value = String(ponts[0].id);
+                    pontCell.dataset.label = ponts[0].nom || ponts[0].label;
+                    const display = pontCell.querySelector('.ticket-cell-display');
+                    if (display) {
+                        display.textContent = ponts[0].nom || ponts[0].label;
+                    }
+                    return;
+                }
+
+                if (!stillValid) {
+                    pontCell.dataset.value = '';
+                    pontCell.dataset.label = '';
+                    const display = pontCell.querySelector('.ticket-cell-display');
+                    if (display) {
+                        display.textContent = '—';
+                    }
+                }
             }
 
             function buildInput(type, value, step) {
@@ -290,6 +330,31 @@
                     const found = AGENTS.find(function (a) { return String(a.id) === String(value); });
                     label = found ? found.name : label;
                     cell.dataset.label = label;
+                    cell.dataset.value = value;
+                    display.textContent = label || '—';
+                    const row = cell.closest('tr');
+                    if (row) {
+                        syncPontCellForAgent(row, value);
+                    }
+                    const changed = String(value) !== String(snapshot);
+                    delete cell.dataset.editSnapshot;
+                    editor.remove();
+                    display.style.display = '';
+                    cell.classList.remove('is-editing');
+                    activeCell = null;
+                    return { committed: true, changed: changed };
+                } else if (field === 'id_pont') {
+                    const row = cell.closest('tr');
+                    const agentCell = row ? row.querySelector('[data-field="id_agent"]') : null;
+                    const agentId = agentCell ? agentCell.dataset.value : '';
+                    const ponts = pontsForAgent(agentId);
+                    if (ponts.length > 0 && !value) {
+                        alert('Veuillez sélectionner un pont-bascule pour cet agent.');
+                        return { committed: false, changed: false };
+                    }
+                    const found = ponts.find(function (p) { return String(p.id) === String(value); });
+                    label = found ? (found.nom || found.label) : (value ? label : '—');
+                    cell.dataset.label = found ? (found.nom || found.label) : '';
                 } else if (field === 'vehicule_id') {
                     const found = VEHICULES.find(function (v) { return String(v.id) === String(value); });
                     label = found ? found.label : (cell.dataset.label || label);
@@ -375,6 +440,20 @@
                     editor = buildSelect(USINES, value);
                 } else if (field === 'id_agent') {
                     editor = buildSelect(AGENTS.map(function (a) { return { id: a.id, label: a.name }; }), value);
+                } else if (field === 'id_pont') {
+                    const agentCell = row.querySelector('[data-field="id_agent"]');
+                    const agentId = agentCell ? agentCell.dataset.value : '';
+                    const ponts = pontsForAgent(agentId).map(function (p) {
+                        return { id: p.id, label: p.label || p.nom };
+                    });
+                    if (!ponts.length) {
+                        display.style.display = '';
+                        cell.classList.remove('is-editing');
+                        delete cell.dataset.editSnapshot;
+                        alert('Aucun pont-bascule associé à cet agent.');
+                        return;
+                    }
+                    editor = buildSelect(ponts, value, '— Sélectionner un pont —');
                 } else if (field === 'vehicule_id') {
                     editor = buildInlineAutocomplete({
                         items: VEHICULES,
@@ -445,6 +524,7 @@
                     numero_ticket: row.dataset.numeroTicket,
                     id_usine: parseInt(cellValue('id_usine'), 10),
                     id_agent: parseInt(cellValue('id_agent'), 10),
+                    id_pont: cellValue('id_pont') ? parseInt(cellValue('id_pont'), 10) : null,
                     vehicule_id: parseInt(cellValue('vehicule_id'), 10),
                     poids: cellValue('poids'),
                     prix_unitaire: cellValue('prix_unitaire') || null,
@@ -457,6 +537,7 @@
                     date_ticket: ['date_ticket', 'date_ticket_display'],
                     id_usine: ['id_usine', 'usine_name'],
                     id_agent: ['id_agent', 'agent_name'],
+                    id_pont: ['id_pont', 'pont_name'],
                     vehicule_id: ['vehicule_id', 'vehicule_label'],
                     poids: ['poids', 'poids_display'],
                     created_at: ['created_at', 'created_at_display'],
@@ -471,7 +552,7 @@
                     const valKey = map[field][0];
                     const displayKey = map[field][1];
                     cell.dataset.value = ticket[valKey] ?? '';
-                    if (field === 'id_usine' || field === 'id_agent' || field === 'vehicule_id') {
+                    if (field === 'id_usine' || field === 'id_agent' || field === 'vehicule_id' || field === 'id_pont') {
                         cell.dataset.label = ticket[displayKey] ?? '';
                     }
                     const display = cell.querySelector('.ticket-cell-display');

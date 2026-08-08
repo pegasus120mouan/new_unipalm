@@ -306,6 +306,7 @@ class TicketController extends Controller
 
         $agents = Agent::query()
             ->whereNull('date_suppression')
+            ->with(['ponts' => fn ($query) => $query->orderBy('nom_pont')])
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get();
@@ -318,6 +319,17 @@ class TicketController extends Controller
             'numero' => $agent->numero_agent ?? '',
             'name' => $agent->full_name,
         ])->values();
+
+        $agentsPontsMap = $agents->mapWithKeys(fn (Agent $agent) => [
+            $agent->id_agent => $agent->ponts->map(fn ($pont) => [
+                'id' => $pont->id_pont,
+                'code' => $pont->code_pont,
+                'nom' => $pont->nom_pont,
+                'label' => $pont->code_pont
+                    ? $pont->code_pont.' — '.$pont->nom_pont
+                    : $pont->nom_pont,
+            ])->values()->all(),
+        ])->all();
 
         $usinesForAutocomplete = $usines->map(fn (Usine $usine) => [
             'id' => $usine->id_usine,
@@ -336,6 +348,7 @@ class TicketController extends Controller
             'usines',
             'vehicules',
             'agentsForAutocomplete',
+            'agentsPontsMap',
             'usinesForAutocomplete',
             'vehiculesForAutocomplete',
         ));
@@ -394,11 +407,51 @@ class TicketController extends Controller
             ],
             'id_usine' => ['required', 'integer', 'exists:usines,id_usine'],
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
+            'id_pont' => ['nullable', 'integer', Rule::exists('pont_bascule', 'id_pont')],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
             'poids' => ['required', 'numeric', 'min:0'],
             'prix_unitaire' => ['nullable', 'numeric', 'min:0'],
             'created_at' => ['nullable', 'date'],
         ]);
+
+        $agentHasPonts = PontBascule::query()
+            ->where('id_agent', (int) $validated['id_agent'])
+            ->exists();
+
+        if ($agentHasPonts) {
+            if (empty($validated['id_pont'])) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Veuillez sélectionner le pont-bascule associé à cet agent.',
+                        'errors' => ['id_pont' => ['Veuillez sélectionner le pont-bascule associé à cet agent.']],
+                    ], 422);
+                }
+
+                return back()->withErrors(['id_pont' => 'Veuillez sélectionner le pont-bascule associé à cet agent.']);
+            }
+
+            $pontBelongsToAgent = PontBascule::query()
+                ->where('id_pont', (int) $validated['id_pont'])
+                ->where('id_agent', (int) $validated['id_agent'])
+                ->exists();
+
+            if (! $pontBelongsToAgent) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'Le pont sélectionné n\'est pas associé à cet agent.',
+                        'errors' => ['id_pont' => ['Le pont sélectionné n\'est pas associé à cet agent.']],
+                    ], 422);
+                }
+
+                return back()->withErrors(['id_pont' => 'Le pont sélectionné n\'est pas associé à cet agent.']);
+            }
+
+            $validated['id_pont'] = (int) $validated['id_pont'];
+        } else {
+            $validated['id_pont'] = null;
+        }
 
         try {
             $updated = $this->ticketService->update($ticket, $validated);
@@ -411,7 +464,7 @@ class TicketController extends Controller
         }
 
         if ($request->wantsJson()) {
-            $updated->load(['usine', 'agent', 'vehicule']);
+            $updated->load(['usine', 'agent', 'vehicule', 'pont']);
 
             return response()->json([
                 'ok' => true,
@@ -423,6 +476,8 @@ class TicketController extends Controller
                     'usine_name' => $updated->usine?->nom_usine,
                     'id_agent' => $updated->id_agent,
                     'agent_name' => $updated->agent?->full_name,
+                    'id_pont' => $updated->id_pont,
+                    'pont_name' => $updated->pont?->nom_pont,
                     'vehicule_id' => $updated->vehicule_id,
                     'vehicule_label' => $updated->vehicule?->matricule_vehicule,
                     'poids' => $updated->poids,

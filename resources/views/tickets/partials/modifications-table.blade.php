@@ -61,7 +61,15 @@
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->agent?->full_name ?? '—' }}</span>
                 </td>
-                <td>{{ $ticket->pont?->nom_pont ?? '—' }}</td>
+                <td @class(['ticket-editable' => $canEdit, 'ticket-editable-cell' => $canEdit])
+                    @if ($canEdit)
+                        data-field="id_pont"
+                        data-value="{{ $ticket->id_pont }}"
+                        data-label="{{ $ticket->pont?->nom_pont ?? '' }}"
+                        title="Cliquer pour modifier — ponts de l'agent sélectionné"
+                    @endif>
+                    <span class="ticket-cell-display">{{ $ticket->pont?->nom_pont ?? '—' }}</span>
+                </td>
                 <td @class(['ticket-editable' => $canEdit, 'ticket-editable-cell' => $canEdit])
                     @if ($canEdit)
                         data-field="vehicule_id"

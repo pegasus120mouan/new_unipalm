@@ -97,6 +97,7 @@ class TicketService
             'numero_ticket' => $data['numero_ticket'],
             'id_usine' => $data['id_usine'],
             'id_agent' => $data['id_agent'],
+            'id_pont' => array_key_exists('id_pont', $data) ? $data['id_pont'] : $ticket->id_pont,
             'vehicule_id' => $data['vehicule_id'],
             'poids' => $data['poids'],
         ]);
