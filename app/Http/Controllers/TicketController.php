@@ -11,6 +11,7 @@ use App\Services\TicketBordereauPdfService;
 use App\Services\TicketExportService;
 use App\Services\TicketService;
 use App\Services\TicketUsinePdfService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -107,16 +108,54 @@ class TicketController extends Controller
         return view('tickets.today', compact('tickets'));
     }
 
-    public function pending(): View
+    public function pending(Request $request): View
     {
-        $tickets = $this->ticketQuery()
-            ->pending()
+        $filters = [
+            'agent_id' => $request->input('agent_id'),
+            'usine_id' => $request->input('usine_id'),
+            'vehicule_id' => $request->input('vehicule_id'),
+            'date_debut' => $request->input('date_debut'),
+            'date_fin' => $request->input('date_fin'),
+        ];
+
+        $query = $this->ticketQuery()->pending();
+
+        if ($filters['agent_id']) {
+            $query->where('id_agent', (int) $filters['agent_id']);
+        }
+
+        if ($filters['usine_id']) {
+            $query->where('id_usine', (int) $filters['usine_id']);
+        }
+
+        if ($filters['vehicule_id']) {
+            $query->where('vehicule_id', (int) $filters['vehicule_id']);
+        }
+
+        if ($filters['date_debut']) {
+            $query->whereDate('date_ticket', '>=', $filters['date_debut']);
+        }
+
+        if ($filters['date_fin']) {
+            $query->whereDate('date_ticket', '<=', $filters['date_fin']);
+        }
+
+        $tickets = $query
             ->orderByDesc('date_ticket')
             ->orderByDesc('id_ticket')
             ->paginate(15)
             ->withQueryString();
 
-        return view('tickets.pending', compact('tickets'));
+        $agents = Agent::query()
+            ->whereNull('date_suppression')
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
+
+        $usines = Usine::query()->orderBy('nom_usine')->get();
+        $vehicules = Vehicule::query()->orderBy('matricule_vehicule')->get();
+
+        return view('tickets.pending', compact('tickets', 'filters', 'agents', 'usines', 'vehicules'));
     }
 
     public function paid(Request $request): View
@@ -501,12 +540,18 @@ class TicketController extends Controller
             ->with('success', 'Ticket modifié avec succès.');
     }
 
-    public function validate(Request $request, Ticket $ticket): RedirectResponse
+    public function validate(Request $request, Ticket $ticket): RedirectResponse|JsonResponse
     {
         $this->authorizeTicketValidation();
         $this->authorizeTicketAccess($ticket);
 
         if (! $ticket->isPending()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Ce ticket n\'est plus en attente de validation.',
+                ], 422);
+            }
+
             return back()->withErrors([
                 'prix_unitaire' => 'Ce ticket n\'est plus en attente de validation.',
             ]);
@@ -518,12 +563,19 @@ class TicketController extends Controller
 
         $this->ticketService->validate($ticket, (float) $validated['prix_unitaire']);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Ticket validé avec succès.',
+                'validated_ids' => [$ticket->id_ticket],
+            ]);
+        }
+
         return redirect()
-            ->route('tickets.pending')
+            ->to($this->pendingRedirectUrl($request))
             ->with('success', 'Ticket validé avec succès.');
     }
 
-    public function validateBulk(Request $request): RedirectResponse
+    public function validateBulk(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorizeTicketValidation();
 
@@ -549,6 +601,12 @@ class TicketController extends Controller
         );
 
         if ($result['validated'] === 0) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Aucun ticket n\'a pu être validé.',
+                ], 422);
+            }
+
             return back()->withErrors([
                 'prix_unitaire' => 'Aucun ticket n\'a pu être validé.',
             ]);
@@ -560,8 +618,16 @@ class TicketController extends Controller
             $message .= ' Prix unitaire appliqué aux autres tickets en attente des usines concernées.';
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'validated_ids' => $result['validated_ids'],
+                'usines_updated' => $result['usines_updated'],
+            ]);
+        }
+
         return redirect()
-            ->route('tickets.pending')
+            ->to($this->pendingRedirectUrl($request))
             ->with('success', $message);
     }
 
@@ -606,6 +672,23 @@ class TicketController extends Controller
         if (! auth()->user()?->canValidateTickets()) {
             abort(403, 'Les opérateurs ne peuvent pas valider un ticket.');
         }
+    }
+
+    /**
+     * Conserve les filtres de la page « Tickets en attente » après validation.
+     */
+    private function pendingRedirectUrl(Request $request): string
+    {
+        $filters = array_filter(
+            $request->only(['agent_id', 'usine_id', 'vehicule_id', 'date_debut', 'date_fin', 'page']),
+            fn ($value) => $value !== null && $value !== '',
+        );
+
+        if ($filters === [] && $request->headers->get('referer')) {
+            return (string) $request->headers->get('referer');
+        }
+
+        return route('tickets.pending', $filters);
     }
 
     /**

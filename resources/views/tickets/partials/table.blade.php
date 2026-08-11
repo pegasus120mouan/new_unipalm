@@ -41,12 +41,9 @@
             <tr>
                 @if (! empty($showBulkSelection))
                     <td>
-                        @if ($ticket->hasPrixUnitaire())
-                            <span class="text-muted">—</span>
-                        @else
-                            <input type="checkbox" class="form-check-input ticket-checkbox"
-                                name="ticket_ids[]" value="{{ $ticket->id_ticket }}">
-                        @endif
+                        <input type="checkbox" class="form-check-input ticket-checkbox"
+                            name="ticket_ids[]" value="{{ $ticket->id_ticket }}"
+                            data-prix-unitaire="{{ $ticket->hasPrixUnitaire() ? (float) $ticket->prix_unitaire : '' }}">
                     </td>
                 @endif
                 <td>{{ $ticket->date_ticket?->format('d/m/Y') ?? '-' }}</td>

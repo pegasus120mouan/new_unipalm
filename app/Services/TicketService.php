@@ -178,15 +178,16 @@ class TicketService
         $tickets = Ticket::query()
             ->whereIn('id_ticket', $ticketIds)
             ->pending()
-            ->withoutPrixUnitaire()
             ->get();
 
         $validated = 0;
+        $validatedIds = [];
         $usineIds = [];
 
         foreach ($tickets as $ticket) {
             $this->validate($ticket, $prixUnitaire);
             $validated++;
+            $validatedIds[] = $ticket->id_ticket;
 
             if ($updateAllUsine) {
                 $usineIds[] = $ticket->id_usine;
@@ -199,8 +200,11 @@ class TicketService
             Ticket::query()
                 ->whereIn('id_usine', $usineIds)
                 ->whereNull('date_validation_boss')
-                ->whereNull('prix_unitaire')
-                ->whereNotIn('id_ticket', $tickets->pluck('id_ticket'))
+                ->where(function ($query) {
+                    $query->whereNull('prix_unitaire')
+                        ->orWhere('prix_unitaire', 0);
+                })
+                ->whereNotIn('id_ticket', $validatedIds)
                 ->update([
                     'prix_unitaire' => $prixUnitaire,
                     'updated_at' => now(),
@@ -209,6 +213,7 @@ class TicketService
 
         return [
             'validated' => $validated,
+            'validated_ids' => $validatedIds,
             'usines_updated' => $usineIds,
         ];
     }
