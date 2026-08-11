@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\PrixUnitaire;
 use App\Models\Usine;
+use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PrixUnitaireController extends Controller
 {
+    public function __construct(
+        private readonly TicketService $ticketService,
+    ) {}
+
     public function index(Request $request): View
     {
         $filters = [
@@ -83,9 +88,23 @@ class PrixUnitaireController extends Controller
             'date_fin' => $validated['date_fin'] ?? null,
         ]);
 
+        $updatedTickets = $this->ticketService->applyPrixUnitaireToPendingTickets(
+            (int) $validated['id_usine'],
+            (float) $validated['prix'],
+            $validated['date_debut'],
+            $validated['date_fin'] ?? null,
+        );
+
+        $message = 'Prix unitaire enregistré avec succès.';
+        if ($updatedTickets > 0) {
+            $message .= ' '.$updatedTickets.' ticket(s) mis à jour rétroactivement.';
+        } else {
+            $message .= ' Aucun ticket à mettre à jour pour cette période.';
+        }
+
         return redirect()
             ->route('prix-unitaires.index')
-            ->with('success', 'Prix unitaire enregistré avec succès.');
+            ->with('success', $message);
     }
 
     private function hasPeriodOverlap(int $idUsine, string $dateDebut, ?string $dateFin, ?int $excludeId = null): bool

@@ -159,6 +159,11 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="alert alert-info small mb-3">
+                            Ce prix sera appliqué <strong>rétroactivement</strong> à tous les tickets
+                            non payés de l’usine dont la date ticket est dans la période
+                            (même s’ils ont été saisis avant).
+                        </div>
                         <div class="mb-3">
                             <label for="id_usine" class="form-label">Usine</label>
                             <select name="id_usine" id="id_usine"

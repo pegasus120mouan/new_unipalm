@@ -57,6 +57,8 @@ class TicketService
         }
 
         $prixInfo = $this->getPrixUnitaireByDateAndUsine($data['date_ticket'], (int) $data['id_usine']);
+        $prix = $prixInfo['found'] ? $prixInfo['prix'] : null;
+        $poids = (float) $data['poids'];
 
         return Ticket::query()->create([
             'numero_ticket' => $data['numero_ticket'],
@@ -65,9 +67,10 @@ class TicketService
             'id_agent' => $data['id_agent'],
             'id_pont' => $data['id_pont'] ?? null,
             'vehicule_id' => $data['vehicule_id'],
-            'poids' => $data['poids'],
+            'poids' => $poids,
             'id_utilisateur' => $data['id_utilisateur'],
-            'prix_unitaire' => $prixInfo['found'] ? $prixInfo['prix'] : null,
+            'prix_unitaire' => $prix,
+            'montant_paie' => $prix !== null ? $prix * $poids : 0,
             'statut_ticket' => 'non soldé',
             'created_at' => now(),
         ]);
@@ -104,6 +107,14 @@ class TicketService
 
         if (array_key_exists('prix_unitaire', $data) && $data['prix_unitaire'] !== null && $data['prix_unitaire'] !== '') {
             $ticket->prix_unitaire = $data['prix_unitaire'];
+        } elseif (! $ticket->hasPrixUnitaire()) {
+            $prixInfo = $this->getPrixUnitaireByDateAndUsine(
+                (string) $data['date_ticket'],
+                (int) $data['id_usine'],
+            );
+            if ($prixInfo['found']) {
+                $ticket->prix_unitaire = $prixInfo['prix'];
+            }
         }
 
         if (! empty($data['created_at'])) {
@@ -117,6 +128,45 @@ class TicketService
         $ticket->save();
 
         return $ticket->fresh();
+    }
+
+    /**
+     * Applique rétroactivement un prix unitaire à tous les tickets non payés
+     * de l'usine dont la date_ticket est dans la période.
+     */
+    public function applyPrixUnitaireToPendingTickets(
+        int $idUsine,
+        float $prix,
+        string $dateDebut,
+        ?string $dateFin = null,
+    ): int {
+        $query = Ticket::query()
+            ->where('id_usine', $idUsine)
+            ->whereNull('date_paie')
+            ->whereDate('date_ticket', '>=', $dateDebut);
+
+        if ($dateFin) {
+            $query->whereDate('date_ticket', '<=', $dateFin);
+        }
+
+        $updated = 0;
+
+        $query->orderBy('id_ticket')->chunkById(100, function ($tickets) use ($prix, &$updated) {
+            foreach ($tickets as $ticket) {
+                $montantPaie = round($prix * (float) $ticket->poids, 2);
+                $montantPayer = (float) ($ticket->montant_payer ?? 0);
+                $montantReste = max(0, $montantPaie - $montantPayer);
+
+                $ticket->update([
+                    'prix_unitaire' => $prix,
+                    'montant_paie' => $montantPaie,
+                    'montant_reste' => $montantReste,
+                ]);
+                $updated++;
+            }
+        }, 'id_ticket');
+
+        return $updated;
     }
 
     /**
