@@ -266,6 +266,7 @@ Route::get('/', function () {
 
     Route::get('/prix-unitaires', [PrixUnitaireController::class, 'index'])->name('prix-unitaires.index');
     Route::post('/prix-unitaires', [PrixUnitaireController::class, 'store'])->name('prix-unitaires.store');
+    Route::put('/prix-unitaires/{prixUnitaire}', [PrixUnitaireController::class, 'update'])->name('prix-unitaires.update');
 
     Route::get('/bordereaux', [BordereauController::class, 'index'])->name('bordereaux.index');
     Route::post('/bordereaux/preview', [BordereauController::class, 'preview'])->name('bordereaux.preview');

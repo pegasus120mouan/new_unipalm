@@ -127,6 +127,7 @@ return [
 
         'prix-unitaires.index' => 'prix-unitaires',
         'prix-unitaires.store' => 'prix-unitaires',
+        'prix-unitaires.update' => 'prix-unitaires',
         'bordereaux.index' => 'bordereaux',
         'bordereaux.preview' => 'bordereaux',
         'bordereaux.store' => 'bordereaux',

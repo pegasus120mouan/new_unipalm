@@ -113,6 +113,7 @@
                                 <th class="text-end">Prix unitaire</th>
                                 <th>Date début</th>
                                 <th>Date fin</th>
+                                <th class="text-center" style="width: 100px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,7 +121,13 @@
                                 <tr>
                                     <td>{{ $prixUnitaire->usine?->nom_usine ?? '-' }}</td>
                                     <td class="text-end fw-semibold">
-                                        {{ number_format((float) $prixUnitaire->prix, 2, '.', ' ') }}
+                                        @php
+                                            $prixAffiche = (float) $prixUnitaire->prix;
+                                            $prixAffiche = fmod($prixAffiche, 1.0) == 0.0
+                                                ? number_format($prixAffiche, 0, '.', ' ')
+                                                : rtrim(rtrim(number_format($prixAffiche, 2, '.', ' '), '0'), '.');
+                                        @endphp
+                                        {{ $prixAffiche }}
                                     </td>
                                     <td>{{ $prixUnitaire->date_debut?->format('d/m/Y') ?? '-' }}</td>
                                     <td>
@@ -130,10 +137,24 @@
                                             <span class="badge bg-success">En cours</span>
                                         @endif
                                     </td>
+                                    <td class="text-center">
+                                        <button type="button"
+                                            class="btn btn-warning btn-sm btn-edit-prix"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editPrixModal"
+                                            data-id="{{ $prixUnitaire->id }}"
+                                            data-usine="{{ $prixUnitaire->id_usine }}"
+                                            data-prix="{{ fmod((float) $prixUnitaire->prix, 1.0) == 0.0 ? (int) $prixUnitaire->prix : rtrim(rtrim(number_format((float) $prixUnitaire->prix, 2, '.', ''), '0'), '.') }}"
+                                            data-debut="{{ $prixUnitaire->date_debut?->format('Y-m-d') }}"
+                                            data-fin="{{ $prixUnitaire->date_fin?->format('Y-m-d') }}"
+                                            title="Modifier">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
+                                    <td colspan="5" class="text-center text-muted py-4">
                                         Aucun prix unitaire trouvé.
                                     </td>
                                 </tr>
@@ -216,11 +237,101 @@
         </div>
     </div>
 
-    @if ($errors->any())
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                new bootstrap.Modal(document.getElementById('addPrixModal')).show();
+    <div class="modal fade" id="editPrixModal" tabindex="-1" aria-labelledby="editPrixModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="editPrixForm" action="">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editPrixModalLabel">Modifier le prix unitaire</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info small mb-3">
+                            La modification sera appliquée <strong>rétroactivement</strong> aux tickets
+                            non payés de l’usine sur cette période.
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_id_usine" class="form-label">Usine</label>
+                            <select name="id_usine" id="edit_id_usine"
+                                class="form-select @error('id_usine') is-invalid @enderror" required>
+                                <option value="">Sélectionner une usine</option>
+                                @foreach ($usines as $usine)
+                                    <option value="{{ $usine->id_usine }}">{{ $usine->nom_usine }}</option>
+                                @endforeach
+                            </select>
+                            @error('id_usine')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_prix" class="form-label">Prix unitaire (FCFA)</label>
+                            <input type="number" name="prix" id="edit_prix" step="0.01" min="0.01"
+                                class="form-control @error('prix') is-invalid @enderror" required>
+                            @error('prix')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_date_debut" class="form-label">Date début</label>
+                            <input type="date" name="date_debut" id="edit_date_debut"
+                                class="form-control @error('date_debut') is-invalid @enderror" required>
+                            @error('date_debut')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-0">
+                            <label for="edit_date_fin" class="form-label">Date fin <span class="text-muted">(optionnel)</span></label>
+                            <input type="date" name="date_fin" id="edit_date_fin"
+                                class="form-control @error('date_fin') is-invalid @enderror">
+                            @error('date_fin')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning">Enregistrer les modifications</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editForm = document.getElementById('editPrixForm');
+            const updateUrlBase = @json(url('/prix-unitaires'));
+
+            document.querySelectorAll('.btn-edit-prix').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    editForm.action = updateUrlBase + '/' + button.dataset.id;
+                    document.getElementById('edit_id_usine').value = button.dataset.usine || '';
+                    const rawPrix = button.dataset.prix || '';
+                    document.getElementById('edit_prix').value = rawPrix === '' ? '' : String(parseFloat(rawPrix));
+                    document.getElementById('edit_date_debut').value = button.dataset.debut || '';
+                    document.getElementById('edit_date_fin').value = button.dataset.fin || '';
+                });
             });
-        </script>
-    @endif
+
+            @if (session('edit_prix_id') || ($errors->any() && old('_method') === 'PUT'))
+                (function () {
+                    const editId = @json(session('edit_prix_id') ?? old('edit_prix_id'));
+                    if (editId) {
+                        editForm.action = updateUrlBase + '/' + editId;
+                    }
+                    document.getElementById('edit_id_usine').value = @json(old('id_usine', ''));
+                    document.getElementById('edit_prix').value = @json(old('prix', ''));
+                    document.getElementById('edit_date_debut').value = @json(old('date_debut', ''));
+                    document.getElementById('edit_date_fin').value = @json(old('date_fin', ''));
+                    new bootstrap.Modal(document.getElementById('editPrixModal')).show();
+                })();
+            @elseif ($errors->any())
+                new bootstrap.Modal(document.getElementById('addPrixModal')).show();
+            @endif
+        });
+    </script>
+    @endpush
 @endsection

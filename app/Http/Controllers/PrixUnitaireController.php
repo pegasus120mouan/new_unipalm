@@ -107,6 +107,53 @@ class PrixUnitaireController extends Controller
             ->with('success', $message);
     }
 
+    public function update(Request $request, PrixUnitaire $prixUnitaire): RedirectResponse
+    {
+        $validated = $request->validate([
+            'id_usine' => ['required', 'integer', 'exists:usines,id_usine'],
+            'prix' => ['required', 'numeric', 'min:0.01'],
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['nullable', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        if ($this->hasPeriodOverlap(
+            (int) $validated['id_usine'],
+            $validated['date_debut'],
+            $validated['date_fin'] ?? null,
+            (int) $prixUnitaire->id,
+        )) {
+            return back()
+                ->withInput()
+                ->with('edit_prix_id', $prixUnitaire->id)
+                ->withErrors([
+                    'date_debut' => 'Un prix unitaire existe déjà pour cette usine sur la période indiquée.',
+                ]);
+        }
+
+        $prixUnitaire->update([
+            'id_usine' => $validated['id_usine'],
+            'prix' => $validated['prix'],
+            'date_debut' => $validated['date_debut'],
+            'date_fin' => $validated['date_fin'] ?? $validated['date_debut'],
+        ]);
+
+        $updatedTickets = $this->ticketService->applyPrixUnitaireToPendingTickets(
+            (int) $validated['id_usine'],
+            (float) $validated['prix'],
+            $validated['date_debut'],
+            $validated['date_fin'] ?? null,
+        );
+
+        $message = 'Prix unitaire modifié avec succès.';
+        if ($updatedTickets > 0) {
+            $message .= ' '.$updatedTickets.' ticket(s) mis à jour rétroactivement.';
+        }
+
+        return redirect()
+            ->route('prix-unitaires.index')
+            ->with('success', $message);
+    }
+
     private function hasPeriodOverlap(int $idUsine, string $dateDebut, ?string $dateFin, ?int $excludeId = null): bool
     {
         $query = PrixUnitaire::query()
