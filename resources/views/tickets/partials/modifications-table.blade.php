@@ -42,7 +42,14 @@
                     @endif>
                     <span class="ticket-cell-display">{{ $ticket->date_ticket?->format('d/m/Y') ?? '—' }}</span>
                 </td>
-                <td class="fw-semibold">{{ $ticket->numero_ticket ?? '—' }}</td>
+                <td @class(['ticket-editable' => $canEdit, 'ticket-editable-cell' => $canEdit, 'fw-semibold' => true])
+                    @if ($canEdit)
+                        data-field="numero_ticket"
+                        data-value="{{ $ticket->numero_ticket ?? '' }}"
+                        title="Cliquer pour modifier — enregistrement à la sortie du champ ou Entrée"
+                    @endif>
+                    <span class="ticket-cell-display">{{ $ticket->numero_ticket ?? '—' }}</span>
+                </td>
                 <td @class(['ticket-editable' => $canEdit, 'ticket-editable-cell' => $canEdit])
                     @if ($canEdit)
                         data-field="id_usine"

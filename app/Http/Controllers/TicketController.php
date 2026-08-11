@@ -511,6 +511,8 @@ class TicketController extends Controller
                 'ticket' => [
                     'date_ticket' => $updated->date_ticket?->format('Y-m-d'),
                     'date_ticket_display' => $updated->date_ticket?->format('d/m/Y'),
+                    'numero_ticket' => $updated->numero_ticket,
+                    'numero_ticket_display' => $updated->numero_ticket,
                     'id_usine' => $updated->id_usine,
                     'usine_name' => $updated->usine?->nom_usine,
                     'id_agent' => $updated->id_agent,

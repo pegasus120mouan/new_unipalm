@@ -386,6 +386,16 @@
                         const parts = value.split('-');
                         label = parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : value;
                     }
+                } else if (field === 'numero_ticket') {
+                    value = String(value || '').trim();
+                    if (!value) {
+                        alert('Le numéro de ticket est obligatoire.');
+                        if (typeof editor.focus === 'function') {
+                            editor.focus();
+                        }
+                        return { committed: false, changed: false };
+                    }
+                    label = value;
                 } else if (field === 'poids') {
                     label = value ? Number(value).toLocaleString('fr-FR') : '—';
                 }
@@ -469,6 +479,8 @@
                     });
                 } else if (field === 'poids') {
                     editor = buildInput('number', value, '1');
+                } else if (field === 'numero_ticket') {
+                    editor = buildInput('text', value);
                 } else if (field === 'prix_unitaire') {
                     editor = buildInput('number', value, '0.01');
                 } else if (field === 'date_ticket' || field === 'created_at') {
@@ -521,7 +533,7 @@
 
                 return {
                     date_ticket: cellValue('date_ticket'),
-                    numero_ticket: row.dataset.numeroTicket,
+                    numero_ticket: cellValue('numero_ticket') || row.dataset.numeroTicket,
                     id_usine: parseInt(cellValue('id_usine'), 10),
                     id_agent: parseInt(cellValue('id_agent'), 10),
                     id_pont: cellValue('id_pont') ? parseInt(cellValue('id_pont'), 10) : null,
@@ -533,8 +545,13 @@
             }
 
             function updateRowFromResponse(row, ticket) {
+                if (ticket.numero_ticket !== undefined) {
+                    row.dataset.numeroTicket = ticket.numero_ticket ?? '';
+                }
+
                 const map = {
                     date_ticket: ['date_ticket', 'date_ticket_display'],
+                    numero_ticket: ['numero_ticket', 'numero_ticket_display'],
                     id_usine: ['id_usine', 'usine_name'],
                     id_agent: ['id_agent', 'agent_name'],
                     id_pont: ['id_pont', 'pont_name'],
