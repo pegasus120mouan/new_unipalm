@@ -157,7 +157,6 @@ class Ticket extends Model
             ->whereDate('created_at', '>=', $dateDebut)
             ->whereDate('created_at', '<=', $dateFin)
             ->validated()
-            ->verified()
             ->where(function ($query) {
                 $query->whereNull('numero_bordereau')
                     ->orWhere('numero_bordereau', '');

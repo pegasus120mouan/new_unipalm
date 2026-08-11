@@ -245,7 +245,8 @@
                     <div class="modal-body">
                         <p class="text-muted small mb-3">
                             Sélectionnez l'agent et la période (<strong>date de création</strong>), puis cliquez sur
-                            <strong>Voir</strong> pour afficher les tickets <strong>vérifiés</strong> et <strong>validés</strong>, sans bordereau.
+                            <strong>Voir</strong> pour afficher les tickets <strong>validés</strong> sans bordereau
+                            (la vérification du ticket n'est pas obligatoire).
                         </p>
 
                         <div class="mb-3">

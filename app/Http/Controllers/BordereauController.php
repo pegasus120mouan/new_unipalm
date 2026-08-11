@@ -136,7 +136,7 @@ class BordereauController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'bordereau' => 'Aucun ticket vérifié et validé disponible pour cet agent sur la période (date de création, sans bordereau).',
+                    'bordereau' => 'Aucun ticket validé disponible pour cet agent sur la période (date de création, sans bordereau).',
                 ]);
         }
 
