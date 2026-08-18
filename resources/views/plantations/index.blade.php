@@ -57,6 +57,49 @@
 
     <section class="row mb-4">
         <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="planteurs-io-toolbar d-flex flex-wrap align-items-center gap-3 gap-md-4">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="planteurs-io-label">
+                                <i class="bi bi-file-earmark-arrow-up"></i>
+                                Importer
+                            </span>
+                            <button type="button" class="planteurs-io-btn planteurs-io-btn--csv" id="planteursImportCsvBtn"
+                                title="Importer un fichier CSV" data-bs-toggle="modal" data-bs-target="#importPlanteursModal">
+                                <i class="bi bi-filetype-csv"></i>
+                                <span>CSV</span>
+                            </button>
+                        </div>
+
+                        <div class="planteurs-io-separator d-none d-md-block"></div>
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="planteurs-io-label">
+                                <i class="bi bi-download"></i>
+                                Exporter les données
+                            </span>
+                            <button type="button" class="planteurs-io-btn planteurs-io-btn--pdf" id="planteursExportPdfBtn" title="Exporter en PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                                <span>PDF</span>
+                            </button>
+                            <button type="button" class="planteurs-io-btn planteurs-io-btn--excel" id="planteursExportExcelBtn" title="Exporter en Excel">
+                                <i class="bi bi-file-earmark-excel"></i>
+                                <span>EXCEL</span>
+                            </button>
+                            <button type="button" class="planteurs-io-btn planteurs-io-btn--print" id="planteursPrintBtn" title="Imprimer la liste">
+                                <i class="bi bi-printer"></i>
+                                <span>IMPRIMER</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="row mb-4">
+        <div class="col-12">
             <div class="card border-0 text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                 <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
@@ -114,6 +157,34 @@
             </div>
         </div>
     </section>
+
+    <div class="modal fade" id="importPlanteursModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Importer des planteurs (CSV)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Colonnes attendues : <code>numero_fiche</code>, <code>nom_prenoms</code>, <code>telephone</code>,
+                        <code>region</code>, <code>sous_prefecture_village</code>, <code>village</code>, <code>collecteur</code>.
+                    </p>
+                    <div class="mb-0">
+                        <label for="importPlanteursFile" class="form-label">Fichier CSV</label>
+                        <input type="file" id="importPlanteursFile" class="form-control" accept=".csv,text/csv">
+                    </div>
+                    <div id="importPlanteursFeedback" class="alert d-none mt-3 mb-0" role="alert"></div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="confirmImportPlanteursBtn">
+                        <i class="bi bi-upload"></i> Importer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="deletePlanteurModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -208,6 +279,80 @@
         .action-btn:hover {
             opacity: 0.9;
             color: #fff;
+        }
+
+        .planteurs-io-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #1e3a5f;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .planteurs-io-label i {
+            color: #2f6fed;
+            font-size: 1.15rem;
+        }
+
+        .planteurs-io-separator {
+            width: 1px;
+            height: 48px;
+            background: #e9ecef;
+        }
+
+        .planteurs-io-btn {
+            width: 72px;
+            height: 72px;
+            border: none;
+            border-radius: 12px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .planteurs-io-btn i {
+            font-size: 1.45rem;
+            line-height: 1;
+        }
+
+        .planteurs-io-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .planteurs-io-btn:disabled {
+            opacity: 0.65;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .planteurs-io-btn--csv {
+            background: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .planteurs-io-btn--pdf {
+            background: #ffe4e6;
+            color: #e11d48;
+        }
+
+        .planteurs-io-btn--excel {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .planteurs-io-btn--print {
+            background: #dbeafe;
+            color: #1d4ed8;
         }
     </style>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -321,18 +466,17 @@
                 }).join('');
             }
 
-            function applyFilter() {
+            function getFilteredRows() {
                 const filterNom = (document.getElementById('filterNom').value || '').toLowerCase().trim();
                 const filterNumeroFiche = (document.getElementById('filterNumeroFiche').value || '').toLowerCase().trim();
                 const filterTel = (document.getElementById('filterTelephone').value || '').toLowerCase().trim();
                 const filterCollecteur = (document.getElementById('filterCollecteur').value || '').toLowerCase().trim();
 
                 if (!filterNom && !filterNumeroFiche && !filterTel && !filterCollecteur) {
-                    render(allRows);
-                    return;
+                    return allRows.slice();
                 }
 
-                const filtered = allRows.filter(function (planteur) {
+                return allRows.filter(function (planteur) {
                     const collecteur = planteur.collecteur
                         ? `${planteur.collecteur.nom ?? ''} ${planteur.collecteur.prenoms ?? ''}`.trim().toLowerCase()
                         : '';
@@ -348,8 +492,270 @@
 
                     return match;
                 });
+            }
 
-                render(filtered);
+            function applyFilter() {
+                render(getFilteredRows());
+            }
+
+            function mapExportRow(planteur) {
+                const collecteur = planteur.collecteur
+                    ? `${planteur.collecteur.nom ?? ''} ${planteur.collecteur.prenoms ?? ''}`.trim()
+                    : '';
+                const exploitation = planteur.exploitation || {};
+                const cultures = Array.isArray(planteur.cultures) ? planteur.cultures : [];
+                const superficie = cultures.reduce(function (sum, culture) {
+                    const value = parseFloat(culture?.superficie_ha);
+                    return sum + (Number.isFinite(value) ? value : 0);
+                }, 0);
+                const typesCulture = cultures
+                    .map(function (culture) { return culture?.type_culture || culture?.autre_culture || ''; })
+                    .filter(Boolean)
+                    .join(' | ');
+
+                return {
+                    numero_fiche: planteur.numero_fiche || '',
+                    nom_prenoms: planteur.nom_prenoms || '',
+                    telephone: planteur.telephone || '',
+                    piece_identite: planteur.piece_identite || '',
+                    date_naissance: fmtDate(planteur.date_naissance),
+                    lieu_naissance: planteur.lieu_naissance || '',
+                    situation_matrimoniale: planteur.situation_matrimoniale || '',
+                    nombre_enfants: planteur.nombre_enfants ?? '',
+                    collecteur: collecteur,
+                    region: exploitation.region || '',
+                    sous_prefecture: exploitation.sous_prefecture_village || '',
+                    village: exploitation.village || '',
+                    longitude: exploitation.longitude ?? '',
+                    latitude: exploitation.latitude ?? '',
+                    delegue: exploitation.delegue_nom || '',
+                    types_culture: typesCulture,
+                    superficie: superficie > 0
+                        ? superficie.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                        : '',
+                    date_enregistrement: fmtDate(planteur.date_enregistrement),
+                    created_at: fmtDate(planteur.created_at),
+                };
+            }
+
+            function exportFileStamp() {
+                const now = new Date();
+                const dd = String(now.getDate()).padStart(2, '0');
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const yyyy = now.getFullYear();
+                return `${dd}-${mm}-${yyyy}`;
+            }
+
+            function getActiveFilters() {
+                return {
+                    nom: (document.getElementById('filterNom').value || '').toLowerCase().trim(),
+                    numeroFiche: (document.getElementById('filterNumeroFiche').value || '').toLowerCase().trim(),
+                    tel: (document.getElementById('filterTelephone').value || '').toLowerCase().trim(),
+                    collecteur: (document.getElementById('filterCollecteur').value || '').toLowerCase().trim(),
+                };
+            }
+
+            function matchesFilters(planteur, filters) {
+                if (!filters.nom && !filters.numeroFiche && !filters.tel && !filters.collecteur) {
+                    return true;
+                }
+
+                const collecteur = planteur.collecteur
+                    ? `${planteur.collecteur.nom ?? ''} ${planteur.collecteur.prenoms ?? ''}`.trim().toLowerCase()
+                    : '';
+                const nom = (planteur.nom_prenoms || '').toLowerCase();
+                const numeroFiche = (planteur.numero_fiche || '').toLowerCase();
+                const tel = (planteur.telephone || '').toLowerCase();
+
+                return (!filters.nom || nom.includes(filters.nom))
+                    && (!filters.numeroFiche || numeroFiche.includes(filters.numeroFiche))
+                    && (!filters.tel || tel.includes(filters.tel))
+                    && (!filters.collecteur || collecteur.includes(filters.collecteur));
+            }
+
+            async function fetchExportRows() {
+                const filters = getActiveFilters();
+                const pageSize = 100;
+                let page = 1;
+                let totalPages = 1;
+                const all = [];
+
+                do {
+                    const res = await fetch(buildApiUrl({
+                        action: 'planteurs',
+                        page: page,
+                        limit: pageSize,
+                    }), { cache: 'no-store' });
+                    const json = await res.json();
+
+                    if (!res.ok || !json?.success) {
+                        throw new Error(json?.error || json?.message || 'Impossible de charger les données à exporter.');
+                    }
+
+                    const batch = json.data?.planteurs || [];
+                    all.push(...batch);
+                    totalPages = Math.max(1, parseInt(json.data?.total_pages, 10) || 1);
+                    page += 1;
+                } while (page <= totalPages);
+
+                return all
+                    .filter(function (planteur) { return matchesFilters(planteur, filters); })
+                    .map(mapExportRow);
+            }
+
+            function csvEscape(value) {
+                const text = String(value ?? '');
+                if (/[",;\n]/.test(text)) {
+                    return '"' + text.replaceAll('"', '""') + '"';
+                }
+                return text;
+            }
+
+            const EXPORT_COLUMNS = [
+                { key: 'numero_fiche', label: 'N° Fiche' },
+                { key: 'nom_prenoms', label: 'Nom & Prénoms' },
+                { key: 'telephone', label: 'Téléphone' },
+                { key: 'piece_identite', label: "Pièce d'identité" },
+                { key: 'date_naissance', label: 'Date de naissance' },
+                { key: 'lieu_naissance', label: 'Lieu de naissance' },
+                { key: 'situation_matrimoniale', label: 'Situation matrimoniale' },
+                { key: 'nombre_enfants', label: "Nombre d'enfants" },
+                { key: 'collecteur', label: 'Collecteur' },
+                { key: 'region', label: 'Région' },
+                { key: 'sous_prefecture', label: 'Sous-préfecture' },
+                { key: 'village', label: 'Village' },
+                { key: 'longitude', label: 'Longitude' },
+                { key: 'latitude', label: 'Latitude' },
+                { key: 'delegue', label: 'Délégué' },
+                { key: 'types_culture', label: 'Type(s) de culture' },
+                { key: 'superficie', label: 'Superficie (ha)' },
+                { key: 'date_enregistrement', label: "Date d'enregistrement" },
+                { key: 'created_at', label: 'Créé le' },
+            ];
+
+            function rowsToCsv(rows) {
+                const lines = [EXPORT_COLUMNS.map(function (col) { return csvEscape(col.label); }).join(';')];
+                rows.forEach(function (row) {
+                    lines.push(EXPORT_COLUMNS.map(function (col) { return csvEscape(row[col.key]); }).join(';'));
+                });
+                return '\uFEFF' + lines.join('\n');
+            }
+
+            function downloadBlob(content, filename, mime) {
+                const blob = new Blob([content], { type: mime });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            }
+
+            function buildPrintHtml(rows, title) {
+                const headerCells = EXPORT_COLUMNS.map(function (col) {
+                    return `<th>${escapeHtml(col.label)}</th>`;
+                }).join('');
+                const bodyRows = rows.map(function (row) {
+                    const cells = EXPORT_COLUMNS.map(function (col) {
+                        const align = col.key === 'superficie' ? ' style="text-align:right"' : '';
+                        return `<td${align}>${escapeHtml(row[col.key])}</td>`;
+                    }).join('');
+                    return `<tr>${cells}</tr>`;
+                }).join('');
+
+                return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 10px; color: #111; }
+                        h1 { font-size: 16px; margin-bottom: 4px; }
+                        .meta { color: #666; margin-bottom: 12px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; white-space: nowrap; }
+                        th { background: #111; color: #fff; }
+                        @media print {
+                            body { margin: 0; }
+                            @page { size: landscape; margin: 8mm; }
+                        }
+                    </style></head><body>
+                    <h1>${escapeHtml(title)}</h1>
+                    <div class="meta">${rows.length} planteur(s) — ${new Date().toLocaleString('fr-FR')}</div>
+                    <table>
+                        <thead><tr>${headerCells}</tr></thead>
+                        <tbody>${bodyRows || `<tr><td colspan="${EXPORT_COLUMNS.length}">Aucune donnée</td></tr>`}</tbody>
+                    </table>
+                    <script>window.onload = function () { window.focus(); window.print(); };<\/script>
+                    </body></html>`;
+            }
+
+            async function withExportLoading(button, handler) {
+                const original = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                try {
+                    await handler();
+                } catch (error) {
+                    showError(error?.message || String(error));
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = original;
+                }
+            }
+
+            function parseCsv(text) {
+                const normalized = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                const lines = normalized.split('\n').filter(function (line) { return line.trim() !== ''; });
+                if (lines.length < 2) {
+                    throw new Error('Le fichier CSV est vide ou invalide.');
+                }
+
+                const delimiter = lines[0].includes(';') ? ';' : ',';
+                function splitLine(line) {
+                    const cells = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            if (inQuotes && line[i + 1] === '"') {
+                                current += '"';
+                                i++;
+                            } else {
+                                inQuotes = !inQuotes;
+                            }
+                        } else if (char === delimiter && !inQuotes) {
+                            cells.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    cells.push(current.trim());
+                    return cells;
+                }
+
+                const headers = splitLine(lines[0]).map(function (h) {
+                    return h.toLowerCase().replace(/\s+/g, '_');
+                });
+                const rows = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const cells = splitLine(lines[i]);
+                    const row = {};
+                    headers.forEach(function (header, index) {
+                        row[header] = cells[index] ?? '';
+                    });
+                    if (!row.nom_prenoms && !row.numero_fiche) {
+                        continue;
+                    }
+                    rows.push(row);
+                }
+
+                if (!rows.length) {
+                    throw new Error('Aucune ligne valide trouvée dans le CSV.');
+                }
+
+                return rows;
             }
 
             function updateSuperficieTotale(data) {
@@ -625,6 +1031,107 @@
                 } finally {
                     button.disabled = false;
                 }
+            });
+
+            document.getElementById('planteursExportExcelBtn').addEventListener('click', function () {
+                const button = this;
+                withExportLoading(button, async function () {
+                    const rows = await fetchExportRows();
+                    downloadBlob(
+                        rowsToCsv(rows),
+                        `planteurs ${exportFileStamp()}.csv`,
+                        'text/csv;charset=utf-8;'
+                    );
+                });
+            });
+
+            document.getElementById('planteursExportPdfBtn').addEventListener('click', function () {
+                const button = this;
+                withExportLoading(button, async function () {
+                    const rows = await fetchExportRows();
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        throw new Error('Autorisez les pop-ups pour exporter en PDF.');
+                    }
+                    win.document.open();
+                    win.document.write(buildPrintHtml(rows, `planteurs ${exportFileStamp()}`));
+                    win.document.close();
+                });
+            });
+
+            document.getElementById('planteursPrintBtn').addEventListener('click', function () {
+                const button = this;
+                withExportLoading(button, async function () {
+                    const rows = await fetchExportRows();
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        throw new Error('Autorisez les pop-ups pour imprimer.');
+                    }
+                    win.document.open();
+                    win.document.write(buildPrintHtml(rows, `planteurs ${exportFileStamp()}`));
+                    win.document.close();
+                });
+            });
+
+            document.getElementById('confirmImportPlanteursBtn').addEventListener('click', async function () {
+                const fileInput = document.getElementById('importPlanteursFile');
+                const feedback = document.getElementById('importPlanteursFeedback');
+                const button = this;
+                const file = fileInput.files?.[0];
+
+                feedback.classList.add('d-none');
+                feedback.classList.remove('alert-success', 'alert-danger');
+
+                if (!file) {
+                    feedback.textContent = 'Veuillez sélectionner un fichier CSV.';
+                    feedback.classList.remove('d-none');
+                    feedback.classList.add('alert-danger');
+                    return;
+                }
+
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Import…';
+
+                try {
+                    const text = await file.text();
+                    const rows = parseCsv(text);
+                    const res = await fetch(apiBaseUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: 'import_planteurs',
+                            planteurs: rows,
+                        }),
+                    });
+                    const json = await res.json();
+                    if (!res.ok || json?.success === false) {
+                        throw new Error(json?.error || json?.message || 'Import impossible.');
+                    }
+
+                    feedback.textContent = json?.message || `${rows.length} ligne(s) importée(s).`;
+                    feedback.classList.remove('d-none');
+                    feedback.classList.add('alert-success');
+                    fileInput.value = '';
+                    load(1);
+                } catch (error) {
+                    feedback.textContent = error?.message || String(error);
+                    feedback.classList.remove('d-none');
+                    feedback.classList.add('alert-danger');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="bi bi-upload"></i> Importer';
+                }
+            });
+
+            document.getElementById('importPlanteursModal').addEventListener('hidden.bs.modal', function () {
+                document.getElementById('importPlanteursFile').value = '';
+                const feedback = document.getElementById('importPlanteursFeedback');
+                feedback.classList.add('d-none');
+                feedback.textContent = '';
             });
 
             load(1);
