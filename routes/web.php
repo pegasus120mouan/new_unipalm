@@ -17,6 +17,7 @@ use App\Http\Controllers\PontVillageController;
 use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\CollecteurController;
 use App\Http\Controllers\CommisController;
+use App\Http\Controllers\LocalisationController;
 use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\DoublonPlanteurController;
@@ -235,6 +236,9 @@ Route::get('/', function () {
     Route::match(['get', 'post'], '/api/planteurs', [PlantationController::class, 'api'])->name('plantations.api');
 
     Route::get('/plantations/collecteurs', [CollecteurController::class, 'index'])->name('plantations.collecteurs');
+    Route::get('/plantations/collecteurs/{id}/point-pdf', [CollecteurController::class, 'pointPdf'])
+        ->name('plantations.collecteurs.point-pdf')
+        ->whereNumber('id');
     Route::get('/plantations/collecteurs/{id}', [CollecteurController::class, 'show'])->name('plantations.collecteurs.show')->whereNumber('id');
     Route::match(['get', 'post'], '/api/collecteurs', [CollecteurController::class, 'api'])->name('plantations.collecteurs.api');
     Route::post('/api/collecteurs/photo', [CollecteurController::class, 'updatePhoto'])->name('plantations.collecteurs.photo');
@@ -244,6 +248,14 @@ Route::get('/', function () {
 
     Route::get('/plantations/zones', [ZoneController::class, 'index'])->name('plantations.zones');
     Route::match(['get', 'post'], '/api/zones', [ZoneController::class, 'api'])->name('plantations.zones.api');
+
+    Route::get('/plantations/localisation', [LocalisationController::class, 'index'])->name('plantations.localisation');
+    Route::get('/plantations/localisation/{region}', [LocalisationController::class, 'show'])
+        ->name('plantations.localisation.show')
+        ->whereNumber('region');
+    Route::get('/api/localisation/{region}/map-data', [LocalisationController::class, 'mapData'])
+        ->name('plantations.localisation.api')
+        ->whereNumber('region');
 
     Route::get('/plantations/doublons', [DoublonPlanteurController::class, 'index'])->name('plantations.doublons');
     Route::match(['get', 'post'], '/api/doublons-planteurs', [DoublonPlanteurController::class, 'api'])->name('plantations.doublons.api');

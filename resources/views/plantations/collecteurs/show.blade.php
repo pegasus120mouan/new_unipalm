@@ -23,6 +23,13 @@
         </div>
     @endif
 
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ $errors->first() }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    @endif
+
     @php
         $fullName = trim(($collecteur['nom'] ?? '').' '.($collecteur['prenoms'] ?? ''));
         $avatarUrl = $collecteur['avatar_url'] ?? null;
@@ -31,22 +38,27 @@
     @endphp
 
     <div class="collecteur-detail-header mb-4">
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <a href="{{ route('plantations.collecteurs') }}" class="btn btn-light btn-sm">
-                <i class="bi bi-arrow-left"></i> Retour
-            </a>
-            <img src="{{ $avatarUrl ?: $defaultAvatar }}"
-                alt="Avatar"
-                class="collecteur-detail-avatar"
-                onerror="this.onerror=null;this.src='{{ $defaultAvatar }}';">
-            <div class="text-white">
-                <h2 class="mb-1 fw-bold">{{ $fullName !== '' ? $fullName : 'Collecteur #'.$collecteurId }}</h2>
-                <div class="d-flex flex-wrap align-items-center gap-3 opacity-90">
-                    <span><i class="bi bi-telephone me-1"></i>{{ $collecteur['contact'] ?? 'N/A' }}</span>
-                    <span><i class="bi bi-geo-alt me-1"></i>{{ $zoneName }}</span>
-                    <span class="badge bg-white text-primary">{{ $collecteur['role'] ?? 'collecteur' }}</span>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <a href="{{ route('plantations.collecteurs') }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+                <img src="{{ $avatarUrl ?: $defaultAvatar }}"
+                    alt="Avatar"
+                    class="collecteur-detail-avatar"
+                    onerror="this.onerror=null;this.src='{{ $defaultAvatar }}';">
+                <div class="text-white">
+                    <h2 class="mb-1 fw-bold">{{ $fullName !== '' ? $fullName : 'Collecteur #'.$collecteurId }}</h2>
+                    <div class="d-flex flex-wrap align-items-center gap-3 opacity-90">
+                        <span><i class="bi bi-telephone me-1"></i>{{ $collecteur['contact'] ?? 'N/A' }}</span>
+                        <span><i class="bi bi-geo-alt me-1"></i>{{ $zoneName }}</span>
+                        <span class="badge bg-white text-primary">{{ $collecteur['role'] ?? 'collecteur' }}</span>
+                    </div>
                 </div>
             </div>
+            <button type="button" class="btn btn-light btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#imprimerPointModal">
+                <i class="bi bi-printer"></i> Imprimer un point
+            </button>
         </div>
     </div>
 
@@ -290,6 +302,61 @@
                     <div id="parcellesMapHint" class="alert alert-info d-none mb-2"></div>
                     <div id="parcellesMap" style="height:70vh;width:100%;background:#fff;"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="imprimerPointModal" tabindex="-1" aria-labelledby="imprimerPointModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+                    <h5 class="modal-title" id="imprimerPointModalLabel">
+                        <i class="bi bi-printer me-1"></i> Imprimer un point
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <form action="{{ route('plantations.collecteurs.point-pdf', $collecteurId) }}" method="GET" target="_blank">
+                    <div class="modal-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Collecteur :</strong> {{ $fullName !== '' ? $fullName : 'Collecteur #'.$collecteurId }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="point_date_debut" class="form-label">
+                                        <i class="bi bi-calendar3"></i> Date début
+                                    </label>
+                                    <input type="date" class="form-control" id="point_date_debut" name="date_debut" required
+                                        value="{{ $dateDebut ?: now()->startOfMonth()->format('Y-m-d') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="point_date_fin" class="form-label">
+                                        <i class="bi bi-calendar-check"></i> Date fin
+                                    </label>
+                                    <input type="date" class="form-control" id="point_date_fin" name="date_fin" required
+                                        value="{{ $dateFin ?: now()->format('Y-m-d') }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <small>Le PDF listera toutes les plantations de ce collecteur sur la période choisie.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg"></i> Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-download"></i> Imprimer
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

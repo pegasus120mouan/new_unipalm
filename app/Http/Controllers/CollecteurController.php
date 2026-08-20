@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Services\CollecteurApiService;
+use App\Services\CollecteurPointPdfService;
 use App\Services\ZoneApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -13,6 +15,7 @@ class CollecteurController extends Controller
 {
     public function __construct(
         private readonly CollecteurApiService $collecteurApi,
+        private readonly CollecteurPointPdfService $pointPdfService,
         private readonly ZoneApiService $zoneApi,
     ) {}
 
@@ -66,6 +69,35 @@ class CollecteurController extends Controller
             'statsMensuel' => $statsData['evolution_mensuelle'],
             'derniersExploitants' => $statsData['derniers_planteurs'],
         ]);
+    }
+
+    public function pointPdf(Request $request, int $id): Response|\Illuminate\Http\RedirectResponse
+    {
+        $collecteur = $this->collecteurApi->getUtilisateur($id);
+
+        if (! $collecteur) {
+            return redirect()
+                ->route('plantations.collecteurs')
+                ->withErrors(['collecteur' => 'Collecteur introuvable.']);
+        }
+
+        $validated = $request->validate([
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+        ]);
+
+        try {
+            return $this->pointPdfService->download(
+                $collecteur,
+                $id,
+                $validated['date_debut'],
+                $validated['date_fin'],
+            );
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('plantations.collecteurs.show', $id)
+                ->withErrors(['pdf' => $exception->getMessage()]);
+        }
     }
 
     public function api(Request $request): JsonResponse

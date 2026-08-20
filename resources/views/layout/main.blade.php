@@ -542,7 +542,7 @@
                         </li>
                         @endif
 
-                        @if ($canModuleAny(['plantations.index', 'plantations.collecteurs', 'plantations.regions', 'plantations.zones', 'plantations.doublons']))
+                        @if ($canModuleAny(['plantations.index', 'plantations.collecteurs', 'plantations.regions', 'plantations.zones', 'plantations.localisation', 'plantations.doublons']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -591,6 +591,16 @@
                                     <a href="{{ route('plantations.zones') }}">
                                         <i class="bi bi-map submenu-icon--all"></i>
                                         <span>Zones</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('plantations.localisation'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.localisation*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('plantations.localisation') }}">
+                                        <i class="bi bi-geo-alt submenu-icon--all"></i>
+                                        <span>Localisation des plantations</span>
                                     </a>
 
                                 </li>
