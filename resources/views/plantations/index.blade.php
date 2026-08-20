@@ -844,13 +844,23 @@
             });
 
             async function fetchPlanteurDetails(id) {
-                const res = await fetch(buildApiUrl({ action: 'planteurs', id: String(id) }), { cache: 'no-store' });
+                const targetId = String(id);
+                const res = await fetch(buildApiUrl({ action: 'planteurs', id: targetId }), { cache: 'no-store' });
                 const json = await res.json();
                 if (!res.ok || !json?.success) {
                     throw new Error(json?.error || json?.message || 'Erreur API');
                 }
-                const planteur = json?.data?.planteurs?.[0] || json?.data;
-                if (!planteur || !planteur.id) {
+
+                const list = Array.isArray(json?.data?.planteurs) ? json.data.planteurs : null;
+                let planteur = null;
+
+                if (list) {
+                    planteur = list.find(function (item) { return String(item?.id) === targetId; }) || null;
+                } else if (json?.data && String(json.data.id) === targetId) {
+                    planteur = json.data;
+                }
+
+                if (!planteur || String(planteur.id) !== targetId) {
                     throw new Error('Planteur introuvable.');
                 }
                 return planteur;
@@ -859,13 +869,14 @@
             function drawParcelles(planteur) {
                 const hintEl = document.getElementById('parcellesMapHint');
                 const mapDiv = document.getElementById('parcellesMap');
-                mapDiv.innerHTML = '';
-                hintEl.classList.add('d-none');
 
                 if (mapInstance) {
                     mapInstance.remove();
                     mapInstance = null;
                 }
+                mapDiv.innerHTML = '';
+                delete mapDiv._leaflet_id;
+                hintEl.classList.add('d-none');
 
                 const cultures = Array.isArray(planteur?.cultures) ? planteur.cultures : [];
                 const fromCultures = cultures.flatMap((c) => Array.isArray(c?.parcelles) ? c.parcelles : []);
@@ -896,7 +907,8 @@
                     if (latlngs.length >= 2) paths.push(latlngs);
                 });
 
-                hintEl.textContent = `ID: ${planteur?.id ?? ''} | Parcelles: ${parcellesList.length} | Points: ${boundsPoints.length}`;
+                const nom = planteur?.nom_prenoms || ('#' + (planteur?.id ?? ''));
+                hintEl.textContent = `${nom} | Parcelles: ${parcellesList.length} | Points: ${boundsPoints.length}`;
                 hintEl.classList.remove('d-none');
                 if (!boundsPoints.length) return;
 

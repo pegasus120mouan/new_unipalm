@@ -34,4 +34,9 @@ return [
         'https://api.objetombrepegasus.online/api/planteur/actions/doublons_planteurs.php'
     ),
 
+    'stats_collecteur_url' => env(
+        'PLANTEUR_STATS_COLLECTEUR_URL',
+        'https://api.objetombrepegasus.online/api/planteur/actions/api_stats_collecteur.php'
+    ),
+
 ];

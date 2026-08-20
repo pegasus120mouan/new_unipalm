@@ -21,6 +21,53 @@ class CollecteurController extends Controller
         return view('plantations.collecteurs.index');
     }
 
+    public function show(Request $request, int $id): View|\Illuminate\Http\RedirectResponse
+    {
+        $collecteur = $this->collecteurApi->getUtilisateur($id);
+
+        if (! $collecteur) {
+            return redirect()
+                ->route('plantations.collecteurs')
+                ->withErrors(['collecteur' => 'Collecteur introuvable.']);
+        }
+
+        $dateDebut = $request->input('date_debut');
+        $dateFin = $request->input('date_fin');
+        $filtreActif = filled($dateDebut) || filled($dateFin);
+
+        try {
+            $statsData = $this->collecteurApi->getStats(
+                $id,
+                $dateDebut ?: null,
+                $dateFin ?: null,
+            );
+        } catch (RuntimeException $exception) {
+            $statsData = [
+                'stats' => [
+                    'nombre_exploitants' => 0,
+                    'superficie_totale' => 0,
+                    'nombre_parcelles' => 0,
+                ],
+                'repartition_cultures' => [],
+                'evolution_mensuelle' => [],
+                'derniers_planteurs' => [],
+            ];
+            session()->flash('warning', $exception->getMessage());
+        }
+
+        return view('plantations.collecteurs.show', [
+            'collecteur' => $collecteur,
+            'collecteurId' => $id,
+            'dateDebut' => $dateDebut ?? '',
+            'dateFin' => $dateFin ?? '',
+            'filtreActif' => $filtreActif,
+            'stats' => $statsData['stats'],
+            'statsParCulture' => $statsData['repartition_cultures'],
+            'statsMensuel' => $statsData['evolution_mensuelle'],
+            'derniersExploitants' => $statsData['derniers_planteurs'],
+        ]);
+    }
+
     public function api(Request $request): JsonResponse
     {
         try {

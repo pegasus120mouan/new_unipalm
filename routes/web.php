@@ -235,6 +235,7 @@ Route::get('/', function () {
     Route::match(['get', 'post'], '/api/planteurs', [PlantationController::class, 'api'])->name('plantations.api');
 
     Route::get('/plantations/collecteurs', [CollecteurController::class, 'index'])->name('plantations.collecteurs');
+    Route::get('/plantations/collecteurs/{id}', [CollecteurController::class, 'show'])->name('plantations.collecteurs.show')->whereNumber('id');
     Route::match(['get', 'post'], '/api/collecteurs', [CollecteurController::class, 'api'])->name('plantations.collecteurs.api');
     Route::post('/api/collecteurs/photo', [CollecteurController::class, 'updatePhoto'])->name('plantations.collecteurs.photo');
 

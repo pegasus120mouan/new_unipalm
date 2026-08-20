@@ -17,23 +17,30 @@
 @section('content')
     <div id="collecteursError" class="alert alert-danger d-none" role="alert"></div>
 
-    <section class="row mb-4">
+    <section class="row mb-3">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span><i class="bi bi-funnel"></i> Filtres</span>
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                        <i class="bi bi-person-plus"></i> Créer un collecteur
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="searchInput" class="form-label">Recherche</label>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Nom, contact, login...">
+            <div class="card border-0 shadow-sm collecteurs-filter-card">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" id="searchInput" class="form-control border-start-0"
+                                    placeholder="Rechercher un collecteur..." autocomplete="off">
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label for="roleFilter" class="form-label">Rôle</label>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-person-vcard text-muted"></i>
+                                </span>
+                                <input type="text" id="ficheInput" class="form-control border-start-0"
+                                    placeholder="Numéro de fiche..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-4">
                             <select id="roleFilter" class="form-select">
                                 <option value="">Tous les rôles</option>
                                 <option value="collecteur">Collecteurs</option>
@@ -41,17 +48,17 @@
                                 <option value="superviseur">Superviseurs</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label for="statusFilter" class="form-label">Statut</label>
+                        <div class="col-lg-2 col-md-4">
                             <select id="statusFilter" class="form-select">
                                 <option value="">Tous les statuts</option>
                                 <option value="1">Actifs</option>
                                 <option value="0">Inactifs</option>
                             </select>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="button" id="refreshBtn" class="btn btn-primary w-100">
-                                <i class="bi bi-arrow-clockwise"></i> Actualiser
+                        <div class="col-lg-2 col-md-4">
+                            <button type="button" id="refreshBtn" class="btn btn-primary w-100"
+                                title="Actualiser">
+                                <i class="bi bi-arrow-repeat"></i>
                             </button>
                         </div>
                     </div>
@@ -60,10 +67,50 @@
         </div>
     </section>
 
+    <section class="row mb-4" id="collecteursStats">
+        <div class="col-6 col-lg-3 col-md-6 mb-3">
+            <div class="card text-white border-0 h-100" style="background-color: #17a2b8;">
+                <div class="card-body text-center py-4">
+                    <h2 class="fw-bold mb-1" id="statTotal">0</h2>
+                    <p class="mb-0">Total utilisateurs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6 mb-3">
+            <div class="card text-white border-0 h-100" style="background-color: #28a745;">
+                <div class="card-body text-center py-4">
+                    <h2 class="fw-bold mb-1" id="statCollecteurs">0</h2>
+                    <p class="mb-0">Nombre de collecteurs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 h-100 text-dark" style="background-color: #ffc107;">
+                <div class="card-body text-center py-4">
+                    <h2 class="fw-bold mb-1" id="statActifs">0</h2>
+                    <p class="mb-0">Collecteurs actifs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3 col-md-6 mb-3">
+            <div class="card text-white border-0 h-100" style="background-color: #dc3545;">
+                <div class="card-body text-center py-4">
+                    <h2 class="fw-bold mb-1" id="statInactifs">0</h2>
+                    <p class="mb-0">Collecteurs inactifs</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">Liste des utilisateurs</div>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span>Liste des utilisateurs</span>
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                        <i class="bi bi-person-plus"></i> Créer un collecteur
+                    </button>
+                </div>
                 <div class="card-body">
                     <div id="loader" class="text-center py-5">
                         <div class="spinner-border text-primary" role="status"></div>
@@ -103,6 +150,8 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
         .collecteurs-table-header { background: #111; }
         .collecteurs-table-header th {
@@ -114,6 +163,20 @@
             border-bottom: none;
             white-space: nowrap;
         }
+        .collecteurs-filter-card .input-group-text {
+            border-radius: 0.5rem 0 0 0.5rem;
+        }
+        .collecteurs-filter-card .input-group .form-control {
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .collecteurs-filter-card .form-select,
+        .collecteurs-filter-card #refreshBtn {
+            border-radius: 0.5rem;
+            min-height: 38px;
+        }
+        .collecteurs-filter-card #refreshBtn {
+            font-size: 1.15rem;
+        }
         .avatar-cell {
             width: 48px;
             height: 48px;
@@ -123,11 +186,25 @@
             cursor: pointer;
         }
         .avatar-cell:hover { border-color: #435ebe; }
+        .collecteur-name-link:hover {
+            text-decoration: underline !important;
+        }
+        .card-btn {
+            color: #9b59b6;
+            border-color: #9b59b6;
+        }
+        .card-btn:hover,
+        .card-btn:focus {
+            color: #fff;
+            background-color: #9b59b6;
+            border-color: #9b59b6;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const apiUrl = @json(route('plantations.collecteurs.api'));
             const photoUrl = @json(route('plantations.collecteurs.photo'));
+            const showUrlTemplate = @json(url('/plantations/collecteurs'));
             const csrfToken = @json(csrf_token());
 
             const defaultPhoto = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E9ECEF"/><circle cx="40" cy="32" r="14" fill="#ADB5BD"/><path d="M16 70c4-14 18-22 24-22s20 8 24 22" fill="#ADB5BD"/></svg>');
@@ -176,11 +253,22 @@
                 const zoneBadge = zoneName
                     ? `<span class="badge bg-primary">${escapeHtml(zoneName)}</span>`
                     : `<span class="badge bg-secondary">Non assigné</span>`;
+                const detailUrl = `${showUrlTemplate}/${escapeHtml(user.id)}`;
+                const nom = escapeHtml(user.nom || '');
+                const prenoms = escapeHtml(user.prenoms || '');
 
                 return `
                     <tr>
-                        <td class="fw-semibold">${escapeHtml(user.nom || '')}</td>
-                        <td>${escapeHtml(user.prenoms || '')}</td>
+                        <td class="fw-semibold">
+                            <a href="${detailUrl}" class="text-decoration-none text-primary collecteur-name-link" title="Voir le détail">
+                                ${nom || '—'}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="${detailUrl}" class="text-decoration-none text-dark collecteur-name-link" title="Voir le détail">
+                                ${prenoms || '—'}
+                            </a>
+                        </td>
                         <td>${escapeHtml(user.contact || '')}</td>
                         <td>${getRoleBadge(user.role)}</td>
                         <td>${zoneBadge}</td>
@@ -195,6 +283,9 @@
                             <button type="button" class="btn btn-sm btn-outline-primary edit-btn" data-id="${escapeHtml(user.id)}" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary card-btn" data-id="${escapeHtml(user.id)}" title="Générer carte PDF">
+                                <i class="bi bi-person-vcard"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-danger delete-btn" data-id="${escapeHtml(user.id)}" title="Supprimer">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -202,6 +293,20 @@
                         <td><span class="badge ${statusClass}">${statusText}</span></td>
                     </tr>
                 `;
+            }
+
+            function updateStats(users) {
+                const list = Array.isArray(users) ? users : [];
+                const collecteurs = list.filter(function (user) {
+                    return String(user.role || '').toLowerCase() === 'collecteur';
+                });
+                const actifs = collecteurs.filter(function (user) { return !!user.statut_compte; });
+                const inactifs = collecteurs.filter(function (user) { return !user.statut_compte; });
+
+                document.getElementById('statTotal').textContent = list.length.toLocaleString('fr-FR');
+                document.getElementById('statCollecteurs').textContent = collecteurs.length.toLocaleString('fr-FR');
+                document.getElementById('statActifs').textContent = actifs.length.toLocaleString('fr-FR');
+                document.getElementById('statInactifs').textContent = inactifs.length.toLocaleString('fr-FR');
             }
 
             function render(users) {
@@ -217,21 +322,29 @@
 
             function filterUsers() {
                 const search = document.getElementById('searchInput').value.toLowerCase().trim();
+                const fiche = document.getElementById('ficheInput').value.toLowerCase().trim();
                 const role = document.getElementById('roleFilter').value.toLowerCase();
                 const status = document.getElementById('statusFilter').value;
 
                 const filtered = allUsers.filter(user => {
-                    const name = (user.nom_complet || user.nom || '').toLowerCase();
+                    const name = `${user.nom_complet || ''} ${user.nom || ''} ${user.prenoms || ''}`.toLowerCase();
                     const contact = (user.contact || '').toLowerCase();
                     const login = (user.login || '').toLowerCase();
+                    const numeroFiche = String(
+                        user.numero_fiche || user.code_fiche || user.matricule || user.id || ''
+                    ).toLowerCase();
                     const userRole = (user.role || '').toLowerCase();
                     const userStatus = user.statut_compte ? '1' : '0';
 
-                    const matchSearch = !search || name.includes(search) || contact.includes(search) || login.includes(search);
+                    const matchSearch = !search
+                        || name.includes(search)
+                        || contact.includes(search)
+                        || login.includes(search);
+                    const matchFiche = !fiche || numeroFiche.includes(fiche) || login.includes(fiche);
                     const matchRole = !role || userRole === role;
                     const matchStatus = status === '' || userStatus === status;
 
-                    return matchSearch && matchRole && matchStatus;
+                    return matchSearch && matchFiche && matchRole && matchStatus;
                 });
 
                 render(filtered);
@@ -268,6 +381,7 @@
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error || 'Erreur API');
                     allUsers = json.data?.utilisateurs || [];
+                    updateStats(allUsers);
                     render(allUsers);
                 } catch (e) {
                     showError('Erreur : ' + e.message);
@@ -290,6 +404,7 @@
             }
 
             document.getElementById('searchInput').addEventListener('input', filterUsers);
+            document.getElementById('ficheInput').addEventListener('input', filterUsers);
             document.getElementById('roleFilter').addEventListener('change', filterUsers);
             document.getElementById('statusFilter').addEventListener('change', filterUsers);
             document.getElementById('refreshBtn').addEventListener('click', loadCollecteurs);
@@ -360,6 +475,17 @@
                     return;
                 }
 
+                const cardBtn = e.target.closest('.card-btn');
+                if (cardBtn) {
+                    const user = allUsers.find(u => String(u.id) === String(cardBtn.dataset.id));
+                    if (!user) {
+                        showError('Utilisateur introuvable pour la génération de carte.');
+                        return;
+                    }
+                    generateIdCard(user, cardBtn);
+                    return;
+                }
+
                 const avatar = e.target.closest('.avatar-cell');
                 if (avatar) {
                     document.getElementById('photoUserId').value = avatar.dataset.id;
@@ -373,6 +499,174 @@
                     new bootstrap.Modal(document.getElementById('changePhotoModal')).show();
                 }
             });
+
+            function loadImageAsBase64(url) {
+                return new Promise((resolve) => {
+                    if (!url || url === defaultPhoto) {
+                        resolve(null);
+                        return;
+                    }
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        try {
+                            resolve(canvas.toDataURL('image/jpeg'));
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    };
+                    img.onerror = () => resolve(null);
+                    img.src = url;
+                });
+            }
+
+            function qrCodeDataUrl(text) {
+                return new Promise((resolve) => {
+                    if (typeof QRCode === 'undefined' || typeof QRCode.toDataURL !== 'function') {
+                        resolve(null);
+                        return;
+                    }
+                    QRCode.toDataURL(text, { width: 180, margin: 1 }, function (error, url) {
+                        resolve(error ? null : url);
+                    });
+                });
+            }
+
+            async function generateIdCard(user, button) {
+                if (!window.jspdf || !window.jspdf.jsPDF) {
+                    showError('Bibliothèque PDF indisponible. Rechargez la page.');
+                    return;
+                }
+
+                const original = button ? button.innerHTML : '';
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const cardWidth = 85.6;
+                    const cardHeight = 54;
+                    const doc = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'mm',
+                        format: [cardHeight, cardWidth],
+                    });
+
+                    doc.setFillColor(200, 230, 201);
+                    doc.roundedRect(0, 0, cardWidth, cardHeight, 3, 3, 'F');
+
+                    doc.setDrawColor(150, 200, 150);
+                    doc.setLineWidth(0.5);
+                    doc.roundedRect(2, 2, cardWidth - 4, cardHeight - 4, 2, 2, 'S');
+
+                    doc.setFillColor(39, 174, 96);
+                    doc.roundedRect(3, 3, cardWidth - 6, 12, 1, 1, 'F');
+
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('UNIPALM', 8, 10);
+
+                    doc.setFontSize(6);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text("CARTE D'IDENTIFICATION", 8, 13);
+
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    const roleText = (user.role && String(user.role).toLowerCase() === 'collecteur')
+                        ? 'ENCADREUR'
+                        : (user.role || 'ENCADREUR');
+                    doc.text(String(roleText).toUpperCase(), cardWidth - 8, 10, { align: 'right' });
+
+                    const photoX = 6;
+                    const photoY = 18;
+                    const photoSize = 20;
+
+                    doc.setFillColor(230, 230, 230);
+                    doc.roundedRect(photoX, photoY, photoSize, photoSize, 1, 1, 'F');
+                    doc.setDrawColor(39, 174, 96);
+                    doc.setLineWidth(0.3);
+                    doc.roundedRect(photoX, photoY, photoSize, photoSize, 1, 1, 'S');
+
+                    const avatarUrl = user.avatar_url || '';
+                    if (avatarUrl && avatarUrl !== defaultPhoto) {
+                        const img = await loadImageAsBase64(avatarUrl);
+                        if (img) {
+                            doc.addImage(img, 'JPEG', photoX + 0.5, photoY + 0.5, photoSize - 1, photoSize - 1);
+                        }
+                    }
+
+                    const infoX = 30;
+                    let infoY = 20;
+
+                    doc.setTextColor(50, 50, 50);
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(String(user.nom || '').toUpperCase(), infoX, infoY);
+
+                    infoY += 5;
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(String(user.prenoms || ''), infoX, infoY);
+
+                    infoY += 6;
+                    doc.setFontSize(7);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text('Contact:', infoX, infoY);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(String(user.contact || ''), infoX + 12, infoY);
+
+                    infoY += 5;
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Zone:', infoX, infoY);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(String(user.zone_nom || user.nom_zone || 'Non assigné'), infoX + 12, infoY);
+
+                    const qrX = cardWidth - 22;
+                    const qrY = 18;
+                    const qrSize = 18;
+                    const qrData = 'https://unipalm.ci/verification.php?id=' + user.id;
+                    const qrUrl = await qrCodeDataUrl(qrData);
+                    if (qrUrl) {
+                        doc.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+                    }
+
+                    doc.setFillColor(39, 174, 96);
+                    doc.roundedRect(3, cardHeight - 10, cardWidth - 6, 7, 1, 1, 'F');
+
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    const cardNumber = 'CARTE N° : UNI-' + String(user.id).padStart(6, '0');
+                    doc.text(cardNumber, 8, cardHeight - 5);
+
+                    const dateCreation = user.created_at
+                        ? new Date(user.created_at).toLocaleDateString('fr-FR')
+                        : new Date().toLocaleDateString('fr-FR');
+                    doc.setFontSize(6);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Créé le: ' + dateCreation, cardWidth - 8, cardHeight - 5, { align: 'right' });
+
+                    const fileName = `carte_${user.nom || 'collecteur'}_${user.prenoms || user.id}`
+                        .replace(/\s+/g, '_')
+                        .replace(/[^\w.\-]+/g, '_') + '.pdf';
+                    doc.save(fileName);
+                } catch (error) {
+                    showError(error?.message || 'Impossible de générer la carte PDF.');
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = original;
+                    }
+                }
+            }
 
             document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
                 if (!deleteUserId) return;

@@ -15,6 +15,9 @@ class PlanteurApiService
     {
         $url = config('planteurs.api_base').'/planteurs.php';
 
+        // Ne pas transmettre le paramètre local "action" à l'API distante.
+        unset($query['action']);
+
         return $this->proxyRemoteGet($url, $query);
     }
 

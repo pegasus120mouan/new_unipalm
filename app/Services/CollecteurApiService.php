@@ -25,10 +25,75 @@ class CollecteurApiService
                 }
             } elseif (isset($json['data']) && is_array($json['data']) && isset($json['data']['id'])) {
                 $json['data'] = $this->enrichAvatar($json['data']);
+            } elseif (isset($json['data'][0]) && is_array($json['data'][0])) {
+                foreach ($json['data'] as $index => $user) {
+                    if (is_array($user)) {
+                        $json['data'][$index] = $this->enrichAvatar($user);
+                    }
+                }
             }
         }
 
         return $json;
+    }
+
+    public function getUtilisateur(int $id): ?array
+    {
+        $json = $this->getUtilisateurs(['id' => $id]);
+
+        if (($json['success'] ?? false) !== true || empty($json['data'])) {
+            return null;
+        }
+
+        $data = $json['data'];
+
+        if (isset($data['utilisateurs'][0]) && is_array($data['utilisateurs'][0])) {
+            return $data['utilisateurs'][0];
+        }
+
+        if (isset($data[0]) && is_array($data[0])) {
+            return $data[0];
+        }
+
+        if (isset($data['id'])) {
+            return $data;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{stats: array, repartition_cultures: array, evolution_mensuelle: array, derniers_planteurs: array}
+     */
+    public function getStats(int $collecteurId, ?string $dateDebut = null, ?string $dateFin = null): array
+    {
+        $query = ['collecteur_id' => $collecteurId];
+
+        if ($dateDebut) {
+            $query['date_debut'] = $dateDebut;
+        }
+        if ($dateFin) {
+            $query['date_fin'] = $dateFin;
+        }
+
+        $json = $this->proxyGet((string) config('planteurs.stats_collecteur_url'), $query);
+
+        if (($json['success'] ?? false) !== true) {
+            throw new RuntimeException($json['error'] ?? $json['message'] ?? 'Erreur stats collecteur.');
+        }
+
+        $data = is_array($json['data'] ?? null) ? $json['data'] : [];
+
+        return [
+            'stats' => [
+                'nombre_exploitants' => (int) ($data['stats']['nombre_exploitants'] ?? 0),
+                'superficie_totale' => (float) ($data['stats']['superficie_totale'] ?? 0),
+                'nombre_parcelles' => (int) ($data['stats']['nombre_parcelles'] ?? 0),
+            ],
+            'repartition_cultures' => $data['repartition_cultures'] ?? [],
+            'evolution_mensuelle' => $data['evolution_mensuelle'] ?? [],
+            'derniers_planteurs' => $data['derniers_planteurs'] ?? [],
+        ];
     }
 
     public function createUtilisateur(array $data): array

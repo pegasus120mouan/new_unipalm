@@ -74,6 +74,7 @@ return [
             'modules' => [
                 'plantations.index' => 'Liste des plantations',
                 'plantations.collecteurs' => 'Liste des collecteurs',
+                'plantations.collecteurs.show' => 'Détail collecteur',
                 'plantations.regions' => 'Régions',
                 'plantations.zones' => 'Zones',
                 'plantations.doublons' => 'Gestion des doublons',
@@ -297,6 +298,7 @@ return [
         'plantations.edit' => 'plantations.index',
         'plantations.api' => 'plantations.index',
         'plantations.collecteurs' => 'plantations.collecteurs',
+        'plantations.collecteurs.show' => 'plantations.collecteurs',
         'plantations.collecteurs.api' => 'plantations.collecteurs',
         'plantations.collecteurs.photo' => 'plantations.collecteurs',
         'plantations.regions' => 'plantations.regions',
