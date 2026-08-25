@@ -399,12 +399,25 @@
                     }
                     label = value;
                 } else if (field === 'poids') {
-                    if (poidsHasDecimal(value) && String(value) !== String(snapshot)) {
-                        showPoidsDecimalForbiddenModal();
-                        if (typeof editor.focus === 'function') {
-                            editor.focus();
+                    if (String(value) !== String(snapshot)) {
+                        if (typeof poidsHasDecimal === 'function' && poidsHasDecimal(value)) {
+                            if (typeof showPoidsForbiddenModal === 'function') {
+                                showPoidsForbiddenModal('Enregistrement nombre à virgule interdit');
+                            }
+                            if (typeof editor.focus === 'function') {
+                                editor.focus();
+                            }
+                            return { committed: false, changed: false };
                         }
-                        return { committed: false, changed: false };
+                        if (typeof poidsDoesNotEndWithZero === 'function' && poidsDoesNotEndWithZero(value)) {
+                            if (typeof showPoidsForbiddenModal === 'function') {
+                                showPoidsForbiddenModal('Le poids doit se terminer par 0');
+                            }
+                            if (typeof editor.focus === 'function') {
+                                editor.focus();
+                            }
+                            return { committed: false, changed: false };
+                        }
                     }
                     label = value ? Number(value).toLocaleString('fr-FR') : '—';
                 }

@@ -3,8 +3,18 @@
         return /[.,]/.test(String(raw ?? '').trim());
     };
 
-    window.showPoidsDecimalForbiddenModal = function () {
+    window.poidsDoesNotEndWithZero = function (raw) {
+        const value = String(raw ?? '').trim().replace(/\s/g, '');
+        if (value === '') {
+            return false;
+        }
+
+        return ! /0$/.test(value);
+    };
+
+    window.showPoidsForbiddenModal = function (message) {
         let overlay = document.getElementById('poidsDecimalForbiddenOverlay');
+        const text = message || 'Enregistrement interdit';
 
         if (!overlay) {
             overlay = document.createElement('div');
@@ -16,9 +26,7 @@
                     '<div class="poids-decimal-forbidden-header">' +
                         '<h5>Enregistrement interdit</h5>' +
                     '</div>' +
-                    '<div class="poids-decimal-forbidden-body">' +
-                        'Enregistrement nombre à virgule interdit' +
-                    '</div>' +
+                    '<div class="poids-decimal-forbidden-body"></div>' +
                     '<div class="poids-decimal-forbidden-footer">' +
                         '<button type="button" class="btn btn-danger px-4" data-close-poids-decimal>OK</button>' +
                     '</div>' +
@@ -33,7 +41,16 @@
             document.body.appendChild(overlay);
         }
 
+        const body = overlay.querySelector('.poids-decimal-forbidden-body');
+        if (body) {
+            body.textContent = text;
+        }
+
         overlay.style.display = 'flex';
+    };
+
+    window.showPoidsDecimalForbiddenModal = function () {
+        window.showPoidsForbiddenModal('Enregistrement nombre à virgule interdit');
     };
 </script>
 

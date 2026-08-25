@@ -894,6 +894,12 @@ class TicketController extends Controller
                     || filter_var($raw, FILTER_VALIDATE_INT) === false
                 ) {
                     $fail('Enregistrement nombre à virgule interdit');
+
+                    return;
+                }
+
+                if (! str_ends_with($raw, '0')) {
+                    $fail('Le poids doit se terminer par 0');
                 }
             },
         ];

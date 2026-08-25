@@ -211,7 +211,7 @@
                             <input type="text" name="poids" id="poids" inputmode="numeric" autocomplete="off"
                                 class="form-control @error('poids') is-invalid @enderror"
                                 value="{{ old('poids') }}" placeholder="Poids" required>
-                            <div class="invalid-feedback" id="poidsDecimalFeedback">
+                            <div class="invalid-feedback" id="poidsForbiddenFeedback">
                                 Enregistrement nombre à virgule interdit
                             </div>
                         </div>
@@ -397,8 +397,8 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('addTicketModal')).show();
-                @if ($errors->has('poids') && str_contains($errors->first('poids'), 'virgule'))
-                    showPoidsDecimalForbiddenModal();
+                @if ($errors->has('poids'))
+                    showPoidsForbiddenModal(@json($errors->first('poids')));
                 @endif
             });
         </script>
@@ -411,30 +411,51 @@
             const poidsInput = document.getElementById('poids');
 
             if (addTicketForm && poidsInput) {
+                const poidsFeedback = document.getElementById('poidsForbiddenFeedback');
+
                 function poidsValueHasDecimal(raw) {
                     return /[.,]/.test(String(raw ?? '').trim());
                 }
 
-                function rejectDecimalPoids(event) {
-                    if (!poidsValueHasDecimal(poidsInput.value)) {
-                        poidsInput.classList.remove('is-invalid');
-                        return;
-                    }
+                function poidsValueMustEndWithZero(raw) {
+                    const value = String(raw ?? '').trim().replace(/\s/g, '');
+                    return value !== '' && ! /0$/.test(value);
+                }
 
+                function showPoidsError(event, message) {
                     event.preventDefault();
                     event.stopImmediatePropagation();
                     poidsInput.classList.add('is-invalid');
+                    if (poidsFeedback) {
+                        poidsFeedback.textContent = message;
+                    }
 
-                    if (typeof window.showPoidsDecimalForbiddenModal === 'function') {
-                        window.showPoidsDecimalForbiddenModal();
+                    if (typeof window.showPoidsForbiddenModal === 'function') {
+                        window.showPoidsForbiddenModal(message);
                     } else {
-                        alert('Enregistrement nombre à virgule interdit');
+                        alert(message);
                     }
                 }
 
-                addTicketForm.addEventListener('submit', rejectDecimalPoids, true);
+                function rejectInvalidPoids(event) {
+                    const value = poidsInput.value;
+
+                    if (poidsValueHasDecimal(value)) {
+                        showPoidsError(event, 'Enregistrement nombre à virgule interdit');
+                        return;
+                    }
+
+                    if (poidsValueMustEndWithZero(value)) {
+                        showPoidsError(event, 'Le poids doit se terminer par 0');
+                        return;
+                    }
+
+                    poidsInput.classList.remove('is-invalid');
+                }
+
+                addTicketForm.addEventListener('submit', rejectInvalidPoids, true);
                 poidsInput.addEventListener('input', function () {
-                    if (!poidsValueHasDecimal(poidsInput.value)) {
+                    if (!poidsValueHasDecimal(poidsInput.value) && !poidsValueMustEndWithZero(poidsInput.value)) {
                         poidsInput.classList.remove('is-invalid');
                     }
                 });
