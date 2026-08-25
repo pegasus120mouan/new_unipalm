@@ -448,7 +448,7 @@ class TicketController extends Controller
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
             'id_pont' => ['nullable', 'integer', Rule::exists('pont_bascule', 'id_pont')],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
-            'poids' => ['required', 'numeric', 'min:0'],
+            'poids' => $this->poidsRules($ticket),
             'prix_unitaire' => ['nullable', 'numeric', 'min:0'],
             'created_at' => ['nullable', 'date'],
         ]);
@@ -819,7 +819,7 @@ class TicketController extends Controller
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
             'id_pont' => ['nullable', 'integer', Rule::exists('pont_bascule', 'id_pont')],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
-            'poids' => ['required', 'numeric', 'min:0'],
+            'poids' => $this->poidsRules(),
         ]);
 
         $agentPontsCount = PontBascule::query()
@@ -868,5 +868,34 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.index')
             ->with('success', $message);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function poidsRules(?Ticket $existing = null): array
+    {
+        return [
+            'required',
+            function (string $attribute, mixed $value, \Closure $fail) use ($existing): void {
+                $raw = str_replace(' ', '', (string) $value);
+
+                if (
+                    $existing !== null
+                    && is_numeric($raw)
+                    && abs((float) $raw - (float) $existing->poids) < 0.00001
+                ) {
+                    return;
+                }
+
+                if (
+                    str_contains($raw, '.')
+                    || str_contains($raw, ',')
+                    || filter_var($raw, FILTER_VALIDATE_INT) === false
+                ) {
+                    $fail('Enregistrement nombre à virgule interdit');
+                }
+            },
+        ];
     }
 }

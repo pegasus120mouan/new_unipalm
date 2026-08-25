@@ -78,6 +78,8 @@
         </div>
     </div>
 
+    @include('tickets.partials.poids-decimal-forbidden-modal')
+
     <style>
         .ticket-editable-cell {
             cursor: pointer;
@@ -397,6 +399,13 @@
                     }
                     label = value;
                 } else if (field === 'poids') {
+                    if (poidsHasDecimal(value) && String(value) !== String(snapshot)) {
+                        showPoidsDecimalForbiddenModal();
+                        if (typeof editor.focus === 'function') {
+                            editor.focus();
+                        }
+                        return { committed: false, changed: false };
+                    }
                     label = value ? Number(value).toLocaleString('fr-FR') : '—';
                 }
 

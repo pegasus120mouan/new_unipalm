@@ -96,7 +96,7 @@
                     <h5 class="modal-title" id="addTicketModalLabel">Enregistrer un ticket</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
-                <form method="POST" action="{{ route('tickets.store') }}">
+                <form method="POST" action="{{ route('tickets.store') }}" id="addTicketForm">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
@@ -208,12 +208,12 @@
 
                         <div class="mb-3">
                             <label for="poids" class="form-label">Poids</label>
-                            <input type="number" name="poids" id="poids" step="0.01" min="0"
+                            <input type="text" name="poids" id="poids" inputmode="numeric" autocomplete="off"
                                 class="form-control @error('poids') is-invalid @enderror"
                                 value="{{ old('poids') }}" placeholder="Poids" required>
-                            @error('poids')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <div class="invalid-feedback" id="poidsDecimalFeedback">
+                                Enregistrement nombre à virgule interdit
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -228,6 +228,8 @@
             </div>
         </div>
     </div>
+
+    @include('tickets.partials.poids-decimal-forbidden-modal')
 
     <div class="modal fade" id="printUsineModal" tabindex="-1" aria-labelledby="printUsineModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -395,6 +397,9 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('addTicketModal')).show();
+                @if ($errors->has('poids') && str_contains($errors->first('poids'), 'virgule'))
+                    showPoidsDecimalForbiddenModal();
+                @endif
             });
         </script>
     @endif
@@ -402,6 +407,38 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const modal = document.getElementById('addTicketModal');
+            const addTicketForm = document.getElementById('addTicketForm');
+            const poidsInput = document.getElementById('poids');
+
+            if (addTicketForm && poidsInput) {
+                function poidsValueHasDecimal(raw) {
+                    return /[.,]/.test(String(raw ?? '').trim());
+                }
+
+                function rejectDecimalPoids(event) {
+                    if (!poidsValueHasDecimal(poidsInput.value)) {
+                        poidsInput.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    poidsInput.classList.add('is-invalid');
+
+                    if (typeof window.showPoidsDecimalForbiddenModal === 'function') {
+                        window.showPoidsDecimalForbiddenModal();
+                    } else {
+                        alert('Enregistrement nombre à virgule interdit');
+                    }
+                }
+
+                addTicketForm.addEventListener('submit', rejectDecimalPoids, true);
+                poidsInput.addEventListener('input', function () {
+                    if (!poidsValueHasDecimal(poidsInput.value)) {
+                        poidsInput.classList.remove('is-invalid');
+                    }
+                });
+            }
 
             function setupAutocomplete(config) {
                 const searchInput = document.getElementById(config.searchId);
