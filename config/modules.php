@@ -117,6 +117,7 @@ return [
         'tickets.paid' => 'tickets.paid',
         'tickets.modifications' => 'tickets.modifications',
         'tickets.search' => 'tickets.search',
+        'tickets.search-pdf' => 'tickets.search',
         'tickets.update' => 'tickets.modifications',
         'tickets.validate' => 'tickets.pending',
         'tickets.validate-bulk' => 'tickets.pending',
@@ -256,6 +257,7 @@ return [
         'recus.tickets.pdf' => 'recus.tickets',
 
         'ponts.index' => 'ponts.index',
+        'ponts.export' => 'ponts.index',
         'ponts.types.index' => 'ponts.types',
         'ponts.types.store' => 'ponts.types',
         'ponts.types.update' => 'ponts.types',

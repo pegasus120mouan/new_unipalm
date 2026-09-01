@@ -95,6 +95,9 @@
                             <i class="bi bi-type"></i> Types de ponts
                         </a>
                         @endif
+                        <a href="{{ route('ponts.export') }}" class="btn btn-success">
+                            <i class="bi bi-file-earmark-excel"></i> Exporter en Excel
+                        </a>
                     </div>
                 </div>
             </div>
@@ -150,9 +153,14 @@
     <section class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span>Liste des ponts-bascules</span>
-                    <span class="text-muted">{{ $ponts->total() }} pont(s)</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted">{{ $ponts->total() }} pont(s)</span>
+                        <a href="{{ route('ponts.export') }}" class="btn btn-sm btn-success">
+                            <i class="bi bi-file-earmark-excel"></i> Exporter en Excel
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body table-responsive">
                     <table class="table table-striped table-hover align-middle">

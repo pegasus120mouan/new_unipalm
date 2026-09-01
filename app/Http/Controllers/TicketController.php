@@ -9,6 +9,7 @@ use App\Models\Usine;
 use App\Models\Vehicule;
 use App\Services\TicketBordereauPdfService;
 use App\Services\TicketExportService;
+use App\Services\TicketSearchPdfService;
 use App\Services\TicketService;
 use App\Services\TicketUsinePdfService;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,7 @@ class TicketController extends Controller
         private readonly TicketUsinePdfService $ticketUsinePdfService,
         private readonly TicketBordereauPdfService $ticketBordereauPdfService,
         private readonly TicketExportService $ticketExportService,
+        private readonly TicketSearchPdfService $ticketSearchPdfService,
     ) {}
 
     public function index(Request $request): View
@@ -409,11 +411,14 @@ class TicketController extends Controller
         $vehicules = Vehicule::query()->orderBy('matricule_vehicule')->get();
 
         $tickets = null;
+        $searchTotalPoids = 0.0;
 
         if ($isSearchRequested) {
             $query = $this->ticketQuery();
 
             $this->applySearchFilters($query, $filters);
+
+            $searchTotalPoids = (float) (clone $query)->sum('poids');
 
             $tickets = $query
                 ->orderByDesc('date_ticket')
@@ -429,7 +434,26 @@ class TicketController extends Controller
             'vehicules',
             'tickets',
             'isSearchRequested',
+            'searchTotalPoids',
         ));
+    }
+
+    public function pdfSearch(Request $request): Response|RedirectResponse
+    {
+        if (! $request->has('search')) {
+            return redirect()->route('tickets.search');
+        }
+
+        $filters = $this->searchFiltersFromRequest($request);
+        $query = $this->ticketQuery();
+        $this->applySearchFilters($query, $filters);
+
+        $tickets = $query
+            ->orderByDesc('date_ticket')
+            ->orderByDesc('id_ticket')
+            ->get();
+
+        return $this->ticketSearchPdfService->stream($tickets, $filters);
     }
 
     public function update(Request $request, Ticket $ticket): RedirectResponse|\Illuminate\Http\JsonResponse

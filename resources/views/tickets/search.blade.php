@@ -25,12 +25,19 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <span>Résultats de la recherche</span>
+                        <span>
+                            Résultats de la recherche
+                            <span class="text-muted fw-normal ms-2">
+                                — Poids : {{ number_format($searchTotalPoids, 0, '', ' ') }} kg
+                            </span>
+                        </span>
                         <div class="d-flex align-items-center gap-2">
                             <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
-                            <button type="button" class="btn btn-sm btn-primary" disabled title="Bientôt disponible">
+                            <a href="{{ route('tickets.search-pdf', request()->query()) }}"
+                                target="_blank" rel="noopener noreferrer"
+                                class="btn btn-sm btn-primary">
                                 <i class="bi bi-printer"></i> Imprimer
-                            </button>
+                            </a>
                         </div>
                     </div>
                     <div class="card-body table-responsive">

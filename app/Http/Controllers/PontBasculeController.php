@@ -10,18 +10,21 @@ use App\Models\SousPrefecture;
 use App\Models\Village;
 use App\Models\TypePont;
 use App\Services\CommisService;
+use App\Services\PontBasculeExportService;
 use App\Services\PontBasculeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PontBasculeController extends Controller
 {
     public function __construct(
         private readonly PontBasculeService $pontService,
         private readonly CommisService $commisService,
+        private readonly PontBasculeExportService $pontExportService,
     ) {}
 
     public function index(Request $request): View
@@ -96,6 +99,11 @@ class PontBasculeController extends Controller
             'typesPont',
             'regions',
         ));
+    }
+
+    public function exportExcel(): StreamedResponse
+    {
+        return $this->pontExportService->streamAll();
     }
 
     public function location(): View

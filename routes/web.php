@@ -67,6 +67,7 @@ Route::get('/', function () {
     Route::get('/tickets/payes', [TicketController::class, 'paid'])->name('tickets.paid');
     Route::get('/tickets/modifications', [TicketController::class, 'modifications'])->name('tickets.modifications');
     Route::get('/tickets/recherche', [TicketController::class, 'search'])->name('tickets.search');
+    Route::get('/tickets/recherche/pdf', [TicketController::class, 'pdfSearch'])->name('tickets.search-pdf');
     Route::put('/tickets/{ticket:id_ticket}', [TicketController::class, 'update'])->name('tickets.update');
     Route::post('/tickets/{ticket:id_ticket}/validate', [TicketController::class, 'validate'])->name('tickets.validate');
     Route::post('/tickets/validate-bulk', [TicketController::class, 'validateBulk'])->name('tickets.validate-bulk');
@@ -224,6 +225,7 @@ Route::get('/', function () {
 
     Route::get('/ponts/agents/{agent:id_agent}/commis-options', [PontBasculeController::class, 'commisOptions'])->name('ponts.commis-options');
     Route::get('/ponts', [PontBasculeController::class, 'index'])->name('ponts.index');
+    Route::get('/ponts/export/excel', [PontBasculeController::class, 'exportExcel'])->name('ponts.export');
     Route::get('/ponts/localisation/regions/{region}', [PontBasculeController::class, 'locationRegion'])->name('ponts.location.region');
     Route::get('/ponts/localisation', [PontBasculeController::class, 'location'])->name('ponts.location');
     Route::post('/ponts', [PontBasculeController::class, 'store'])->name('ponts.store');
