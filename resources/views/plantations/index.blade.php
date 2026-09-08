@@ -401,6 +401,19 @@
                 return date.toLocaleDateString('fr-FR');
             }
 
+            function calcAge(value) {
+                if (!value) return '';
+                const birth = new Date(value);
+                if (Number.isNaN(birth.getTime())) return '';
+                const today = new Date();
+                let age = today.getFullYear() - birth.getFullYear();
+                const monthDiff = today.getMonth() - birth.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                    age -= 1;
+                }
+                return age >= 0 && age < 130 ? String(age) : '';
+            }
+
             function getPhotoValue(planteur) {
                 return planteur?.photo_url || planteur?.image_url || planteur?.photo || planteur?.photo_planteur || '';
             }
@@ -512,6 +525,14 @@
                     .map(function (culture) { return culture?.type_culture || culture?.autre_culture || ''; })
                     .filter(Boolean)
                     .join(' | ');
+                const agesCulture = cultures
+                    .map(function (culture) {
+                        const age = culture?.age_culture ?? culture?.age ?? '';
+                        return age === null || age === undefined || age === '' ? '' : String(age);
+                    })
+                    .join(' | ')
+                    .replace(/^(?:\s*\|\s*)+|(?:\s*\|\s*)+$/g, '')
+                    .replace(/(?:\s*\|\s*){2,}/g, ' | ');
 
                 return {
                     numero_fiche: planteur.numero_fiche || '',
@@ -519,6 +540,7 @@
                     telephone: planteur.telephone || '',
                     piece_identite: planteur.piece_identite || '',
                     date_naissance: fmtDate(planteur.date_naissance),
+                    age: calcAge(planteur.date_naissance),
                     lieu_naissance: planteur.lieu_naissance || '',
                     situation_matrimoniale: planteur.situation_matrimoniale || '',
                     nombre_enfants: planteur.nombre_enfants ?? '',
@@ -533,6 +555,7 @@
                     superficie: superficie > 0
                         ? superficie.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
                         : '',
+                    age_culture: agesCulture,
                     date_enregistrement: fmtDate(planteur.date_enregistrement),
                     created_at: fmtDate(planteur.created_at),
                 };
@@ -617,6 +640,7 @@
                 { key: 'telephone', label: 'Téléphone' },
                 { key: 'piece_identite', label: "Pièce d'identité" },
                 { key: 'date_naissance', label: 'Date de naissance' },
+                { key: 'age', label: 'Âge' },
                 { key: 'lieu_naissance', label: 'Lieu de naissance' },
                 { key: 'situation_matrimoniale', label: 'Situation matrimoniale' },
                 { key: 'nombre_enfants', label: "Nombre d'enfants" },
@@ -629,6 +653,7 @@
                 { key: 'delegue', label: 'Délégué' },
                 { key: 'types_culture', label: 'Type(s) de culture' },
                 { key: 'superficie', label: 'Superficie (ha)' },
+                { key: 'age_culture', label: 'Âge culture' },
                 { key: 'date_enregistrement', label: "Date d'enregistrement" },
                 { key: 'created_at', label: 'Créé le' },
             ];
@@ -659,7 +684,9 @@
                 }).join('');
                 const bodyRows = rows.map(function (row) {
                     const cells = EXPORT_COLUMNS.map(function (col) {
-                        const align = col.key === 'superficie' ? ' style="text-align:right"' : '';
+                        const align = (col.key === 'superficie' || col.key === 'age' || col.key === 'age_culture')
+                            ? ' style="text-align:right"'
+                            : '';
                         return `<td${align}>${escapeHtml(row[col.key])}</td>`;
                     }).join('');
                     return `<tr>${cells}</tr>`;

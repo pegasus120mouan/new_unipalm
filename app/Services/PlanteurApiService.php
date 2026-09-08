@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -23,21 +24,7 @@ class PlanteurApiService
 
     public function getGlobalStats(): array
     {
-        $response = Http::timeout(20)
-            ->acceptJson()
-            ->get(config('planteurs.stats_url'));
-
-        if (! $response->successful()) {
-            throw new RuntimeException('Erreur lors de la récupération des statistiques planteurs.');
-        }
-
-        $json = $response->json();
-
-        if (! is_array($json)) {
-            throw new RuntimeException('Réponse invalide de l\'API statistiques.');
-        }
-
-        return $json;
+        return $this->requestJson('get', config('planteurs.stats_url'));
     }
 
     public function getRegions(): array
@@ -80,20 +67,7 @@ class PlanteurApiService
 
     public function getDoublons(): array
     {
-        $url = (string) config('planteurs.doublons_url');
-        $response = Http::timeout(30)
-            ->acceptJson()
-            ->get($url);
-
-        if (! $response->successful()) {
-            throw new RuntimeException('Erreur lors de la récupération des doublons planteurs.');
-        }
-
-        $json = $response->json();
-
-        if (! is_array($json)) {
-            throw new RuntimeException('Réponse invalide de l\'API doublons.');
-        }
+        $json = $this->requestJson('get', (string) config('planteurs.doublons_url'));
 
         if (($json['success'] ?? false) === true && isset($json['data']['groupes']) && is_array($json['data']['groupes'])) {
             foreach ($json['data']['groupes'] as $gIndex => $groupe) {
@@ -122,39 +96,20 @@ class PlanteurApiService
             default => throw new RuntimeException('Action non supportée : '.$action),
         };
 
-        $response = Http::timeout(30)
-            ->acceptJson()
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $data);
-
-        $json = $response->json();
-
-        if (! is_array($json)) {
-            throw new RuntimeException('Réponse invalide de l\'API distante.');
-        }
-
-        if (! $response->successful()) {
-            throw new RuntimeException($json['error'] ?? $json['message'] ?? 'Erreur API planteurs.');
-        }
+        $json = $this->requestJson('post', $url, $data, [
+            'Content-Type' => 'application/json',
+        ]);
 
         return $json;
     }
 
+    /**
+     * @param  array<string, mixed>  $queryParams
+     * @return array<string, mixed>
+     */
     private function proxyRemoteGet(string $url, array $queryParams): array
     {
-        $response = Http::timeout(20)
-            ->acceptJson()
-            ->get($url, $queryParams);
-
-        if (! $response->successful()) {
-            throw new RuntimeException('Erreur lors de la récupération des planteurs (API distante).');
-        }
-
-        $json = $response->json();
-
-        if (! is_array($json)) {
-            throw new RuntimeException('Réponse invalide de l\'API distante.');
-        }
+        $json = $this->requestJson('get', $url, $queryParams);
 
         if (($json['success'] ?? false) === true) {
             if (isset($json['data']['planteurs']) && is_array($json['data']['planteurs'])) {
@@ -166,6 +121,47 @@ class PlanteurApiService
             } elseif (isset($json['data']) && is_array($json['data']) && isset($json['data']['id'])) {
                 $json['data'] = $this->enrichPlanteur($json['data']);
             }
+        }
+
+        return $json;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, string>  $headers
+     * @return array<string, mixed>
+     */
+    private function requestJson(string $method, string $url, array $payload = [], array $headers = []): array
+    {
+        try {
+            $pending = Http::timeout(60)
+                ->connectTimeout(15)
+                ->retry(2, 1500, fn ($exception): bool => $exception instanceof ConnectionException)
+                ->acceptJson();
+
+            if ($headers !== []) {
+                $pending = $pending->withHeaders($headers);
+            }
+
+            $response = strtolower($method) === 'post'
+                ? $pending->post($url, $payload)
+                : $pending->get($url, $payload);
+        } catch (ConnectionException) {
+            throw new RuntimeException(
+                'L\'API planteurs ne répond pas (délai dépassé). Réessayez dans quelques instants.'
+            );
+        }
+
+        $json = $response->json();
+
+        if (! is_array($json)) {
+            throw new RuntimeException('Réponse invalide de l\'API planteurs.');
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException(
+                $json['error'] ?? $json['message'] ?? 'Impossible de joindre l\'API planteurs.'
+            );
         }
 
         return $json;

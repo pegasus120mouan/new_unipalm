@@ -52,6 +52,11 @@ class PlantationController extends Controller
                 'success' => false,
                 'error' => $exception->getMessage(),
             ], 502);
+        } catch (\Throwable) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Impossible de joindre l\'API planteurs. Réessayez dans quelques instants.',
+            ], 502);
         }
     }
 }
