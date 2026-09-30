@@ -19,9 +19,32 @@ class PlantationController extends Controller
         return view('plantations.index');
     }
 
+    public function create(): View
+    {
+        return view('plantations.create');
+    }
+
+    public function plantations(): View
+    {
+        return view('plantations.plantations');
+    }
+
     public function show(int $id): View
     {
         return view('plantations.show', ['planteurId' => $id]);
+    }
+
+    public function champs(int $id): View
+    {
+        return view('plantations.champs', ['planteurId' => $id]);
+    }
+
+    public function champShow(int $id, int $champId): View
+    {
+        return view('plantations.champ-show', [
+            'planteurId' => $id,
+            'champId' => $champId,
+        ]);
     }
 
     public function edit(int $id): View
@@ -38,12 +61,49 @@ class PlantationController extends Controller
 
             $action = (string) $request->query('action', 'planteurs');
 
+            if ($action === 'search') {
+                return response()->json($this->planteurApi->searchPlanteurs($request->query()));
+            }
+
+            if ($action === 'plantations') {
+                return response()->json($this->planteurApi->getPlantations($request->query()));
+            }
+
             if ($action === 'regions') {
                 return response()->json($this->planteurApi->getRegions());
             }
 
             if ($action === 'stats') {
                 return response()->json($this->planteurApi->getGlobalStats());
+            }
+
+            if ($action === 'champ') {
+                $id = (int) $request->query('id', 0);
+                $champId = (int) $request->query('champ_id', 0);
+                if ($id <= 0 || $champId <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Identifiant planteur ou champ manquant.',
+                    ], 422);
+                }
+
+                return response()->json($this->planteurApi->getChampForPlanteur($id, $champId));
+            }
+
+            if ($action === 'champs' || $action === 'fiches') {
+                $id = (int) $request->query('id', 0);
+                if ($id <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Identifiant planteur manquant.',
+                    ], 422);
+                }
+
+                return response()->json($this->planteurApi->getChampsForPlanteur($id));
+            }
+
+            if ($action === 'check_doublon') {
+                return response()->json($this->planteurApi->checkDoublon($request->query()));
             }
 
             return response()->json($this->planteurApi->getPlanteurs($request->query()));

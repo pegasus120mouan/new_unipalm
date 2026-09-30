@@ -554,17 +554,29 @@
                             </a>
 
                             <ul class="submenu {{ request()->routeIs('plantations.*') ? 'active' : '' }}">
+                                
 
                                 @if ($canModule('plantations.index'))
-                                <li class="submenu-item {{ request()->routeIs('plantations.index', 'plantations.show', 'plantations.edit') ? 'active' : '' }}">
+                                <li class="submenu-item {{ request()->routeIs('plantations.index', 'plantations.show', 'plantations.edit', 'plantations.create', 'plantations.fiches', 'plantations.champs', 'plantations.champ.show') ? 'active' : '' }}">
 
                                     <a href="{{ route('plantations.index') }}">
                                         <i class="bi bi-flower2 submenu-icon--all"></i>
+                                        <span>Liste des planteurs</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('plantations.index'))
+                                <li class="submenu-item {{ request()->routeIs('plantations.liste') ? 'active' : '' }}">
+
+                                    <a href="{{ route('plantations.liste') }}">
+                                        <i class="bi bi-tree submenu-icon--all"></i>
                                         <span>Liste des plantations</span>
                                     </a>
 
                                 </li>
                                 @endif
+
                                 @if ($canModule('plantations.collecteurs'))
                                 <li class="submenu-item {{ request()->routeIs('plantations.collecteurs') ? 'active' : '' }}">
 

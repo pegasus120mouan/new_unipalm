@@ -233,6 +233,14 @@ Route::get('/', function () {
     Route::delete('/ponts/{pont:id_pont}', [PontBasculeController::class, 'destroy'])->name('ponts.destroy');
 
     Route::get('/plantations', [PlantationController::class, 'index'])->name('plantations.index');
+    Route::get('/plantations/create', [PlantationController::class, 'create'])->name('plantations.create');
+    Route::get('/plantations/liste', [PlantationController::class, 'plantations'])->name('plantations.liste');
+    Route::get('/plantations/{id}/champs/{champId}', [PlantationController::class, 'champShow'])
+        ->name('plantations.champ.show')
+        ->whereNumber('id')
+        ->whereNumber('champId');
+    Route::get('/plantations/{id}/champs', [PlantationController::class, 'champs'])->name('plantations.champs')->whereNumber('id');
+    Route::get('/plantations/{id}/fiches', [PlantationController::class, 'champs'])->name('plantations.fiches')->whereNumber('id');
     Route::get('/plantations/{id}', [PlantationController::class, 'show'])->name('plantations.show')->whereNumber('id');
     Route::get('/plantations/{id}/edit', [PlantationController::class, 'edit'])->name('plantations.edit')->whereNumber('id');
     Route::match(['get', 'post'], '/api/planteurs', [PlantationController::class, 'api'])->name('plantations.api');

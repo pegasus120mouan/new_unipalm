@@ -72,7 +72,7 @@ return [
         'plantations' => [
             'label' => 'Gestion des plantations',
             'modules' => [
-                'plantations.index' => 'Liste des plantations',
+                'plantations.index' => 'Planteurs et plantations',
                 'plantations.collecteurs' => 'Liste des collecteurs',
                 'plantations.collecteurs.show' => 'Détail collecteur',
                 'plantations.regions' => 'Régions',
@@ -297,7 +297,12 @@ return [
         'ponts.destroy' => 'ponts.index',
 
         'plantations.index' => 'plantations.index',
+        'plantations.create' => 'plantations.index',
+        'plantations.liste' => 'plantations.index',
         'plantations.show' => 'plantations.index',
+        'plantations.fiches' => 'plantations.index',
+        'plantations.champs' => 'plantations.index',
+        'plantations.champ.show' => 'plantations.index',
         'plantations.edit' => 'plantations.index',
         'plantations.api' => 'plantations.index',
         'plantations.collecteurs' => 'plantations.collecteurs',

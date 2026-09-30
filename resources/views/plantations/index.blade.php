@@ -1,6 +1,6 @@
 @extends('layout.main')
 
-@section('title', 'Liste des plantations')
+@section('title', 'Liste des planteurs')
 
 @section('page-heading')
     <div class="page-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -8,7 +8,7 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ route('tickets.index') }}">Accueil</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Plantations</li>
+                <li class="breadcrumb-item active" aria-current="page">Planteurs</li>
             </ol>
         </nav>
     </div>
@@ -60,6 +60,15 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body py-3">
                     <div class="planteurs-io-toolbar d-flex flex-wrap align-items-center gap-3 gap-md-4">
+                        <a href="{{ route('plantations.create') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Enregistrer un planteur
+                        </a>
+                        @if (auth()->user()->canAccessModule('plantations.doublons'))
+                            <a href="{{ route('plantations.doublons') }}" class="btn btn-outline-danger">
+                                <i class="bi bi-files"></i> Vérifier les doublons
+                            </a>
+                        @endif
+                        <div class="planteurs-io-separator d-none d-md-block"></div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <span class="planteurs-io-label">
                                 <i class="bi bi-file-earmark-arrow-up"></i>
@@ -103,12 +112,12 @@
             <div class="card border-0 text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                 <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <h3 class="mb-1 fw-bold" id="superficieTotale">0,00 ha</h3>
-                        <div class="small opacity-75">Superficie totale des plantations</div>
+                        <h3 class="mb-1 fw-bold"><i class="bi bi-people"></i> <span id="nombrePlanteurs">0</span></h3>
+                        <div class="small opacity-75">Planteurs enregistrés</div>
                     </div>
-                    <span class="badge bg-white bg-opacity-25 text-white px-3 py-2">
-                        <i class="bi bi-people"></i> <span id="nombrePlanteurs">0</span> planteurs
-                    </span>
+                    <a href="{{ route('plantations.liste') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-tree"></i> Voir la liste des plantations
+                    </a>
                 </div>
             </div>
         </div>
@@ -117,8 +126,11 @@
     <section class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Liste des planteurs</span>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <span>Liste des planteurs</span>
+                        <div class="text-muted small fw-normal">Cliquez sur la photo pour ouvrir la fiche du planteur</div>
+                    </div>
                     <span class="text-muted small" id="paginationInfoTop"></span>
                 </div>
                 <div class="card-body">
@@ -131,15 +143,17 @@
                         <table class="table table-striped table-hover align-middle" id="planteursTable">
                             <thead class="plantations-table-header">
                                 <tr>
-                                    <th>Photo</th>
+                                    <th title="Cliquez sur la photo pour ouvrir la fiche du planteur">Photo</th>
                                     <th>N° fiche</th>
-                                    <th>Nom & prénoms</th>
+                                    <th title="Nom et prénoms">Nom</th>
+                                    <th title="Nombre de champs">Champs</th>
+                                    <th title="Superficie totale">Superficie</th>
                                     <th>Téléphone</th>
                                     <th>Collecteur</th>
-                                    <th>Région</th>
-                                    <th>Sous-préfecture</th>
-                                    <th>Village</th>
-                                    <th>Créé le</th>
+                                    <th title="Lieu de naissance">Né(e) à</th>
+                                    <th title="Nombre d'enfants">Enfants</th>
+                                    <th>N° CNI</th>
+                                    <th title="Situation matrimoniale">Situation</th>
                                     <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
@@ -245,6 +259,17 @@
             object-fit: cover;
             border-radius: 50%;
             border: 2px solid #e9ecef;
+            transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .planteur-photo-link {
+            display: inline-block;
+            line-height: 0;
+        }
+
+        .planteur-photo-link:hover .planteur-photo {
+            border-color: #435ebe;
+            transform: scale(1.08);
         }
 
         .action-buttons {
@@ -360,6 +385,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const apiBaseUrl = @json(route('plantations.api'));
             const showUrlTemplate = @json(url('/plantations'));
+            const plantationsUrl = @json(route('plantations.liste'));
             const csrfToken = @json(csrf_token());
             const errorEl = document.getElementById('planteursError');
             const loaderEl = document.getElementById('loader');
@@ -428,9 +454,54 @@
                 errorEl.textContent = '';
             }
 
+            function champsCount(planteur) {
+                const cultures = Array.isArray(planteur?.cultures) ? planteur.cultures : [];
+                if (cultures.length) return cultures.length;
+                return Array.isArray(planteur?.parcelles) ? planteur.parcelles.length : 0;
+            }
+
+            function parseSuperficie(value) {
+                const number = parseFloat(value);
+                return Number.isFinite(number) && number > 0 ? number : 0;
+            }
+
+            function superficieTotale(planteur) {
+                const cultures = Array.isArray(planteur?.cultures) ? planteur.cultures : [];
+                if (cultures.length) {
+                    return cultures.reduce(function (sum, culture) {
+                        const fromCulture = parseSuperficie(culture?.superficie_ha);
+                        if (fromCulture > 0) return sum + fromCulture;
+                        const parcelles = Array.isArray(culture?.parcelles) ? culture.parcelles : [];
+                        return sum + parcelles.reduce(function (parcelleSum, parcelle) {
+                            return parcelleSum + parseSuperficie(
+                                parcelle?.superficie_ha ?? parcelle?.superficie_calculee ?? parcelle?.superficie
+                            );
+                        }, 0);
+                    }, 0);
+                }
+                const parcelles = Array.isArray(planteur?.parcelles) ? planteur.parcelles : [];
+                return parcelles.reduce(function (sum, parcelle) {
+                    return sum + parseSuperficie(
+                        parcelle?.superficie_ha ?? parcelle?.superficie_calculee ?? parcelle?.superficie
+                    );
+                }, 0);
+            }
+
+            function fmtSuperficie(value) {
+                const number = Number(value);
+                if (!Number.isFinite(number) || number <= 0) return '—';
+                return number.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ha';
+            }
+
+            function situationLabel(value) {
+                const labels = { Celibataire: 'Célibataire', Marie: 'Marié(e)', Veuf: 'Veuf / Veuve', Divorce: 'Divorcé(e)' };
+                const key = String(value ?? '').trim();
+                return labels[key] || key || '—';
+            }
+
             function render(rows) {
                 if (rows.length === 0) {
-                    tbodyEl.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Aucun planteur trouvé.</td></tr>';
+                    tbodyEl.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Aucun planteur trouvé.</td></tr>';
                     return;
                 }
 
@@ -438,33 +509,43 @@
                     const collecteur = planteur.collecteur
                         ? `${planteur.collecteur.nom ?? ''} ${planteur.collecteur.prenoms ?? ''}`.trim()
                         : '—';
-                    const exploitation = planteur.exploitation || {};
                     const photoSrc = getPhotoValue(planteur) || defaultPhoto;
+                    const nbEnfants = planteur.nombre_enfants === null || planteur.nombre_enfants === undefined || planteur.nombre_enfants === ''
+                        ? '—'
+                        : planteur.nombre_enfants;
                     const id = escapeHtml(planteur.id);
                     const name = escapeHtml(planteur.nom_prenoms || planteur.numero_fiche || planteur.id);
 
                     return `
                         <tr>
                             <td>
-                                <img src="${escapeHtml(photoSrc)}" alt="Photo" class="planteur-photo"
-                                    onerror="this.onerror=null;this.src='${defaultPhoto}';">
+                                <a href="${showUrlTemplate}/${id}" class="planteur-photo-link" title="Ouvrir la fiche du planteur">
+                                    <img src="${escapeHtml(photoSrc)}" alt="Photo" class="planteur-photo"
+                                        onerror="this.onerror=null;this.src='${defaultPhoto}';">
+                                </a>
                             </td>
                             <td><code class="text-danger">${escapeHtml(planteur.numero_fiche || '—')}</code></td>
                             <td class="fw-semibold">${escapeHtml(planteur.nom_prenoms || '—')}</td>
+                            <td class="text-center">
+                                <a href="${plantationsUrl}?q=${encodeURIComponent(planteur.numero_fiche || planteur.nom_prenoms || '')}" class="text-decoration-none" title="Voir les plantations de ce planteur">
+                                    <span class="badge bg-primary">${champsCount(planteur)}</span>
+                                </a>
+                                ${(planteur.nb_exploitations || 0) > 1
+                                    ? `<a href="${showUrlTemplate}/${id}" class="badge bg-info text-decoration-none d-block mt-1" title="Voir toutes les exploitations">${escapeHtml(planteur.nb_exploitations)} exploitations</a>`
+                                    : ''}
+                            </td>
+                            <td class="text-end fw-semibold">${fmtSuperficie(superficieTotale(planteur))}</td>
                             <td>${escapeHtml(planteur.telephone || '—')}</td>
                             <td>${escapeHtml(collecteur)}</td>
-                            <td>${escapeHtml(exploitation.region || '—')}</td>
-                            <td>${escapeHtml(exploitation.sous_prefecture_village || '—')}</td>
-                            <td>${escapeHtml(exploitation.village || '—')}</td>
-                            <td>${escapeHtml(fmtDate(planteur.created_at))}</td>
+                            <td>${escapeHtml(planteur.lieu_naissance || '—')}</td>
+                            <td class="text-center">${escapeHtml(nbEnfants)}</td>
+                            <td>${escapeHtml(planteur.piece_identite || '—')}</td>
+                            <td>${escapeHtml(situationLabel(planteur.situation_matrimoniale))}</td>
                             <td class="text-end">
                                 <div class="action-buttons">
                                     <a class="action-btn view" href="${showUrlTemplate}/${id}" title="Voir">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <button type="button" class="action-btn map" data-action="map" data-id="${id}" title="Voir sur la carte">
-                                        <i class="bi bi-geo-alt"></i>
-                                    </button>
                                     <a class="action-btn edit" href="${showUrlTemplate}/${id}/edit" title="Modifier">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
@@ -517,10 +598,10 @@
                     : '';
                 const exploitation = planteur.exploitation || {};
                 const cultures = Array.isArray(planteur.cultures) ? planteur.cultures : [];
-                const superficie = cultures.reduce(function (sum, culture) {
-                    const value = parseFloat(culture?.superficie_ha);
-                    return sum + (Number.isFinite(value) ? value : 0);
-                }, 0);
+                const superficie = superficieTotale(planteur);
+                const superficieLabel = superficie > 0
+                    ? superficie.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : '';
                 const typesCulture = cultures
                     .map(function (culture) { return culture?.type_culture || culture?.autre_culture || ''; })
                     .filter(Boolean)
@@ -537,6 +618,8 @@
                 return {
                     numero_fiche: planteur.numero_fiche || '',
                     nom_prenoms: planteur.nom_prenoms || '',
+                    nbre_champs: champsCount(planteur),
+                    superficie_totale: superficieLabel,
                     telephone: planteur.telephone || '',
                     piece_identite: planteur.piece_identite || '',
                     date_naissance: fmtDate(planteur.date_naissance),
@@ -552,9 +635,7 @@
                     latitude: exploitation.latitude ?? '',
                     delegue: exploitation.delegue_nom || '',
                     types_culture: typesCulture,
-                    superficie: superficie > 0
-                        ? superficie.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-                        : '',
+                    superficie: superficieLabel,
                     age_culture: agesCulture,
                     date_enregistrement: fmtDate(planteur.date_enregistrement),
                     created_at: fmtDate(planteur.created_at),
@@ -637,6 +718,8 @@
             const EXPORT_COLUMNS = [
                 { key: 'numero_fiche', label: 'N° Fiche' },
                 { key: 'nom_prenoms', label: 'Nom & Prénoms' },
+                { key: 'nbre_champs', label: 'Nbre de champ' },
+                { key: 'superficie_totale', label: 'Superficie total (ha)' },
                 { key: 'telephone', label: 'Téléphone' },
                 { key: 'piece_identite', label: "Pièce d'identité" },
                 { key: 'date_naissance', label: 'Date de naissance' },
@@ -684,7 +767,7 @@
                 }).join('');
                 const bodyRows = rows.map(function (row) {
                     const cells = EXPORT_COLUMNS.map(function (col) {
-                        const align = (col.key === 'superficie' || col.key === 'age' || col.key === 'age_culture')
+                        const align = (col.key === 'superficie' || col.key === 'superficie_totale' || col.key === 'age' || col.key === 'age_culture' || col.key === 'nbre_champs')
                             ? ' style="text-align:right"'
                             : '';
                         return `<td${align}>${escapeHtml(row[col.key])}</td>`;
@@ -787,35 +870,6 @@
 
             function updateSuperficieTotale(data) {
                 document.getElementById('nombrePlanteurs').textContent = Number(data?.total || 0).toLocaleString('fr-FR');
-
-                if (data?.superficie_totale !== undefined) {
-                    const superficie = parseFloat(data.superficie_totale) || 0;
-                    document.getElementById('superficieTotale').textContent =
-                        superficie.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ha';
-                    return;
-                }
-
-                loadSuperficieTotale();
-            }
-
-            async function loadSuperficieTotale() {
-                const superficieEl = document.getElementById('superficieTotale');
-                superficieEl.textContent = 'Chargement...';
-
-                try {
-                    const res = await fetch(buildApiUrl({ action: 'stats' }), { cache: 'no-store' });
-                    const json = await res.json();
-
-                    if (res.ok && json?.success && json.data?.superficie_totale !== undefined) {
-                        const superficie = parseFloat(json.data.superficie_totale) || 0;
-                        superficieEl.textContent =
-                            superficie.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ha';
-                    } else {
-                        superficieEl.textContent = 'N/A';
-                    }
-                } catch (error) {
-                    superficieEl.textContent = 'N/A';
-                }
             }
 
             function renderPagination() {
@@ -965,8 +1019,27 @@
                 paginationContainer.classList.remove('d-flex');
                 tbodyEl.innerHTML = '';
 
+                const filters = getActiveFilters();
+                const searching = !!(filters.nom || filters.numeroFiche || filters.tel || filters.collecteur);
+                const loaderLabel = loaderEl.querySelector('.text-muted');
+                if (loaderLabel) {
+                    loaderLabel.textContent = searching ? 'Recherche en cours...' : 'Chargement des planteurs...';
+                }
+
                 try {
-                    const res = await fetch(buildApiUrl({ action: 'planteurs', page: page, limit: limit }), { cache: 'no-store' });
+                    const params = searching
+                        ? {
+                            action: 'search',
+                            page: page,
+                            limit: limit,
+                            nom: document.getElementById('filterNom').value.trim(),
+                            numero_fiche: document.getElementById('filterNumeroFiche').value.trim(),
+                            telephone: document.getElementById('filterTelephone').value.trim(),
+                            collecteur: document.getElementById('filterCollecteur').value.trim(),
+                        }
+                        : { action: 'planteurs', page: page, limit: limit };
+
+                    const res = await fetch(buildApiUrl(params), { cache: 'no-store' });
                     const json = await res.json();
 
                     if (!res.ok || !json?.success) {
@@ -1029,13 +1102,23 @@
                 }
             });
 
-            document.getElementById('planteursRefresh').addEventListener('click', applyFilter);
+            document.getElementById('planteursRefresh').addEventListener('click', function () {
+                load(1);
+            });
             document.getElementById('planteursReset').addEventListener('click', function () {
                 document.getElementById('filterNom').value = '';
                 document.getElementById('filterNumeroFiche').value = '';
                 document.getElementById('filterTelephone').value = '';
                 document.getElementById('filterCollecteur').value = '';
-                render(allRows);
+                load(1);
+            });
+            ['filterNom', 'filterNumeroFiche', 'filterTelephone', 'filterCollecteur'].forEach(function (id) {
+                document.getElementById(id).addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        load(1);
+                    }
+                });
             });
 
             document.getElementById('confirmDeletePlanteurBtn').addEventListener('click', async function () {
