@@ -208,7 +208,11 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0">Confirmer la suppression de <strong id="deletePlanteurName"></strong> ?</p>
+                    <p>Confirmer la suppression de <strong id="deletePlanteurName"></strong> ?</p>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Tous les champs (plantations) de ce planteur et leurs parcelles tracées seront également supprimés définitivement.
+                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>

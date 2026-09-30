@@ -84,6 +84,7 @@
     </div>
 
     <div id="plantationsError" class="alert alert-danger d-none" role="alert"></div>
+    <div id="plantationsSuccess" class="alert alert-success d-none" role="status"></div>
 
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -130,6 +131,32 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="plantationDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-trash me-2"></i>Supprimer la plantation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="plantationDeleteError" class="alert alert-danger d-none"></div>
+                    <p class="mb-2">Voulez-vous vraiment supprimer la plantation <code id="plantationDeleteCode" class="text-danger"></code> ?</p>
+                    <ul class="list-unstyled small mb-2">
+                        <li><span class="text-muted">Planteur :</span> <span id="plantationDeletePlanteur"></span></li>
+                        <li><span class="text-muted">Champ :</span> <span id="plantationDeleteDetail"></span></li>
+                    </ul>
+                    <p class="text-muted small mb-0">La culture et sa parcelle tracée seront supprimées définitivement. Le planteur et ses autres plantations sont conservés.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="plantationDeleteConfirm">
+                        <i class="bi bi-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -137,9 +164,15 @@
         document.addEventListener('DOMContentLoaded', function () {
             const apiUrl = @json(route('plantations.api'));
             const baseUrl = @json(url('/plantations'));
+            const csrfToken = @json(csrf_token());
             const limit = 15;
             let currentPage = 1;
             let regionsLoaded = false;
+            let rowsByChampId = {};
+            let plantationToDelete = null;
+            const deleteModal = new bootstrap.Modal(document.getElementById('plantationDeleteModal'));
+            const deleteErrorEl = document.getElementById('plantationDeleteError');
+            const successEl = document.getElementById('plantationsSuccess');
 
             const loaderEl = document.getElementById('loader');
             const errorEl = document.getElementById('plantationsError');
@@ -163,6 +196,10 @@
             }
 
             function render(rows) {
+                rowsByChampId = {};
+                rows.forEach(function (row) {
+                    if (row.champ_id) rowsByChampId[row.champ_id] = row;
+                });
                 if (!rows.length) {
                     tbodyEl.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Aucune plantation trouvée.</td></tr>';
                     return;
@@ -193,6 +230,7 @@
                             <td class="text-end text-nowrap">
                                 <a class="btn btn-sm btn-outline-primary" href="${champUrl}" title="Détail du champ"><i class="bi bi-eye"></i></a>
                                 <a class="btn btn-sm btn-outline-secondary ms-1" href="${planteurUrl}" title="Fiche du planteur"><i class="bi bi-person"></i></a>
+                                ${row.champ_id ? `<button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-delete-plantation" data-champ-id="${escapeHtml(row.champ_id)}" title="Supprimer la plantation"><i class="bi bi-trash"></i></button>` : ''}
                             </td>
                         </tr>
                     `;
@@ -293,6 +331,62 @@
             }
 
             refreshBtn.addEventListener('click', function () { load(lastPage, true); });
+
+            tbodyEl.addEventListener('click', function (event) {
+                const button = event.target.closest('.btn-delete-plantation');
+                if (!button) return;
+                const row = rowsByChampId[button.dataset.champId];
+                if (!row) return;
+                plantationToDelete = row;
+                deleteErrorEl.classList.add('d-none');
+                document.getElementById('plantationDeleteCode').textContent = row.numero_champ || '';
+                document.getElementById('plantationDeletePlanteur').textContent =
+                    [row.planteur_nom, row.numero_fiche].filter(Boolean).join(' · ') || '—';
+                document.getElementById('plantationDeleteDetail').textContent = [
+                    row.type_culture,
+                    row.superficie_ha > 0 ? `${fmtHa(row.superficie_ha)} ha` : null,
+                    [row.village, row.sous_prefecture].filter(Boolean).join(', ') || null,
+                ].filter(Boolean).join(' · ') || '—';
+                deleteModal.show();
+            });
+
+            document.getElementById('plantationDeleteConfirm').addEventListener('click', async function () {
+                if (!plantationToDelete) return;
+                const button = this;
+                const label = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Suppression...';
+                try {
+                    const res = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({
+                            action: 'delete_champ',
+                            champ_id: plantationToDelete.champ_id,
+                            planteur_id: plantationToDelete.planteur_id,
+                        }),
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok || !json?.success) {
+                        throw new Error(json?.error || json?.message || 'Suppression impossible.');
+                    }
+                    deleteModal.hide();
+                    successEl.textContent = `Plantation ${plantationToDelete.numero_champ} supprimée.`;
+                    successEl.classList.remove('d-none');
+                    plantationToDelete = null;
+                    await load(lastPage);
+                } catch (error) {
+                    deleteErrorEl.textContent = error.message || String(error);
+                    deleteErrorEl.classList.remove('d-none');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = label;
+                }
+            });
 
             paginationNav.addEventListener('click', function (event) {
                 event.preventDefault();

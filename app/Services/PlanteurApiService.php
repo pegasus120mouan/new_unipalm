@@ -897,6 +897,10 @@ class PlanteurApiService
             return $this->saveChamp($action === 'update_champ' ? 'update' : 'delete', $data);
         }
 
+        if ($action === 'delete_planteur') {
+            return $this->deletePlanteur($data);
+        }
+
         $url = match ($action) {
             'update_planteur' => config('planteurs.api_base').'/update_planteur.php',
             'delete_planteur' => config('planteurs.api_base').'/delete_planteur.php',
@@ -970,6 +974,67 @@ class PlanteurApiService
         return $this->requestJson('post', config('planteurs.api_base').'/champ.php', $payload, [
             'Content-Type' => 'application/json',
         ]);
+    }
+
+    /**
+     * Supprime tous les champs (cultures + parcelles) du planteur, puis sa fiche.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function deletePlanteur(array $data): array
+    {
+        $id = (int) ($data['id'] ?? $data['planteur_id'] ?? 0);
+        if ($id <= 0) {
+            throw new RuntimeException('Identifiant du planteur manquant.');
+        }
+
+        $champsSupprimes = $this->deleteAllChamps($id);
+
+        $json = $this->requestJson(
+            'post',
+            config('planteurs.api_base').'/delete_planteur.php',
+            ['action' => 'delete_planteur', 'id' => $id],
+            ['Content-Type' => 'application/json']
+        );
+
+        $json['message'] = 'Planteur supprimé avec '.$champsSupprimes.' champ(s).';
+        $json['champs_supprimes'] = $champsSupprimes;
+
+        return $json;
+    }
+
+    private function deleteAllChamps(int $planteurId): int
+    {
+        try {
+            $json = $this->requestJson('post', config('planteurs.api_base').'/champ.php', [
+                'op' => 'delete_all',
+                'planteur_id' => $planteurId,
+            ], ['Content-Type' => 'application/json']);
+
+            return (int) ($json['data']['champs_supprimes'] ?? 0);
+        } catch (RuntimeException $e) {
+            // champ.php sans "delete_all" (ancienne version) : suppression champ par champ
+            if (! str_contains($e->getMessage(), 'Opération inconnue')) {
+                throw $e;
+            }
+        }
+
+        $planteur = $this->extractPlanteur($this->getPlanteurs(['id' => $planteurId]), $planteurId);
+        if ($planteur === null) {
+            return 0;
+        }
+
+        $count = 0;
+        foreach ($this->extractChamps($planteur) as $champ) {
+            if (! ($champ['editable'] ?? false)) {
+                continue;
+            }
+            $this->saveChamp('delete', ['champ_id' => $champ['id'], 'planteur_id' => $planteurId]);
+            $count++;
+        }
+
+        return $count;
     }
 
     /**
