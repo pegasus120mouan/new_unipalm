@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Agent;
 use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -55,6 +56,37 @@ class TicketExportService
         return $this->streamQuery(
             $query,
             sprintf('tickets_%s_%s.csv', Carbon::parse($debut)->format('Ymd'), Carbon::parse($fin)->format('Ymd'))
+        );
+    }
+
+    /**
+     * @param  list<int|string>  $usineIds
+     */
+    public function streamPeriodByAgent(int $idAgent, string $dateDebut, string $dateFin, array $usineIds): StreamedResponse
+    {
+        $debut = Carbon::parse($dateDebut)->toDateString();
+        $fin = Carbon::parse($dateFin)->toDateString();
+        $usineIds = array_values(array_unique(array_map('intval', $usineIds)));
+
+        $query = $this->baseQuery()
+            ->where('id_agent', $idAgent)
+            ->whereIn('id_usine', $usineIds)
+            ->whereDate('created_at', '>=', $debut)
+            ->whereDate('created_at', '<=', $fin)
+            ->orderBy('created_at')
+            ->orderBy('id_ticket');
+
+        $agent = Agent::query()->find($idAgent);
+        $agentSlug = preg_replace('/[^A-Za-z0-9_-]+/', '_', $agent?->full_name ?: (string) $idAgent) ?: (string) $idAgent;
+
+        return $this->streamQuery(
+            $query,
+            sprintf(
+                'tickets_agent_%s_%s_%s.csv',
+                $agentSlug,
+                Carbon::parse($debut)->format('Ymd'),
+                Carbon::parse($fin)->format('Ymd')
+            )
         );
     }
 

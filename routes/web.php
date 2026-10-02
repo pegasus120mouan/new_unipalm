@@ -58,6 +58,7 @@ Route::get('/', function () {
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/export/csv', [TicketController::class, 'exportAll'])->name('tickets.export-all');
     Route::get('/tickets/export/csv/periode', [TicketController::class, 'exportPeriod'])->name('tickets.export-period');
+    Route::get('/tickets/export/csv/periode-agent', [TicketController::class, 'exportPeriodByAgent'])->name('tickets.export-period-agent');
     Route::get('/tickets/impression-usine/pdf', [TicketController::class, 'pdfByUsine'])->name('tickets.pdf-by-usine');
     Route::get('/tickets/bordereau/pdf', [TicketController::class, 'pdfBordereau'])->name('tickets.pdf-bordereau');
     Route::get('/tickets/jour', [TicketController::class, 'today'])->name('tickets.today');

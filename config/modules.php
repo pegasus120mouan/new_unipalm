@@ -126,6 +126,7 @@ return [
         'tickets.pdf-bordereau' => 'tickets.index',
         'tickets.export-all' => 'tickets.index',
         'tickets.export-period' => 'tickets.index',
+        'tickets.export-period-agent' => 'tickets.index',
         'tickets.destroy' => 'tickets.destroy',
 
         'prix-unitaires.index' => 'prix-unitaires',

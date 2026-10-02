@@ -55,6 +55,9 @@
                             <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exportPeriodModal">
                                 <i class="bi bi-calendar3"></i> Exporter période
                             </button>
+                            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportPeriodAgentModal">
+                                <i class="bi bi-person-badge"></i> Exporter période par agent
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -391,9 +394,106 @@
         </div>
     </div>
 
+    @php
+        $exportAgentSelected = old('id_agent')
+            ? $agents->firstWhere('id_agent', (int) old('id_agent'))
+            : null;
+        $exportAgentUsineIds = array_map('intval', (array) old('id_usine', []));
+    @endphp
+
+    <div class="modal fade" id="exportPeriodAgentModal" tabindex="-1" aria-labelledby="exportPeriodAgentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="GET" action="{{ route('tickets.export-period-agent') }}" id="exportPeriodAgentForm">
+                    <input type="hidden" name="export_scope" value="agent">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="exportPeriodAgentModalLabel">
+                            <i class="bi bi-person-badge me-2"></i>Exporter une période par agent
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Export CSV des tickets de l’agent selon la <strong>date de création</strong>,
+                            pour une ou plusieurs usines.
+                        </p>
+                        <div class="mb-3 position-relative">
+                            <label for="export_agent_search" class="form-label">Agent</label>
+                            <input type="text" id="export_agent_search" class="form-control"
+                                placeholder="Rechercher un agent..." autocomplete="off"
+                                value="{{ $exportAgentSelected?->full_name }}">
+                            <input type="hidden" name="id_agent" id="export_agent_id_agent"
+                                value="{{ $exportAgentSelected?->id_agent }}" required>
+                            <div id="export_agent_suggestions" class="list-group position-absolute w-100 shadow-sm"
+                                style="z-index: 1060; display: none; max-height: 200px; overflow-y: auto;"></div>
+                            <div id="export_agent_found" class="form-text mt-1" style="display: none;">
+                                Agent trouvé :
+                                <button type="button" id="export_agent_found_select"
+                                    class="btn btn-link btn-sm p-0 align-baseline text-success fw-bold text-decoration-none">
+                                    <span id="export_agent_found_name"></span>
+                                </button>
+                                <span class="text-muted">— cliquer pour sélectionner</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="export_agent_date_debut" class="form-label">Date de début</label>
+                            <input type="date" name="date_debut" id="export_agent_date_debut" class="form-control"
+                                value="{{ old('date_debut', now()->startOfMonth()->format('Y-m-d')) }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="export_agent_date_fin" class="form-label">Date fin</label>
+                            <input type="date" name="date_fin" id="export_agent_date_fin" class="form-control"
+                                value="{{ old('date_fin', now()->format('Y-m-d')) }}" required>
+                        </div>
+                        <div class="mb-0">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                <label class="form-label mb-0">Usine(s)</label>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary" id="exportAgentUsineSelectAll">Tout</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="exportAgentUsineSelectNone">Aucun</button>
+                                </div>
+                            </div>
+                            <input type="text" id="export_agent_usine_filter" class="form-control form-control-sm mb-2"
+                                placeholder="Filtrer les usines..." autocomplete="off">
+                            <div class="border rounded px-2 py-1" id="exportAgentUsineList"
+                                style="max-height: 180px; overflow-y: auto;">
+                                @forelse ($usines as $usine)
+                                    <div class="form-check" data-usine-label="{{ mb_strtolower($usine->nom_usine) }}">
+                                        <input class="form-check-input export-agent-usine" type="checkbox"
+                                            name="id_usine[]" value="{{ $usine->id_usine }}"
+                                            id="export_agent_usine_{{ $usine->id_usine }}"
+                                            @checked(in_array((int) $usine->id_usine, $exportAgentUsineIds, true))>
+                                        <label class="form-check-label" for="export_agent_usine_{{ $usine->id_usine }}">
+                                            {{ $usine->nom_usine }}
+                                        </label>
+                                    </div>
+                                @empty
+                                    <div class="text-muted small py-2">Aucune usine disponible.</div>
+                                @endforelse
+                            </div>
+                            <div class="form-text" id="exportAgentUsineCount">0 usine(s) sélectionnée(s)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-download"></i> Exporter CSV
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     @include('tickets.partials.search-modals', ['searchAction' => route('tickets.index')])
 
-    @if ($errors->any())
+    @if ($errors->any() && old('export_scope') === 'agent')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                new bootstrap.Modal(document.getElementById('exportPeriodAgentModal')).show();
+            });
+        </script>
+    @elseif ($errors->any())
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('addTicketModal')).show();
@@ -469,6 +569,12 @@
                 const foundName = document.getElementById(config.foundNameId);
                 const foundSelect = document.getElementById(config.foundSelectId);
                 let pendingItem = null;
+
+                if (!searchInput || !hiddenInput || !suggestions || !foundBox || !foundName || !foundSelect) {
+                    return;
+                }
+
+                const parentModal = searchInput.closest('.modal');
 
                 function clearSelection() {
                     hiddenInput.value = '';
@@ -570,11 +676,13 @@
                     }
                 });
 
-                modal.addEventListener('hidden.bs.modal', () => {
-                    searchInput.value = '';
-                    clearSelection();
-                    suggestions.style.display = 'none';
-                });
+                if (parentModal) {
+                    parentModal.addEventListener('hidden.bs.modal', () => {
+                        searchInput.value = '';
+                        clearSelection();
+                        suggestions.style.display = 'none';
+                    });
+                }
 
                 return { clearSelection, selectItem };
             }
@@ -726,6 +834,26 @@
                     : `<strong>${item.name}</strong>`,
             });
 
+            setupAutocomplete({
+                items: @json($agentsForAutocomplete),
+                searchId: 'export_agent_search',
+                hiddenId: 'export_agent_id_agent',
+                suggestionsId: 'export_agent_suggestions',
+                foundId: 'export_agent_found',
+                foundNameId: 'export_agent_found_name',
+                foundSelectId: 'export_agent_found_select',
+                labelKey: 'name',
+                emptyText: 'Aucun agent trouvé',
+                getLabel: (item) => item.numero ? `${item.numero} — ${item.name}` : item.name,
+                filter: (item, term) => item.numero.toLowerCase().includes(term)
+                    || item.name.toLowerCase().includes(term),
+                isExact: (item, term) => item.numero.toLowerCase() === term
+                    || item.name.toLowerCase() === term,
+                renderItem: (item) => item.numero
+                    ? `<span class="text-muted">${item.numero}</span> — <strong>${item.name}</strong>`
+                    : `<strong>${item.name}</strong>`,
+            });
+
             const printUsineForm = document.getElementById('printUsineForm');
             const printUsineModal = document.getElementById('printUsineModal');
             const printBordereauForm = document.getElementById('printBordereauForm');
@@ -845,6 +973,11 @@
                         return;
                     }
 
+                    if (typeof config.extraValidate === 'function' && !config.extraValidate()) {
+                        event.preventDefault();
+                        return;
+                    }
+
                     document.getElementById(config.dateDebutHiddenId).value = dateDebutIso;
                     document.getElementById(config.dateFinHiddenId).value = dateFinIso;
                 });
@@ -867,6 +1000,164 @@
                 dateDebutHiddenId: 'bordereau_date_debut_value',
                 dateFinHiddenId: 'bordereau_date_fin_value',
             });
+
+            const exportPeriodAgentForm = document.getElementById('exportPeriodAgentForm');
+            const exportPeriodAgentModal = document.getElementById('exportPeriodAgentModal');
+            const exportAgentUsineList = document.getElementById('exportAgentUsineList');
+            const exportAgentUsineFilter = document.getElementById('export_agent_usine_filter');
+            const exportAgentUsineCount = document.getElementById('exportAgentUsineCount');
+            const exportAgentUsineSelectAll = document.getElementById('exportAgentUsineSelectAll');
+            const exportAgentUsineSelectNone = document.getElementById('exportAgentUsineSelectNone');
+
+            function exportAgentUsineCheckboxes() {
+                return Array.from(document.querySelectorAll('.export-agent-usine'));
+            }
+
+            function updateExportAgentUsineCount() {
+                if (!exportAgentUsineCount) {
+                    return;
+                }
+                const selected = exportAgentUsineCheckboxes().filter(function (input) { return input.checked; }).length;
+                exportAgentUsineCount.textContent = selected + ' usine(s) sélectionnée(s)';
+            }
+
+            function setVisibleUsinesChecked(checked) {
+                exportAgentUsineCheckboxes().forEach(function (input) {
+                    const row = input.closest('[data-usine-label]');
+                    if (row && row.style.display !== 'none') {
+                        input.checked = checked;
+                    }
+                });
+                updateExportAgentUsineCount();
+            }
+
+            if (exportAgentUsineFilter) {
+                exportAgentUsineFilter.addEventListener('input', function () {
+                    const term = exportAgentUsineFilter.value.trim().toLowerCase();
+                    document.querySelectorAll('#exportAgentUsineList [data-usine-label]').forEach(function (row) {
+                        const label = row.getAttribute('data-usine-label') || '';
+                        row.style.display = !term || label.includes(term) ? '' : 'none';
+                    });
+                });
+            }
+
+            if (exportAgentUsineList) {
+                exportAgentUsineList.addEventListener('change', updateExportAgentUsineCount);
+            }
+
+            if (exportAgentUsineSelectAll) {
+                exportAgentUsineSelectAll.addEventListener('click', function () {
+                    setVisibleUsinesChecked(true);
+                });
+            }
+
+            if (exportAgentUsineSelectNone) {
+                exportAgentUsineSelectNone.addEventListener('click', function () {
+                    setVisibleUsinesChecked(false);
+                });
+            }
+
+            updateExportAgentUsineCount();
+
+            if (exportPeriodAgentForm) {
+                const exportAgentDateDebut = document.getElementById('export_agent_date_debut');
+                const exportAgentDateFin = document.getElementById('export_agent_date_fin');
+
+                function syncExportAgentDateBounds() {
+                    if (!exportAgentDateDebut || !exportAgentDateFin) {
+                        return;
+                    }
+                    exportAgentDateFin.min = exportAgentDateDebut.value || '';
+                    exportAgentDateDebut.max = exportAgentDateFin.value || '';
+                }
+
+                if (exportAgentDateDebut) {
+                    exportAgentDateDebut.addEventListener('change', syncExportAgentDateBounds);
+                    exportAgentDateDebut.addEventListener('click', function () {
+                        try {
+                            if (typeof exportAgentDateDebut.showPicker === 'function') {
+                                exportAgentDateDebut.showPicker();
+                            }
+                        } catch (error) {
+                            // Native picker already opening from the click.
+                        }
+                    });
+                }
+
+                if (exportAgentDateFin) {
+                    exportAgentDateFin.addEventListener('change', syncExportAgentDateBounds);
+                    exportAgentDateFin.addEventListener('click', function () {
+                        try {
+                            if (typeof exportAgentDateFin.showPicker === 'function') {
+                                exportAgentDateFin.showPicker();
+                            }
+                        } catch (error) {
+                            // Native picker already opening from the click.
+                        }
+                    });
+                }
+
+                syncExportAgentDateBounds();
+
+                exportPeriodAgentForm.addEventListener('submit', function (event) {
+                    const entityId = document.getElementById('export_agent_id_agent')?.value;
+                    const dateDebut = exportAgentDateDebut?.value || '';
+                    const dateFin = exportAgentDateFin?.value || '';
+
+                    if (!entityId) {
+                        event.preventDefault();
+                        alert('Veuillez sélectionner un agent dans la liste de suggestions.');
+                        return;
+                    }
+
+                    if (!dateDebut) {
+                        event.preventDefault();
+                        alert('Veuillez choisir la date de début.');
+                        return;
+                    }
+
+                    if (!dateFin) {
+                        event.preventDefault();
+                        alert('Veuillez choisir la date de fin.');
+                        return;
+                    }
+
+                    if (dateFin < dateDebut) {
+                        event.preventDefault();
+                        alert('La date de fin doit être postérieure ou égale à la date de début.');
+                        return;
+                    }
+
+                    const selected = exportAgentUsineCheckboxes().filter(function (input) { return input.checked; }).length;
+                    if (selected === 0) {
+                        event.preventDefault();
+                        alert('Veuillez sélectionner au moins une usine.');
+                    }
+                });
+            }
+
+            if (exportPeriodAgentModal) {
+                exportPeriodAgentModal.addEventListener('hidden.bs.modal', function () {
+                    const dateDebutInput = document.getElementById('export_agent_date_debut');
+                    const dateFinInput = document.getElementById('export_agent_date_fin');
+
+                    if (dateDebutInput) dateDebutInput.value = @json(now()->startOfMonth()->format('Y-m-d'));
+                    if (dateFinInput) dateFinInput.value = @json(now()->format('Y-m-d'));
+                    if (dateDebutInput) dateDebutInput.max = dateFinInput?.value || '';
+                    if (dateFinInput) dateFinInput.min = dateDebutInput?.value || '';
+
+                    if (exportAgentUsineFilter) {
+                        exportAgentUsineFilter.value = '';
+                    }
+                    document.querySelectorAll('#exportAgentUsineList [data-usine-label]').forEach(function (row) {
+                        row.style.display = '';
+                    });
+                    exportAgentUsineCheckboxes().forEach(function (input) {
+                        input.checked = false;
+                    });
+                    updateExportAgentUsineCount();
+                });
+            }
 
             const exportPeriodForm = document.getElementById('exportPeriodForm');
             const exportPeriodModal = document.getElementById('exportPeriodModal');

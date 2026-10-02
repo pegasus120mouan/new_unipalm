@@ -98,6 +98,24 @@ class TicketController extends Controller
         );
     }
 
+    public function exportPeriodByAgent(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'id_agent' => ['required', 'integer', Rule::exists('agents', 'id_agent')->whereNull('date_suppression')],
+            'date_debut' => ['required', 'date'],
+            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+            'id_usine' => ['required', 'array', 'min:1'],
+            'id_usine.*' => ['required', 'integer', 'distinct', 'exists:usines,id_usine'],
+        ]);
+
+        return $this->ticketExportService->streamPeriodByAgent(
+            (int) $validated['id_agent'],
+            $validated['date_debut'],
+            $validated['date_fin'],
+            $validated['id_usine'],
+        );
+    }
+
     public function today(): View
     {
         $tickets = $this->ticketQuery()
