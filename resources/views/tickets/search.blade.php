@@ -33,7 +33,7 @@
                         </span>
                         <div class="d-flex align-items-center gap-2">
                             <span class="text-muted">{{ $tickets->total() }} ticket(s)</span>
-                            <a href="{{ route('tickets.search-pdf', request()->query()) }}"
+                            <a href="{{ route('tickets.search-pdf', array_filter(request()->query(), fn ($value) => $value !== null && $value !== ''), false) }}"
                                 target="_blank" rel="noopener noreferrer"
                                 class="btn btn-sm btn-primary">
                                 <i class="bi bi-printer"></i> Imprimer

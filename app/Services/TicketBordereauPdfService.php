@@ -24,7 +24,7 @@ class TicketBordereauPdfService
 
         return Pdf::loadView('tickets.bordereau-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->stream($filename, ['Attachment' => false]);
+            ->stream($filename);
     }
 
     /**

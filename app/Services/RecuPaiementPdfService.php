@@ -15,7 +15,7 @@ class RecuPaiementPdfService
 
         return Pdf::loadView('recus.payment-receipt-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->stream('Recu_'.$recu->numero_recu.'.pdf', ['Attachment' => false]);
+            ->stream('Recu_'.$recu->numero_recu.'.pdf');
     }
 
     /**

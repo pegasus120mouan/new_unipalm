@@ -16,7 +16,7 @@ class BordereauPdfService
 
         return Pdf::loadView('bordereaux.pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->stream('Bordereau_'.$numeroBordereau.'.pdf', ['Attachment' => false]);
+            ->stream('Bordereau_'.$numeroBordereau.'.pdf');
     }
 
     /**

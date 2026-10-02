@@ -24,7 +24,7 @@ class TicketUsinePdfService
 
         return Pdf::loadView('tickets.usine-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->stream($filename, ['Attachment' => false]);
+            ->stream($filename);
     }
 
     public function streamByTicketDate(int $idUsine, string $date): Response
@@ -39,7 +39,7 @@ class TicketUsinePdfService
 
         return Pdf::loadView('tickets.usine-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->stream($filename, ['Attachment' => false]);
+            ->stream($filename);
     }
 
     /**

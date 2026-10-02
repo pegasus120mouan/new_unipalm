@@ -23,9 +23,7 @@ class TicketSearchPdfService
 
         return Pdf::loadView('tickets.search-pdf', $data)
             ->setPaper('a4', 'landscape')
-            ->stream('recherche_tickets_'.now()->format('Y-m-d_His').'.pdf', [
-                'Attachment' => false,
-            ]);
+            ->stream('recherche_tickets_'.now()->format('Y-m-d_His').'.pdf');
     }
 
     /**
