@@ -43,7 +43,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span>Historique des approvisionnements</span>
+                    <span>Historique des approvisionnements et remboursements CCA</span>
                     <span class="text-muted">{{ $approvisionnements->total() }} opération(s)</span>
                 </div>
                 <div class="card-body">
@@ -53,6 +53,8 @@
                                 <option value="all" @selected($filters['origine'] === 'all')>Toutes les origines</option>
                                 <option value="manuel" @selected($filters['origine'] === 'manuel')>Manuels</option>
                                 <option value="banque" @selected($filters['origine'] === 'banque')>Depuis banques</option>
+                                <option value="cca" @selected($filters['origine'] === 'cca')>Prêts CCA</option>
+                                <option value="cca_remboursement" @selected($filters['origine'] === 'cca_remboursement')>Remboursements CCA</option>
                                 <option value="usine" @selected($filters['origine'] === 'usine')>Paiements usines</option>
                             </select>
                         </div>
@@ -91,10 +93,11 @@
                             <tbody>
                                 @php($approService = app(\App\Services\ApprovisionnementService::class))
                                 @forelse ($approvisionnements as $appro)
+                                    @php($estSortie = $appro->type_transaction === 'paiement')
                                     <tr>
                                         <td>{{ \Carbon\Carbon::parse($appro->date_transaction)->format('d/m/Y H:i') }}</td>
-                                        <td class="text-end fw-semibold text-success">
-                                            {{ number_format((float) $appro->montant, 0, ',', ' ') }} FCFA
+                                        <td class="text-end fw-semibold {{ $estSortie ? 'text-danger' : 'text-success' }}">
+                                            {{ $estSortie ? '−' : '' }}{{ number_format((float) $appro->montant, 0, ',', ' ') }} FCFA
                                         </td>
                                         <td>
                                             @if ($approService->isUsineSource($appro->source))
@@ -103,6 +106,9 @@
                                             @elseif ($approService->isBanqueSource($appro->source))
                                                 <span class="badge bg-warning text-dark">Banque</span>
                                                 {{ $approService->banqueNameFromSource($appro->source) }}
+                                            @elseif ($approService->isCcaSource($appro->source))
+                                                <span class="badge {{ $estSortie ? 'bg-danger' : 'bg-primary' }}">{{ $estSortie ? 'Remb. CCA' : 'CCA' }}</span>
+                                                {{ $approService->ccaNameFromSource($appro->source) }}
                                             @else
                                                 <span class="badge bg-secondary">Manuel</span>
                                                 {{ $appro->source ?: '—' }}

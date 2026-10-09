@@ -42,6 +42,7 @@ class BanqueService
             'total_initial' => (float) ($rows->total_initial ?? 0),
             'total_entrees' => (float) BanqueMouvement::query()
                 ->where('id_banque', $banque->id_banque)
+                ->whereNotIn('type_mouvement', BanqueMouvement::TYPES_DEBIT)
                 ->sum('montant'),
         ];
     }
@@ -320,6 +321,36 @@ class BanqueService
         ]);
     }
 
+    /**
+     * @throws \InvalidArgumentException
+     */
+    public function remboursementCca(
+        Banque $banque,
+        float $montant,
+        string $libelle,
+        ?string $reference,
+        Utilisateur $utilisateur,
+    ): void {
+        $banque = Banque::query()->lockForUpdate()->findOrFail($banque->id_banque);
+
+        if ((float) $banque->solde < $montant) {
+            throw new \InvalidArgumentException(
+                'Solde insuffisant sur '.$banque->nom_banque.' (disponible : '
+                .number_format((float) $banque->solde, 0, ',', ' ')
+                .' FCFA).',
+            );
+        }
+
+        $this->debiter(
+            $banque,
+            $montant,
+            BanqueMouvement::TYPE_REMBOURSEMENT_CCA,
+            $libelle,
+            $utilisateur,
+            reference: $reference,
+        );
+    }
+
     private function debiter(
         Banque $banque,
         float $montant,
@@ -327,6 +358,7 @@ class BanqueService
         string $libelle,
         Utilisateur $utilisateur,
         ?Carbon $dateMouvement = null,
+        ?string $reference = null,
     ): void {
         $banque->refresh();
         $nouveauSolde = (float) $banque->solde - $montant;
@@ -338,7 +370,7 @@ class BanqueService
             'type_mouvement' => $type,
             'montant' => $montant,
             'libelle' => $libelle,
-            'reference' => null,
+            'reference' => $reference,
             'id_utilisateur' => $utilisateur->id,
             'id_usine' => null,
             'solde_apres' => $nouveauSolde,

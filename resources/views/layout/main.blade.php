@@ -439,7 +439,7 @@
 
                                     <a href="{{ route('prets.index') }}">
                                         <i class="bi bi-wallet2 submenu-icon--pret"></i>
-                                        <span>Prêts</span>
+                                        <span>Prêts agents</span>
                                     </a>
 
                                 </li>
@@ -879,7 +879,7 @@
                         </li>
                         @endif
 
-                        @if ($canModule('caisse.banques'))
+                        @if ($canModuleAny(['caisse.banques', 'caisse.cca']))
                         <li class="sidebar-item has-sub">
 
                             <a href="#" class='sidebar-link'>
@@ -898,6 +898,16 @@
                                     <a href="{{ route('caisse.banques.index') }}">
                                         <i class="bi bi-building submenu-icon--caisse-banques"></i>
                                         <span>Liste des banques</span>
+                                    </a>
+
+                                </li>
+                                @endif
+                                @if ($canModule('caisse.cca'))
+                                <li class="submenu-item {{ request()->routeIs('caisse.cca.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('caisse.cca.index') }}">
+                                        <i class="bi bi-person-badge submenu-icon--cca"></i>
+                                        <span>CCA</span>
                                     </a>
 
                                 </li>

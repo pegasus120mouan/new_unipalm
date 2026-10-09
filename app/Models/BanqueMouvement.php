@@ -29,6 +29,10 @@ class BanqueMouvement extends Model
 
     public const TYPE_FINANCEMENT_USINE = 'financement_usine';
 
+    public const TYPE_REMBOURSEMENT_CCA = 'remboursement_cca';
+
+    public const TYPES_DEBIT = [self::TYPE_CAISSE, self::TYPE_REMBOURSEMENT_CCA];
+
     protected $table = 'banque_mouvements';
 
     protected $primaryKey = 'id_mouvement';
@@ -67,8 +71,14 @@ class BanqueMouvement extends Model
             self::TYPE_CAISSE => 'Vers caisse',
             self::TYPE_USINE => 'Paiement usine',
             self::TYPE_FINANCEMENT_USINE => 'Financement usine',
+            self::TYPE_REMBOURSEMENT_CCA => 'Remboursement CCA',
             default => $this->type_mouvement,
         };
+    }
+
+    public function isDebit(): bool
+    {
+        return in_array($this->type_mouvement, self::TYPES_DEBIT, true);
     }
 
     public function getTypeBadgeClassAttribute(): string
@@ -79,6 +89,7 @@ class BanqueMouvement extends Model
             self::TYPE_CAISSE => 'warning',
             self::TYPE_USINE => 'info',
             self::TYPE_FINANCEMENT_USINE => 'primary',
+            self::TYPE_REMBOURSEMENT_CCA => 'danger',
             default => 'light text-dark',
         };
     }

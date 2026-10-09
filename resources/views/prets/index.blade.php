@@ -1,14 +1,14 @@
 @extends('layout.main')
 
-@section('title', 'Prêts')
+@section('title', 'Prêts agents')
 
 @section('page-heading')
     <div class="page-heading d-flex justify-content-between align-items-center">
-        <h3>Gestion des prêts</h3>
+        <h3>Prêts agents</h3>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ route('tickets.index') }}">Accueil</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Prêts</li>
+                <li class="breadcrumb-item active" aria-current="page">Prêts agents</li>
             </ol>
         </nav>
     </div>

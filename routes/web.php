@@ -36,6 +36,7 @@ use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\UtilisateurPhotoController;
 use App\Models\Utilisateur;
 use App\Http\Controllers\CaisseBanqueController;
+use App\Http\Controllers\CcaController;
 use App\Http\Controllers\CaisseSoldeController;
 use App\Http\Controllers\CaissePaiementController;
 use App\Http\Controllers\RecuPaiementController;
@@ -175,6 +176,11 @@ Route::get('/', function () {
     Route::post('/caisse/banques/{banque:id_banque}/paiement-usine', [CaisseBanqueController::class, 'storePaiementUsine'])->name('caisse.banques.paiement-usine');
     Route::put('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'update'])->name('caisse.banques.update');
     Route::delete('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'destroy'])->name('caisse.banques.destroy');
+    Route::get('/caisse/cca', [CcaController::class, 'index'])->name('caisse.cca.index');
+    Route::post('/caisse/cca', [CcaController::class, 'store'])->name('caisse.cca.store');
+    Route::post('/caisse/cca/rembourser', [CcaController::class, 'rembourser'])->name('caisse.cca.rembourser');
+    Route::put('/caisse/cca/{cca:id_cca}', [CcaController::class, 'update'])->name('caisse.cca.update');
+    Route::delete('/caisse/cca/{cca:id_cca}', [CcaController::class, 'destroy'])->name('caisse.cca.destroy');
 
     Route::get('/caisse/solde', [CaisseSoldeController::class, 'index'])->name('caisse.solde.index');
     Route::post('/caisse/utilisable', [CaisseSoldeController::class, 'updateMontantUtilisable'])->name('caisse.utilisable.update');

@@ -13,6 +13,8 @@ class ApprovisionnementService
 
     public const SOURCE_BANQUE_PREFIX = 'Banque: ';
 
+    public const SOURCE_CCA_PREFIX = 'CCA: ';
+
     public function __construct(
         private readonly CaisseService $caisseService,
     ) {}
@@ -66,9 +68,18 @@ class ApprovisionnementService
     {
         $query = DB::table('transactions as t')
             ->leftJoin('utilisateurs as u', 't.id_utilisateur', '=', 'u.id')
-            ->where('t.type_transaction', 'approvisionnement')
+            ->where(function ($builder): void {
+                $builder
+                    ->where('t.type_transaction', 'approvisionnement')
+                    ->orWhere(function ($inner): void {
+                        $inner
+                            ->where('t.type_transaction', 'paiement')
+                            ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%');
+                    });
+            })
             ->select([
                 't.id_transaction',
+                't.type_transaction',
                 't.montant',
                 't.date_transaction',
                 't.motifs',
@@ -84,14 +95,21 @@ class ApprovisionnementService
             $query->where('t.source', 'like', self::SOURCE_USINE_PREFIX.'%');
         } elseif ($origine === 'banque') {
             $query->where('t.source', 'like', self::SOURCE_BANQUE_PREFIX.'%');
+        } elseif ($origine === 'cca') {
+            $query->where('t.type_transaction', 'approvisionnement')
+                ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%');
+        } elseif ($origine === 'cca_remboursement') {
+            $query->where('t.type_transaction', 'paiement');
         } elseif ($origine === 'manuel') {
+            $query->where('t.type_transaction', 'approvisionnement');
             $query->where(function ($builder): void {
                 $builder
                     ->whereNull('t.source')
                     ->orWhere(function ($inner): void {
                         $inner
                             ->where('t.source', 'not like', self::SOURCE_USINE_PREFIX.'%')
-                            ->where('t.source', 'not like', self::SOURCE_BANQUE_PREFIX.'%');
+                            ->where('t.source', 'not like', self::SOURCE_BANQUE_PREFIX.'%')
+                            ->where('t.source', 'not like', self::SOURCE_CCA_PREFIX.'%');
                     });
             });
         }
@@ -137,12 +155,15 @@ class ApprovisionnementService
                 COALESCE(SUM(montant), 0) as total_montant,
                 COALESCE(SUM(CASE WHEN source LIKE ? THEN montant ELSE 0 END), 0) as montant_usines,
                 COALESCE(SUM(CASE WHEN source LIKE ? THEN montant ELSE 0 END), 0) as montant_banques,
-                COALESCE(SUM(CASE WHEN source IS NULL OR (source NOT LIKE ? AND source NOT LIKE ?) THEN montant ELSE 0 END), 0) as montant_manuel
+                COALESCE(SUM(CASE WHEN source LIKE ? THEN montant ELSE 0 END), 0) as montant_cca,
+                COALESCE(SUM(CASE WHEN source IS NULL OR (source NOT LIKE ? AND source NOT LIKE ? AND source NOT LIKE ?) THEN montant ELSE 0 END), 0) as montant_manuel
             ', [
                 self::SOURCE_USINE_PREFIX.'%',
                 self::SOURCE_BANQUE_PREFIX.'%',
+                self::SOURCE_CCA_PREFIX.'%',
                 self::SOURCE_USINE_PREFIX.'%',
                 self::SOURCE_BANQUE_PREFIX.'%',
+                self::SOURCE_CCA_PREFIX.'%',
             ])
             ->first();
 
@@ -154,6 +175,7 @@ class ApprovisionnementService
             'total_montant' => (float) ($rows->total_montant ?? 0),
             'montant_usines' => (float) ($rows->montant_usines ?? 0),
             'montant_banques' => (float) ($rows->montant_banques ?? 0),
+            'montant_cca' => (float) ($rows->montant_cca ?? 0),
             'montant_manuel' => (float) ($rows->montant_manuel ?? 0),
         ];
     }
@@ -184,5 +206,19 @@ class ApprovisionnementService
         }
 
         return trim(substr($source, strlen(self::SOURCE_BANQUE_PREFIX)));
+    }
+
+    public function isCcaSource(?string $source): bool
+    {
+        return $source !== null && str_starts_with($source, self::SOURCE_CCA_PREFIX);
+    }
+
+    public function ccaNameFromSource(?string $source): ?string
+    {
+        if (! $this->isCcaSource($source)) {
+            return null;
+        }
+
+        return trim(substr($source, strlen(self::SOURCE_CCA_PREFIX)));
     }
 }

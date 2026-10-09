@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Banque;
+use App\Models\Cca;
 use App\Models\Ticket;
 use App\Models\Usine;
 use App\Services\BanqueService;
+use App\Services\CcaService;
 use App\Services\UsinePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,7 @@ class CaisseBanqueController extends Controller
     public function __construct(
         private readonly BanqueService $banqueService,
         private readonly UsinePaymentService $usinePaymentService,
+        private readonly CcaService $ccaService,
     ) {}
 
     public function index(Request $request): View
@@ -99,7 +102,9 @@ class CaisseBanqueController extends Controller
             ->get()
             ->each(fn (Usine $usine) => $usine->reste_a_payer = (float) ($restesUsines[$usine->id_usine] ?? 0));
 
-        return view('caisse.banques.approvisionnement-caisse', compact('stats', 'banques', 'usines', 'historique', 'filters'));
+        $ccas = Cca::query()->orderBy('nom')->get();
+
+        return view('caisse.banques.approvisionnement-caisse', compact('stats', 'banques', 'usines', 'ccas', 'historique', 'filters'));
     }
 
     public function storeApprovisionnementCaisse(Request $request): RedirectResponse
@@ -109,7 +114,7 @@ class CaisseBanqueController extends Controller
         ]);
 
         $validated = $request->validate([
-            'source_type' => ['required', 'in:banque,usine'],
+            'source_type' => ['required', 'in:banque,usine,cca'],
             'id_banque' => [
                 'required_if:source_type,banque',
                 'nullable',
@@ -122,10 +127,17 @@ class CaisseBanqueController extends Controller
                 'integer',
                 Rule::exists('usines', 'id_usine'),
             ],
+            'id_cca' => [
+                'required_if:source_type,cca',
+                'nullable',
+                'integer',
+                Rule::exists('ccas', 'id_cca'),
+            ],
             'montant' => ['required', 'numeric', 'min:1'],
         ], [
             'id_banque.required_if' => 'Sélectionnez une banque.',
             'id_usine.required_if' => 'Sélectionnez une usine.',
+            'id_cca.required_if' => 'Sélectionnez un CCA.',
         ]);
 
         $montant = (float) $validated['montant'];
@@ -143,6 +155,10 @@ class CaisseBanqueController extends Controller
                     restePlafond: $this->usinePaymentService->resteAPayer((int) $usine->id_usine),
                 );
                 $origine = $usine->nom_usine;
+            } elseif ($validated['source_type'] === 'cca') {
+                $cca = Cca::query()->findOrFail($validated['id_cca']);
+                $this->ccaService->pretCaisse($cca, $montant, $request->user());
+                $origine = 'le CCA '.$cca->nom;
             } else {
                 $banque = Banque::query()->findOrFail($validated['id_banque']);
                 $this->banqueService->approvisionnementCaisse($banque, $montant, $request->user());

@@ -150,6 +150,8 @@
                                 <option value="approvisionnement_manuel" @selected($filters['type'] === 'approvisionnement_manuel')>Manuel</option>
                                 <option value="paiement_usine" @selected($filters['type'] === 'paiement_usine')>Paiement usine</option>
                                 <option value="financement_usine" @selected($filters['type'] === 'financement_usine')>Financement usine</option>
+                                <option value="approvisionnement_caisse" @selected($filters['type'] === 'approvisionnement_caisse')>Vers caisse</option>
+                                <option value="remboursement_cca" @selected($filters['type'] === 'remboursement_cca')>Remboursement CCA</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -194,8 +196,8 @@
                                             </span>
                                         </td>
                                         <td>{{ $mouvement->reference ?: '—' }}</td>
-                                        <td class="text-end text-success fw-semibold">
-                                            +{{ number_format((float) $mouvement->montant, 0, ',', ' ') }} FCFA
+                                        <td class="text-end fw-semibold {{ $mouvement->isDebit() ? 'text-danger' : 'text-success' }}">
+                                            {{ $mouvement->isDebit() ? '−' : '+' }}{{ number_format((float) $mouvement->montant, 0, ',', ' ') }} FCFA
                                         </td>
                                         <td class="text-end">{{ number_format((float) $mouvement->solde_apres, 0, ',', ' ') }} FCFA</td>
                                         <td>{{ $mouvement->utilisateur?->full_name ?? '—' }}</td>

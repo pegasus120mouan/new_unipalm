@@ -62,7 +62,7 @@
             <div class="card">
                 <div class="card-body py-3 d-flex flex-wrap gap-3 align-items-stretch">
                     <button type="button" class="btn btn-success align-self-center" data-bs-toggle="modal" data-bs-target="#approCaisseModal"
-                        @disabled($banques->isEmpty() && $usines->isEmpty())>
+                        @disabled($banques->isEmpty() && $usines->isEmpty() && $ccas->isEmpty())>
                         <i class="bi bi-cash-coin"></i> Approvisionnement caisse
                     </button>
                     <div class="flex-grow-1" style="min-width: 280px;">
@@ -217,6 +217,7 @@
                             <select name="source_type" id="source_type" class="form-select @error('source_type') is-invalid @enderror" required>
                                 <option value="banque" @selected($sourceType === 'banque')>Banque</option>
                                 <option value="usine" @selected($sourceType === 'usine')>Usine</option>
+                                <option value="cca" @selected($sourceType === 'cca')>CCA (Compte courant associé)</option>
                             </select>
                             @error('source_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -235,7 +236,21 @@
                             @error('id_usine')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <div class="form-text">Enregistré comme paiement des livraisons de l'usine (espèces).</div>
                         </div>
-                        <div class="mb-3 @if ($sourceType === 'usine') d-none @endif" data-source-block="banque">
+                        <div class="mb-3 @if ($sourceType !== 'cca') d-none @endif" data-source-block="cca">
+                            <label for="id_cca" class="form-label">CCA <span class="text-danger">*</span></label>
+                            <select name="id_cca" id="id_cca" class="form-select @error('id_cca') is-invalid @enderror">
+                                <option value="">Sélectionner un CCA</option>
+                                @foreach ($ccas as $cca)
+                                    <option value="{{ $cca->id_cca }}"
+                                        @selected((int) old('id_cca') === (int) $cca->id_cca)>
+                                        {{ $cca->nom }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('id_cca')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text">Enregistré comme prêt de l'associé à la caisse.</div>
+                        </div>
+                        <div class="mb-3 @if ($sourceType !== 'banque') d-none @endif" data-source-block="banque">
                             <label for="id_banque" class="form-label">Banque <span class="text-danger">*</span></label>
                             <select name="id_banque" id="id_banque" class="form-select @error('id_banque') is-invalid @enderror">
                                 <option value="">Sélectionner une banque</option>
@@ -286,7 +301,7 @@
 
         function updateBanqueSolde() {
             const sourceType = document.getElementById('source_type')?.value || 'banque';
-            const select = document.getElementById(sourceType === 'usine' ? 'id_usine' : 'id_banque');
+            const select = document.getElementById('id_' + sourceType);
             const alertBox = document.getElementById('banqueSoldeAlert');
             const labelEl = document.getElementById('banqueSoldeLabel');
             const montantEl = document.getElementById('banqueSoldeMontant');
@@ -328,10 +343,11 @@
         document.getElementById('source_type')?.addEventListener('change', updateSourceType);
         document.getElementById('id_banque')?.addEventListener('change', updateBanqueSolde);
         document.getElementById('id_usine')?.addEventListener('change', updateBanqueSolde);
+        document.getElementById('id_cca')?.addEventListener('change', updateBanqueSolde);
         document.getElementById('approCaisseModal')?.addEventListener('shown.bs.modal', updateSourceType);
         updateSourceType();
 
-        @if (session('open_appro_caisse_modal') || $errors->has('montant') || $errors->has('id_banque') || $errors->has('id_usine') || request()->query('open_appro'))
+        @if (session('open_appro_caisse_modal') || $errors->has('montant') || $errors->has('id_banque') || $errors->has('id_usine') || $errors->has('id_cca') || request()->query('open_appro'))
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('approCaisseModal')).show();
             });
