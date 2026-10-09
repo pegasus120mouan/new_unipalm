@@ -62,7 +62,7 @@
             <div class="card">
                 <div class="card-body py-3 d-flex flex-wrap gap-3 align-items-stretch">
                     <button type="button" class="btn btn-success align-self-center" data-bs-toggle="modal" data-bs-target="#approCaisseModal"
-                        @disabled($banques->isEmpty())>
+                        @disabled($banques->isEmpty() && $usines->isEmpty())>
                         <i class="bi bi-cash-coin"></i> Approvisionnement caisse
                     </button>
                     <div class="flex-grow-1" style="min-width: 280px;">
@@ -211,9 +211,33 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                     </div>
                     <div class="modal-body">
+                        @php($sourceType = old('source_type', 'banque'))
                         <div class="mb-3">
+                            <label for="source_type" class="form-label">Source <span class="text-danger">*</span></label>
+                            <select name="source_type" id="source_type" class="form-select @error('source_type') is-invalid @enderror" required>
+                                <option value="banque" @selected($sourceType === 'banque')>Banque</option>
+                                <option value="usine" @selected($sourceType === 'usine')>Usine</option>
+                            </select>
+                            @error('source_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="mb-3 @if ($sourceType !== 'usine') d-none @endif" data-source-block="usine">
+                            <label for="id_usine" class="form-label">Usine <span class="text-danger">*</span></label>
+                            <select name="id_usine" id="id_usine" class="form-select @error('id_usine') is-invalid @enderror">
+                                <option value="">Sélectionner une usine</option>
+                                @foreach ($usines as $usine)
+                                    <option value="{{ $usine->id_usine }}"
+                                        data-reste="{{ $usine->reste_a_payer }}"
+                                        @selected((int) old('id_usine') === (int) $usine->id_usine)>
+                                        {{ $usine->nom_usine }} — reste à payer {{ number_format($usine->reste_a_payer, 0, ',', ' ') }} FCFA
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('id_usine')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text">Enregistré comme paiement des livraisons de l'usine (espèces).</div>
+                        </div>
+                        <div class="mb-3 @if ($sourceType === 'usine') d-none @endif" data-source-block="banque">
                             <label for="id_banque" class="form-label">Banque <span class="text-danger">*</span></label>
-                            <select name="id_banque" id="id_banque" class="form-select @error('id_banque') is-invalid @enderror" required>
+                            <select name="id_banque" id="id_banque" class="form-select @error('id_banque') is-invalid @enderror">
                                 <option value="">Sélectionner une banque</option>
                                 @foreach ($banques as $banque)
                                     <option value="{{ $banque->id_banque }}"
@@ -226,7 +250,7 @@
                             @error('id_banque')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="alert alert-light border mb-3 d-none" id="banqueSoldeAlert">
-                            <span class="text-muted">Solde disponible :</span>
+                            <span class="text-muted" id="banqueSoldeLabel">Solde disponible :</span>
                             <strong class="text-primary" id="banqueSoldeMontant">0 FCFA</strong>
                         </div>
                         <div class="mb-0">
@@ -261,8 +285,10 @@
         }
 
         function updateBanqueSolde() {
-            const select = document.getElementById('id_banque');
+            const sourceType = document.getElementById('source_type')?.value || 'banque';
+            const select = document.getElementById(sourceType === 'usine' ? 'id_usine' : 'id_banque');
             const alertBox = document.getElementById('banqueSoldeAlert');
+            const labelEl = document.getElementById('banqueSoldeLabel');
             const montantEl = document.getElementById('banqueSoldeMontant');
 
             if (!select || !alertBox || !montantEl) {
@@ -270,21 +296,42 @@
             }
 
             const option = select.options[select.selectedIndex];
-            const solde = option?.dataset?.solde ? parseFloat(option.dataset.solde) : NaN;
+            const raw = sourceType === 'usine' ? option?.dataset?.reste : option?.dataset?.solde;
+            const solde = raw ? parseFloat(raw) : NaN;
 
             if (!option?.value || Number.isNaN(solde)) {
                 alertBox.classList.add('d-none');
                 return;
             }
 
+            labelEl.textContent = sourceType === 'usine' ? 'Reste à payer :' : 'Solde disponible :';
             alertBox.classList.remove('d-none');
             montantEl.textContent = formatFcfa(solde);
         }
 
-        document.getElementById('id_banque')?.addEventListener('change', updateBanqueSolde);
-        document.getElementById('approCaisseModal')?.addEventListener('shown.bs.modal', updateBanqueSolde);
+        function updateSourceType() {
+            const sourceType = document.getElementById('source_type')?.value || 'banque';
 
-        @if (session('open_appro_caisse_modal') || $errors->has('montant') || $errors->has('id_banque') || request()->query('open_appro'))
+            document.querySelectorAll('[data-source-block]').forEach(function (block) {
+                const active = block.dataset.sourceBlock === sourceType;
+                block.classList.toggle('d-none', !active);
+                const select = block.querySelector('select');
+                if (select) {
+                    select.required = active;
+                    select.disabled = !active;
+                }
+            });
+
+            updateBanqueSolde();
+        }
+
+        document.getElementById('source_type')?.addEventListener('change', updateSourceType);
+        document.getElementById('id_banque')?.addEventListener('change', updateBanqueSolde);
+        document.getElementById('id_usine')?.addEventListener('change', updateBanqueSolde);
+        document.getElementById('approCaisseModal')?.addEventListener('shown.bs.modal', updateSourceType);
+        updateSourceType();
+
+        @if (session('open_appro_caisse_modal') || $errors->has('montant') || $errors->has('id_banque') || $errors->has('id_usine') || request()->query('open_appro'))
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('approCaisseModal')).show();
             });

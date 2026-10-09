@@ -886,7 +886,7 @@
 
                                 <span class="sidebar-icon sidebar-icon--banques"><i class="bi bi-building"></i></span>
 
-                                <span>Gestion banques</span>
+                                <span>Gestion trésorerie</span>
 
                             </a>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Banque;
+use App\Models\Ticket;
 use App\Models\Usine;
 use App\Services\BanqueService;
 use App\Services\UsinePaymentService;
@@ -86,7 +87,19 @@ class CaisseBanqueController extends Controller
             ->get();
         $historique = $this->banqueService->paginatedApprovisionnementsCaisse($filters);
 
-        return view('caisse.banques.approvisionnement-caisse', compact('stats', 'banques', 'historique', 'filters'));
+        $restesUsines = Ticket::query()
+            ->validated()
+            ->where('montant_reste', '>', 0)
+            ->groupBy('id_usine')
+            ->selectRaw('id_usine, SUM(montant_reste) AS reste')
+            ->pluck('reste', 'id_usine');
+
+        $usines = Usine::query()
+            ->orderBy('nom_usine')
+            ->get()
+            ->each(fn (Usine $usine) => $usine->reste_a_payer = (float) ($restesUsines[$usine->id_usine] ?? 0));
+
+        return view('caisse.banques.approvisionnement-caisse', compact('stats', 'banques', 'usines', 'historique', 'filters'));
     }
 
     public function storeApprovisionnementCaisse(Request $request): RedirectResponse
@@ -96,22 +109,45 @@ class CaisseBanqueController extends Controller
         ]);
 
         $validated = $request->validate([
+            'source_type' => ['required', 'in:banque,usine'],
             'id_banque' => [
-                'required',
+                'required_if:source_type,banque',
+                'nullable',
                 'integer',
                 Rule::exists('banques', 'id_banque')->where('actif', true),
             ],
+            'id_usine' => [
+                'required_if:source_type,usine',
+                'nullable',
+                'integer',
+                Rule::exists('usines', 'id_usine'),
+            ],
             'montant' => ['required', 'numeric', 'min:1'],
+        ], [
+            'id_banque.required_if' => 'Sélectionnez une banque.',
+            'id_usine.required_if' => 'Sélectionnez une usine.',
         ]);
 
-        $banque = Banque::query()->findOrFail($validated['id_banque']);
+        $montant = (float) $validated['montant'];
 
         try {
-            $this->banqueService->approvisionnementCaisse(
-                $banque,
-                (float) $validated['montant'],
-                $request->user(),
-            );
+            if ($validated['source_type'] === 'usine') {
+                $usine = Usine::query()->findOrFail($validated['id_usine']);
+                $this->usinePaymentService->create(
+                    $usine,
+                    $montant,
+                    now()->toDateString(),
+                    'Espèces',
+                    null,
+                    $request->user(),
+                    restePlafond: $this->usinePaymentService->resteAPayer((int) $usine->id_usine),
+                );
+                $origine = $usine->nom_usine;
+            } else {
+                $banque = Banque::query()->findOrFail($validated['id_banque']);
+                $this->banqueService->approvisionnementCaisse($banque, $montant, $request->user());
+                $origine = $banque->nom_banque;
+            }
         } catch (\InvalidArgumentException $e) {
             return redirect()
                 ->route('caisse.banques.approvisionnement-caisse.index')
@@ -123,8 +159,8 @@ class CaisseBanqueController extends Controller
         return redirect()
             ->route('caisse.banques.approvisionnement-caisse.index')
             ->with('success', 'Approvisionnement de '
-                .number_format((float) $validated['montant'], 0, ',', ' ')
-                .' FCFA effectué depuis '.$banque->nom_banque.' vers la caisse.');
+                .number_format($montant, 0, ',', ' ')
+                .' FCFA effectué depuis '.$origine.' vers la caisse.');
     }
 
     public function store(Request $request): RedirectResponse
