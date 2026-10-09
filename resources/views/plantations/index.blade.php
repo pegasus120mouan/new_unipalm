@@ -16,6 +16,7 @@
 
 @section('content')
     <div id="planteursError" class="alert alert-danger d-none" role="alert"></div>
+    <div id="planteursSuccess" class="alert alert-success d-none" role="alert"></div>
 
     <section class="row mb-4">
         <div class="col-12">
@@ -224,6 +225,8 @@
         </div>
     </div>
 
+    @include('plantations.partials.transfert-modal')
+
     <div class="modal fade" id="parcellesMapModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
@@ -303,6 +306,10 @@
 
         .action-btn.delete {
             background: #fa5252;
+        }
+
+        .action-btn.transfer {
+            background: #f59f00;
         }
 
         .action-btn:hover {
@@ -553,6 +560,10 @@
                                     <a class="action-btn edit" href="${showUrlTemplate}/${id}/edit" title="Modifier">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
+                                    <button type="button" class="action-btn transfer" data-action="transfer"
+                                        data-id="${id}" title="Transférer à un autre collecteur">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
                                     <button type="button" class="action-btn delete" data-action="delete"
                                         data-id="${id}" data-name="${name}" title="Supprimer">
                                         <i class="bi bi-trash"></i>
@@ -1072,6 +1083,29 @@
 
                 const action = btn.getAttribute('data-action');
                 const id = btn.getAttribute('data-id');
+
+                if (action === 'transfer') {
+                    const planteur = allRows.find((p) => String(p.id) === String(id));
+                    if (!planteur) return;
+                    window.openTransfertPlanteur({
+                        id: planteur.id,
+                        nom: planteur.nom_prenoms,
+                        fiche: planteur.numero_fiche,
+                        collecteurId: planteur.collecteur_id ?? planteur.collecteur?.id ?? null,
+                        collecteurNom: planteur.collecteur
+                            ? `${planteur.collecteur.nom ?? ''} ${planteur.collecteur.prenoms ?? ''}`.trim()
+                            : '',
+                        nbChamps: champsCount(planteur),
+                        superficie: superficieTotale(planteur),
+                        onDone: function (json) {
+                            const successEl = document.getElementById('planteursSuccess');
+                            successEl.textContent = json.message || 'Planteur transféré.';
+                            successEl.classList.remove('d-none');
+                            load(currentPage);
+                        },
+                    });
+                    return;
+                }
 
                 if (action === 'delete') {
                     deletePlanteurId = id;

@@ -157,6 +157,8 @@
             </div>
         </div>
     </div>
+
+    @include('plantations.partials.champ-edit-modal')
 @endsection
 
 @push('scripts')
@@ -230,6 +232,7 @@
                             <td class="text-end text-nowrap">
                                 <a class="btn btn-sm btn-outline-primary" href="${champUrl}" title="Détail du champ"><i class="bi bi-eye"></i></a>
                                 <a class="btn btn-sm btn-outline-secondary ms-1" href="${planteurUrl}" title="Fiche du planteur"><i class="bi bi-person"></i></a>
+                                ${row.champ_id ? `<button type="button" class="btn btn-sm btn-outline-success ms-1 btn-edit-plantation" data-champ-id="${escapeHtml(row.champ_id)}" title="Modifier le champ"><i class="bi bi-pencil"></i></button>` : ''}
                                 ${row.champ_id ? `<button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-delete-plantation" data-champ-id="${escapeHtml(row.champ_id)}" title="Supprimer la plantation"><i class="bi bi-trash"></i></button>` : ''}
                             </td>
                         </tr>
@@ -333,6 +336,22 @@
             refreshBtn.addEventListener('click', function () { load(lastPage, true); });
 
             tbodyEl.addEventListener('click', function (event) {
+                const editButton = event.target.closest('.btn-edit-plantation');
+                if (editButton) {
+                    const row = rowsByChampId[editButton.dataset.champId];
+                    if (!row) return;
+                    window.openChampEdit({
+                        planteurId: row.planteur_id,
+                        champId: row.champ_id,
+                        onDone: function () {
+                            successEl.textContent = `Champ ${row.numero_champ} modifié.`;
+                            successEl.classList.remove('d-none');
+                            load(lastPage);
+                        },
+                    });
+                    return;
+                }
+
                 const button = event.target.closest('.btn-delete-plantation');
                 if (!button) return;
                 const row = rowsByChampId[button.dataset.champId];

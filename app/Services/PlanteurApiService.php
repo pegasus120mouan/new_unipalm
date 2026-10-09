@@ -901,6 +901,10 @@ class PlanteurApiService
             return $this->deletePlanteur($data);
         }
 
+        if ($action === 'update_exploitation') {
+            return $this->updateExploitation($data);
+        }
+
         $url = match ($action) {
             'update_planteur' => config('planteurs.api_base').'/update_planteur.php',
             'delete_planteur' => config('planteurs.api_base').'/delete_planteur.php',
@@ -929,6 +933,34 @@ class PlanteurApiService
         ]);
 
         return $json;
+    }
+
+    /**
+     * Localisation (région, sous-préfecture, village) d'une exploitation : commune à tous ses champs.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function updateExploitation(array $data): array
+    {
+        $exploitationId = (int) ($data['exploitation_id'] ?? 0);
+        if ($exploitationId <= 0) {
+            throw new RuntimeException('Identifiant de l\'exploitation manquant.');
+        }
+
+        $payload = [
+            'id' => $exploitationId,
+            'planteur_id' => (int) ($data['planteur_id'] ?? 0),
+        ];
+        foreach (['region', 'sous_prefecture_village', 'village'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $payload[$field] = trim((string) $data[$field]);
+            }
+        }
+
+        return $this->requestJson('post', config('planteurs.api_base').'/update_exploitation.php', $payload, [
+            'Content-Type' => 'application/json',
+        ]);
     }
 
     /**

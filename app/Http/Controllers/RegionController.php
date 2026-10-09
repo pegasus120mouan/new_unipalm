@@ -34,4 +34,24 @@ class RegionController extends Controller
             ], 502);
         }
     }
+
+    /**
+     * Listes de choix (formulaires planteurs / champs) : régions, ou sous-préfectures de ?region_id=
+     */
+    public function referentiel(Request $request): JsonResponse
+    {
+        $regionId = $request->integer('region_id') ?: null;
+
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $this->regionApi->referentiel($regionId),
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'error' => $exception->getMessage(),
+            ], 502);
+        }
+    }
 }

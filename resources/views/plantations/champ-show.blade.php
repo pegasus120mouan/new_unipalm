@@ -40,7 +40,12 @@
         <div class="row g-4">
             <div class="col-lg-5">
                 <div class="card mb-4">
-                    <div class="card-header">Informations du champ</div>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Informations du champ</span>
+                        <button type="button" class="btn btn-primary btn-sm d-none" id="editChampBtn">
+                            <i class="bi bi-pencil-square"></i> Modifier
+                        </button>
+                    </div>
                     <div class="card-body">
                         <div class="mb-2"><strong>Type de culture :</strong> <span id="champType"></span></div>
                         <div class="mb-2"><strong>Superficie :</strong> <span id="champSuperficie"></span></div>
@@ -74,6 +79,8 @@
             </div>
         </div>
     </div>
+
+    @include('plantations.partials.champ-edit-modal')
 @endsection
 
 @push('scripts')
@@ -86,6 +93,7 @@
             const apiUrl = @json(route('plantations.api'));
             const defaultPhoto = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E9ECEF"/><circle cx="40" cy="32" r="14" fill="#ADB5BD"/><path d="M16 70c4-14 18-22 24-22s20 8 24 22" fill="#ADB5BD"/></svg>');
             let mapInstance = null;
+            let currentChamp = null;
 
             function escapeHtml(value) {
                 return String(value ?? '')
@@ -222,6 +230,9 @@
                     setText('explLat', expl.latitude);
                     setText('explLng', expl.longitude);
 
+                    currentChamp = Object.assign({ planteur_nom: planteur.nom_prenoms || '' }, champ);
+                    document.getElementById('editChampBtn').classList.toggle('d-none', !champ.editable);
+
                     document.getElementById('champLoader').classList.add('d-none');
                     document.getElementById('champContent').classList.remove('d-none');
                     setTimeout(function () { drawMap(champ, expl); }, 50);
@@ -232,6 +243,11 @@
                     errorEl.classList.remove('d-none');
                 }
             }
+
+            document.getElementById('editChampBtn').addEventListener('click', function () {
+                if (!currentChamp) return;
+                window.openChampEdit({ planteurId, champId, champ: currentChamp, onDone: load });
+            });
 
             load();
         });

@@ -2,11 +2,42 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class RegionApiService
 {
+    /**
+     * Régions (sans $regionId) ou sous-préfectures d'une région, triées et sans doublons de nom.
+     *
+     * @return list<array{id: int, nom: string}>
+     */
+    public function referentiel(?int $regionId = null): array
+    {
+        $query = $regionId ? ['action' => 'sous_prefectures', 'region_id' => $regionId] : ['action' => 'list'];
+
+        return Cache::remember('referentiel_regions:'.($regionId ?? 'all'), now()->addHours(6), function () use ($query): array {
+            $items = [];
+            foreach ($this->get($query)['data'] ?? [] as $item) {
+                $nom = trim((string) ($item['nom'] ?? ''));
+                $key = mb_strtolower($nom);
+                if ($nom === '' || isset($items[$key])) {
+                    continue;
+                }
+                $items[$key] = ['id' => (int) ($item['id'] ?? 0), 'nom' => $nom];
+            }
+            $items = array_values($items);
+            usort($items, fn (array $a, array $b): int => strcmp(
+                Str::lower(Str::ascii($a['nom'])),
+                Str::lower(Str::ascii($b['nom']))
+            ));
+
+            return $items;
+        });
+    }
+
     public function get(array $query = []): array
     {
         return $this->proxyGet(config('planteurs.regions_url'), $query);

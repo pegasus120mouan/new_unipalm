@@ -75,59 +75,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="champEditModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <form class="modal-content" id="champEditForm" novalidate>
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Modifier le champ <code id="champEditCode" class="text-danger"></code></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="champEditError" class="alert alert-danger d-none"></div>
-                    <div class="mb-3">
-                        <label class="form-label" for="champTypeCulture">Type de culture <span class="text-danger">*</span></label>
-                        <select class="form-select" id="champTypeCulture" required>
-                            <option value="Palmier a huile">Palmier à huile</option>
-                            <option value="Hevea">Hévéa</option>
-                            <option value="Autre">Autre</option>
-                        </select>
-                    </div>
-                    <div class="mb-3 d-none" id="champAutreCultureGroup">
-                        <label class="form-label" for="champAutreCulture">Précisez la culture</label>
-                        <input type="text" class="form-control" id="champAutreCulture" maxlength="100">
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label" for="champSuperficie">Superficie (ha)</label>
-                            <input type="number" class="form-control" id="champSuperficie" min="0" step="0.01">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="champAge">Âge (années)</label>
-                            <input type="number" class="form-control" id="champAge" min="0" step="1">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="champMode">Mode</label>
-                            <select class="form-select" id="champMode">
-                                <option value="">—</option>
-                                <option value="Pur">Pur</option>
-                                <option value="Associe">Associé</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" for="champProduction">Production estimée (kg)</label>
-                            <input type="number" class="form-control" id="champProduction" min="0" step="1">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary" id="champEditSubmit">
-                        <i class="bi bi-check-lg"></i> Enregistrer
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    @include('plantations.partials.champ-edit-modal')
 
     <div class="modal fade" id="champDeleteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -158,7 +106,6 @@
             const planteurId = @json($planteurId);
             const apiUrl = @json(route('plantations.api'));
             const csrfToken = @json(csrf_token());
-            const editModal = new bootstrap.Modal(document.getElementById('champEditModal'));
             const deleteModal = new bootstrap.Modal(document.getElementById('champDeleteModal'));
             let champsById = {};
             let currentChamp = null;
@@ -281,35 +228,8 @@
                 }
             }
 
-            const typeSelect = document.getElementById('champTypeCulture');
-            const autreGroup = document.getElementById('champAutreCultureGroup');
-            function toggleAutre() {
-                autreGroup.classList.toggle('d-none', typeSelect.value !== 'Autre');
-            }
-            typeSelect.addEventListener('change', toggleAutre);
-
-            function valueOrEmpty(value) {
-                return value === null || value === undefined ? '' : value;
-            }
-
             function openEdit(champ) {
-                currentChamp = champ;
-                showAlert(document.getElementById('champEditError'), '');
-                document.getElementById('champEditCode').textContent = champ.numero_champ || '';
-                const knownTypes = ['Palmier a huile', 'Hevea', 'Autre'];
-                const type = knownTypes.includes(champ.type_culture_code)
-                    ? champ.type_culture_code
-                    : (champ.type_culture_code ? 'Autre' : 'Palmier a huile');
-                typeSelect.value = type;
-                document.getElementById('champAutreCulture').value = type === 'Autre'
-                    ? (champ.autre_culture || (knownTypes.includes(champ.type_culture_code) ? '' : champ.type_culture_code || ''))
-                    : '';
-                toggleAutre();
-                document.getElementById('champSuperficie').value = valueOrEmpty(champ.superficie_ha);
-                document.getElementById('champAge').value = valueOrEmpty(champ.age_culture);
-                document.getElementById('champMode').value = ['Pur', 'Associe'].includes(champ.mode_culture) ? champ.mode_culture : '';
-                document.getElementById('champProduction').value = valueOrEmpty(champ.production_estimee_kg);
-                editModal.show();
+                window.openChampEdit({ planteurId, champId: champ.id, champ, onDone: load });
             }
 
             function openDelete(champ) {
@@ -326,39 +246,6 @@
                 if (!champ) return;
                 if (button.dataset.action === 'edit') openEdit(champ);
                 if (button.dataset.action === 'delete') openDelete(champ);
-            });
-
-            document.getElementById('champEditForm').addEventListener('submit', async function (e) {
-                e.preventDefault();
-                if (!currentChamp) return;
-                const errorEl = document.getElementById('champEditError');
-                const submit = document.getElementById('champEditSubmit');
-                const type = typeSelect.value;
-                const autre = document.getElementById('champAutreCulture').value.trim();
-                if (type === 'Autre' && !autre) {
-                    showAlert(errorEl, 'Précisez le nom de la culture.');
-                    return;
-                }
-                showAlert(errorEl, '');
-                setLoading(submit, true);
-                try {
-                    await postChamp({
-                        action: 'update_champ',
-                        champ_id: currentChamp.id,
-                        type_culture: type,
-                        autre_culture: type === 'Autre' ? autre : '',
-                        superficie_ha: document.getElementById('champSuperficie').value,
-                        age_culture: document.getElementById('champAge').value,
-                        mode_culture: document.getElementById('champMode').value,
-                        production_estimee_kg: document.getElementById('champProduction').value,
-                    });
-                    editModal.hide();
-                    await load();
-                } catch (error) {
-                    showAlert(errorEl, error.message || String(error));
-                } finally {
-                    setLoading(submit, false);
-                }
             });
 
             document.getElementById('champDeleteConfirm').addEventListener('click', async function () {

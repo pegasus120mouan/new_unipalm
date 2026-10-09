@@ -51,7 +51,12 @@
 
                 <div class="card mt-3">
                     <div class="card-header">Collecteur</div>
-                    <div class="card-body" id="planteurCollecteur"></div>
+                    <div class="card-body">
+                        <div id="planteurCollecteur" class="fw-semibold mb-3"></div>
+                        <button type="button" id="openTransfertBtn" class="btn btn-warning btn-sm w-100">
+                            <i class="bi bi-arrow-left-right"></i> Transférer à un autre collecteur
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -69,16 +74,32 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-                    <h5 class="mb-0">Exploitations <span class="badge bg-secondary" id="exploitationsBadge">0</span></h5>
+                    <h5 class="mb-0">
+                        Exploitations <span class="badge bg-secondary" id="exploitationsBadge">0</span>
+                        <small class="text-muted fs-6 ms-2" id="exploitationsTotal"></small>
+                    </h5>
                     <button type="button" id="openParcellesMap" class="btn btn-info btn-sm d-none">
                         <i class="bi bi-geo-alt"></i> Cartographie (toutes)
                     </button>
                 </div>
 
                 <div id="exploitationsContainer"></div>
+
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history me-1"></i> Historique des collecteurs</span>
+                        <span class="badge bg-secondary" id="transfertsBadge">0</span>
+                    </div>
+                    <div class="card-body" id="transfertsContainer">
+                        <div class="text-muted small">Chargement de l'historique...</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    @include('plantations.partials.transfert-modal')
+    @include('plantations.partials.champ-edit-modal')
 
     <div class="modal fade" id="parcellesMapModalDetails" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -105,8 +126,12 @@
             const apiUrl = @json(route('plantations.api'));
             const champUrlTemplate = @json(url('/plantations'));
             const defaultPhoto = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E9ECEF"/><circle cx="40" cy="32" r="14" fill="#ADB5BD"/><path d="M16 70c4-14 18-22 24-22s20 8 24 22" fill="#ADB5BD"/></svg>');
+            const transfertsUrl = @json(route('plantations.transferts', $planteurId));
             let currentParcelles = [];
             let mapInstance = null;
+            let currentPlanteur = null;
+            let transferts = [];
+            let transfertsError = null;
 
             function escapeHtml(v) {
                 return String(v ?? '')
@@ -122,6 +147,34 @@
                 const d = new Date(v);
                 if (Number.isNaN(d.getTime())) return v;
                 return d.toLocaleDateString('fr-FR');
+            }
+
+            function parseServerDate(v) {
+                if (!v) return null;
+                const d = new Date(String(v).replace(' ', 'T'));
+                return Number.isNaN(d.getTime()) ? null : d;
+            }
+
+            function fmtDateTime(v) {
+                const d = parseServerDate(v);
+                if (!d) return '—';
+                return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            function personName(p) {
+                return p ? `${p.nom ?? ''} ${p.prenoms ?? ''}`.trim() : '';
+            }
+
+            /** Collecteur de l'exploitation : celui enregistré par l'API, sinon celui du planteur à la date de collecte */
+            function collecteurOf(expl, planteurCollecteur) {
+                const nom = personName(expl.collecteur);
+                if (nom) return { id: expl.collecteur.id, nom };
+                const date = parseServerDate(expl.date_collecte || expl.created_at);
+                if (date) {
+                    const suivant = transferts.slice().reverse().find((t) => new Date(t.created_at) > date);
+                    if (suivant) return { id: suivant.ancien_collecteur_id, nom: suivant.ancien_collecteur };
+                }
+                return planteurCollecteur;
             }
 
             function setText(id, value) {
@@ -148,10 +201,12 @@
                 })];
             }
 
+            let mapModal = null;
+
             function openMap(parcelles) {
                 currentParcelles = parcelles;
-                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('parcellesMapModalDetails'));
-                modal.show();
+                if (!mapModal) mapModal = new bootstrap.Modal(document.getElementById('parcellesMapModalDetails'));
+                mapModal.show();
             }
 
             function parcelleLatLngs(parcelle) {
@@ -244,7 +299,9 @@
                 return `<div class="col-md-6"><strong>${escapeHtml(label)} :</strong> ${escapeHtml(v)}</div>`;
             }
 
-            function renderExploitation(expl, champCodes) {
+            function renderExploitation(expl, champCodes, planteurCollecteur) {
+                const collecteur = collecteurOf(expl, planteurCollecteur);
+                const autreCollecteur = collecteur.id && planteurCollecteur.id && String(collecteur.id) !== String(planteurCollecteur.id);
                 const cultures = (Array.isArray(expl.cultures) ? expl.cultures : [])
                     .slice().sort(function (a, b) { return (a?.id || 0) - (b?.id || 0); });
                 const superficie = cultures.reduce((sum, c) => sum + (Number(c.superficie_ha) || 0), 0);
@@ -277,9 +334,12 @@
                             <td>${escapeHtml(c.mode_culture ?? '—')}</td>
                             <td>${escapeHtml(c.production_estimee_kg ?? '—')}</td>
                             <td>${parcelleCell}</td>
+                            <td class="text-center">
+                                ${c.id ? `<button type="button" class="btn btn-sm btn-outline-primary js-edit-champ" data-champ-id="${escapeHtml(c.id)}" title="Modifier le champ"><i class="bi bi-pencil"></i></button>` : ''}
+                            </td>
                         </tr>`;
                     }).join('')
-                    : '<tr><td colspan="7" class="text-center text-muted">Aucun champ</td></tr>';
+                    : '<tr><td colspan="8" class="text-center text-muted">Aucun champ</td></tr>';
 
                 const parcellesRows = parcelles.map((p, index) => {
                     const sup = Number(p.superficie_calculee);
@@ -318,10 +378,17 @@
 
                 return `<div class="card mb-3 exploitation-card" data-numero="${escapeHtml(expl.numero)}">
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <span>
+                        <div>
                             <strong>Exploitation ${escapeHtml(expl.numero)}</strong>
                             ${lieu ? `<span class="text-muted"> — ${escapeHtml(lieu)}</span>` : ''}
-                        </span>
+                            <div class="small mt-1">
+                                <span class="text-muted"><i class="bi bi-calendar-check me-1"></i>Collectée le</span>
+                                <strong>${escapeHtml(fmtDateTime(expl.date_collecte || expl.created_at))}</strong>
+                                <span class="text-muted ms-2"><i class="bi bi-person-badge me-1"></i>par</span>
+                                <strong>${escapeHtml(collecteur.nom || '—')}</strong>
+                                ${autreCollecteur ? '<span class="badge bg-warning text-dark ms-1">Autre collecteur</span>' : ''}
+                            </div>
+                        </div>
                         <span class="d-flex align-items-center gap-2">
                             <span class="badge bg-light text-dark">${cultures.length} champ(s) • ${superficie.toFixed(2)} ha</span>
                             ${hasParcelles ? `<button type="button" class="btn btn-info btn-sm js-map-exploitation" data-numero="${escapeHtml(expl.numero)}"><i class="bi bi-geo-alt"></i> Cartographie</button>` : ''}
@@ -352,6 +419,7 @@
                                         <th>Mode</th>
                                         <th>Production estimée (kg)</th>
                                         <th>Parcelle</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>${rows}</tbody>
@@ -394,6 +462,16 @@
                 document.getElementById('planteurCollecteur').textContent = collecteur || '—';
 
                 const exploitations = exploitationsOf(planteur);
+                const allCultures = exploitations.flatMap((e) => Array.isArray(e.cultures) ? e.cultures : []);
+                currentPlanteur = {
+                    id: planteur.id,
+                    nom: planteur.nom_prenoms,
+                    fiche: planteur.numero_fiche,
+                    collecteurId: planteur.collecteur_id ?? planteur.collecteur?.id ?? null,
+                    collecteurNom: collecteur === '—' ? '' : collecteur,
+                    nbChamps: allCultures.length,
+                    superficie: allCultures.reduce((sum, c) => sum + (Number(c.superficie_ha) || 0), 0),
+                };
 
                 // Codes des champs numérotés sur l'ensemble des exploitations (même logique que la page Champs)
                 const fiche = planteur.numero_fiche || '';
@@ -408,10 +486,16 @@
                     });
 
                 document.getElementById('exploitationsBadge').textContent = exploitations.length;
+                document.getElementById('exploitationsTotal').textContent = exploitations.length
+                    ? `${currentPlanteur.nbChamps} champ(s) au total • ${currentPlanteur.superficie.toFixed(2)} ha`
+                    : '';
                 pendingInlineMaps = [];
                 const container = document.getElementById('exploitationsContainer');
                 container.innerHTML = exploitations.length
-                    ? exploitations.map((e) => renderExploitation(e, champCodes)).join('')
+                    ? exploitations.map((e) => renderExploitation(e, champCodes, {
+                        id: currentPlanteur.collecteurId,
+                        nom: currentPlanteur.collecteurNom,
+                    })).join('')
                     : '<div class="card"><div class="card-body text-center text-muted">Aucune exploitation enregistrée</div></div>';
 
                 container.querySelectorAll('.js-map-exploitation').forEach((btn) => {
@@ -447,11 +531,111 @@
                 }
             }
 
+            function renderTransferts(transferts) {
+                const container = document.getElementById('transfertsContainer');
+                document.getElementById('transfertsBadge').textContent = transferts.length;
+
+                if (!transferts.length) {
+                    container.innerHTML = `<div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Aucun transfert : ce planteur est rattaché à son collecteur d'origine
+                        (${escapeHtml(currentPlanteur?.collecteurNom || '—')}).
+                    </div>`;
+                    return;
+                }
+
+                container.innerHTML = transferts.map((t, index) => {
+                    const champsRows = (t.champs || []).map((c) => `<tr>
+                        <td><code class="text-danger">${escapeHtml(c.numero_champ || '—')}</code></td>
+                        <td>${escapeHtml(c.type_culture || '—')}</td>
+                        <td class="text-end">${Number(c.superficie_ha || 0).toFixed(2)}</td>
+                        <td class="text-center">${escapeHtml(c.parcelles_count ?? 0)}</td>
+                        <td>${escapeHtml(c.village || '—')}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">Aucun champ</td></tr>';
+                    const collapseId = `transfertChamps${escapeHtml(t.id)}`;
+
+                    return `<div class="transfert-item ${index < transferts.length - 1 ? 'border-bottom pb-3 mb-3' : ''}">
+                        <div class="d-flex justify-content-between flex-wrap gap-2">
+                            <div>
+                                <span class="text-muted">${escapeHtml(t.ancien_collecteur)}</span>
+                                <i class="bi bi-arrow-right mx-1 text-warning"></i>
+                                <strong>${escapeHtml(t.nouveau_collecteur)}</strong>
+                            </div>
+                            <small class="text-muted"><i class="bi bi-calendar3"></i> ${escapeHtml(t.date)}</small>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            Par ${escapeHtml(t.utilisateur)} • ${escapeHtml(t.nb_champs)} champ(s), ${Number(t.superficie_totale || 0).toFixed(2)} ha
+                        </div>
+                        ${t.motif ? `<div class="small mt-1"><strong>Motif :</strong> ${escapeHtml(t.motif)}</div>` : ''}
+                        <button class="btn btn-link btn-sm px-0" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                            <i class="bi bi-list-ul"></i> Champs au moment du transfert
+                        </button>
+                        <div class="collapse" id="${collapseId}">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr><th>N° champ</th><th>Culture</th><th class="text-end">Superficie (ha)</th><th class="text-center">Parcelles</th><th>Village</th></tr>
+                                    </thead>
+                                    <tbody>${champsRows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            async function fetchTransferts() {
+                try {
+                    const res = await fetch(transfertsUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+                    const json = await res.json();
+                    if (!res.ok || !json.success) throw new Error(json.error || 'Historique indisponible.');
+                    transferts = json.data.transferts || [];
+                    transfertsError = null;
+                } catch (e) {
+                    transferts = [];
+                    transfertsError = e.message || String(e);
+                }
+            }
+
+            function showTransferts() {
+                if (transfertsError) {
+                    document.getElementById('transfertsContainer').innerHTML =
+                        `<div class="text-danger small">${escapeHtml(transfertsError)}</div>`;
+                    return;
+                }
+                renderTransferts(transferts);
+            }
+
+            async function refresh() {
+                await fetchTransferts();
+                await load();
+                showTransferts();
+            }
+
+            document.getElementById('exploitationsContainer').addEventListener('click', function (event) {
+                const button = event.target.closest('.js-edit-champ');
+                if (!button) return;
+                window.openChampEdit({ planteurId, champId: button.dataset.champId, onDone: refresh });
+            });
+
+            document.getElementById('openTransfertBtn').addEventListener('click', function () {
+                if (!currentPlanteur) return;
+                window.openTransfertPlanteur(Object.assign({}, currentPlanteur, {
+                    onDone: function (json) {
+                        const successEl = document.getElementById('planteurError');
+                        successEl.classList.remove('alert-danger', 'd-none');
+                        successEl.classList.add('alert-success');
+                        successEl.textContent = json.message || 'Planteur transféré.';
+                        refresh();
+                    },
+                }));
+            });
+
             document.getElementById('parcellesMapModalDetails').addEventListener('shown.bs.modal', function () {
                 drawParcelles(currentParcelles);
             });
 
-            load();
+            refresh();
         });
     </script>
 @endpush

@@ -22,6 +22,7 @@ use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\DoublonPlanteurController;
 use App\Http\Controllers\PlantationController;
+use App\Http\Controllers\PlanteurTransfertController;
 use App\Http\Controllers\PrixUnitaireController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RolePermissionController;
@@ -245,6 +246,10 @@ Route::get('/', function () {
     Route::get('/plantations/{id}/fiches', [PlantationController::class, 'champs'])->name('plantations.fiches')->whereNumber('id');
     Route::get('/plantations/{id}', [PlantationController::class, 'show'])->name('plantations.show')->whereNumber('id');
     Route::get('/plantations/{id}/edit', [PlantationController::class, 'edit'])->name('plantations.edit')->whereNumber('id');
+    Route::get('/plantations/{id}/transferts', [PlanteurTransfertController::class, 'index'])->name('plantations.transferts')->whereNumber('id');
+    Route::post('/plantations/{id}/transfert', [PlanteurTransfertController::class, 'store'])->name('plantations.transfert')->whereNumber('id');
+    Route::get('/api/planteurs/collecteurs-transfert', [PlanteurTransfertController::class, 'collecteurs'])->name('plantations.transfert.collecteurs');
+    Route::get('/api/planteurs/referentiel-regions', [RegionController::class, 'referentiel'])->name('plantations.referentiel.regions');
     Route::match(['get', 'post'], '/api/planteurs', [PlantationController::class, 'api'])->name('plantations.api');
 
     Route::get('/plantations/collecteurs', [CollecteurController::class, 'index'])->name('plantations.collecteurs');
