@@ -63,6 +63,10 @@ class Utilisateur extends Authenticatable
 
         $version = rawurlencode(basename((string) $this->avatar));
 
+        if ((int) auth()->id() === (int) $this->id) {
+            return route('profil.avatar').'?v='.$version;
+        }
+
         return route('utilisateurs.avatar', $this).'?v='.$version;
     }
 

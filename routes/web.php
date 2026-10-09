@@ -23,6 +23,7 @@ use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\DoublonPlanteurController;
 use App\Http\Controllers\PlantationController;
 use App\Http\Controllers\PrixUnitaireController;
+use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UsineController;
@@ -300,6 +301,11 @@ Route::get('/', function () {
     Route::get('/bordereaux/{numero}/pdf', [BordereauController::class, 'pdf'])
         ->where('numero', 'BORD-[0-9\-]+')
         ->name('bordereaux.pdf');
+
+    Route::get('/mon-profil', [ProfilController::class, 'show'])->name('profil.show');
+    Route::post('/mon-profil/mot-de-passe', [ProfilController::class, 'updatePassword'])->name('profil.password.update');
+    Route::post('/mon-profil/photo', [ProfilController::class, 'updatePhoto'])->name('profil.photo.update');
+    Route::get('/mon-profil/avatar', [ProfilController::class, 'avatar'])->name('profil.avatar');
 
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 });

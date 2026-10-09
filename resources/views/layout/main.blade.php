@@ -34,6 +34,35 @@
     <link rel="stylesheet" href="{{ asset('assets/css/pages/unipalm-logo.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/pages/unipalm-sidebar.css') }}">
     @include('layout.partials.favicon')
+    <style>
+        .header-profil-link {
+            padding: 0.2rem 0.6rem 0.2rem 0.2rem;
+            border-radius: 2rem;
+            transition: background-color 0.15s ease;
+        }
+
+        .header-profil-link:hover,
+        .header-profil-link.is-active {
+            background-color: rgba(46, 139, 87, 0.1);
+        }
+
+        .header-profil-avatar {
+            width: 38px;
+            height: 38px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 2px solid #e9f7ef;
+        }
+
+        .header-profil-avatar--fallback {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #2e8b57;
+            color: #fff;
+            font-weight: 700;
+        }
+    </style>
 
 </head>
 
@@ -962,13 +991,25 @@
 
                     <div class="d-flex align-items-center gap-3">
 
-                        <span class="text-muted">
-
-                            {{ auth()->user()->full_name }}
-
-                            <small class="text-secondary">({{ auth()->user()->role }})</small>
-
-                        </span>
+                        @php
+                            $headerUser = auth()->user();
+                        @endphp
+                        <a href="{{ route('profil.show') }}"
+                            class="header-profil-link d-flex align-items-center gap-2 text-decoration-none {{ request()->routeIs('profil.*') ? 'is-active' : '' }}"
+                            title="Mon profil">
+                            @if ($headerUser->hasAvatarImage())
+                                <img src="{{ $headerUser->avatar_url }}" alt="{{ $headerUser->full_name }}"
+                                    class="header-profil-avatar rounded-circle">
+                            @else
+                                <span class="header-profil-avatar header-profil-avatar--fallback rounded-circle">
+                                    {{ strtoupper(mb_substr($headerUser->formatted_nom ?: $headerUser->login, 0, 1, 'UTF-8')) }}
+                                </span>
+                            @endif
+                            <span class="text-muted d-none d-sm-inline">
+                                {{ $headerUser->full_name }}
+                                <small class="text-secondary">({{ $headerUser->role }})</small>
+                            </span>
+                        </a>
 
                         <form method="POST" action="{{ route('logout') }}">
 
@@ -1004,6 +1045,7 @@
                     'role-permissions.*',
                     'plantations.*',
                     'ponts.*',
+                    'profil.*',
                 ]))
                     @include('tickets.partials.stats-cards')
                 @endif
