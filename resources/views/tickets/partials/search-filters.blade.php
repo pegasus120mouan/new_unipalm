@@ -143,6 +143,20 @@
                     </div>
                 @endif
 
+                @if (! empty($showCodeTransfertFilter))
+                    <div class="col-lg-3 col-md-6">
+                        <label for="code_transfert" class="form-label">
+                            <i class="bi bi-arrow-left-right"></i> Code transfert
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-arrow-left-right"></i></span>
+                            <input type="text" name="code_transfert" id="code_transfert" class="form-control"
+                                placeholder="Code transfert"
+                                value="{{ $filters['code_transfert'] ?? '' }}">
+                        </div>
+                    </div>
+                @endif
+
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i> Rechercher

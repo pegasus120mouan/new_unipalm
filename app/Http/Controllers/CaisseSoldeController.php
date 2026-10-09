@@ -30,35 +30,6 @@ class CaisseSoldeController extends Controller
         return view('caisse.solde.index', compact('stats', 'approvisionnements', 'filters'));
     }
 
-    public function storeApprovisionnement(Request $request): RedirectResponse
-    {
-        $request->merge([
-            'montant' => preg_replace('/\s+/', '', (string) $request->input('montant', '')),
-        ]);
-
-        $validated = $request->validate([
-            'montant' => ['required', 'numeric', 'min:1'],
-            'redirect_to' => ['nullable', 'string'],
-        ]);
-
-        $this->approvisionnementService->createManual(
-            (float) $validated['montant'],
-            'Approvisionnement caisse',
-            $request->user(),
-        );
-
-        $redirectTo = $validated['redirect_to'] ?? route('caisse.solde.index');
-        if (! is_string($redirectTo) || ! str_starts_with($redirectTo, url('/'))) {
-            $redirectTo = route('caisse.solde.index');
-        }
-
-        $message = 'Approvisionnement de '
-            .number_format((float) $validated['montant'], 0, ',', ' ')
-            .' FCFA enregistré sur la caisse.';
-
-        return redirect($redirectTo)->with('success', $message);
-    }
-
     public function updateMontantUtilisable(Request $request): RedirectResponse
     {
         $request->merge([

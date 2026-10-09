@@ -39,20 +39,6 @@
         </div>
     </section>
 
-    @if ($canModule('caisse.approvisionnement'))
-        <section class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body py-3">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#caisseApproModal">
-                            <i class="bi bi-cash-coin"></i> Approvisionnement caisse
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    @endif
-
     <section class="row">
         <div class="col-12">
             <div class="card">
@@ -142,53 +128,10 @@
             </div>
         </div>
     </section>
-
-    @if ($canModule('caisse.approvisionnement'))
-        <div class="modal fade" id="caisseApproModal" tabindex="-1" aria-labelledby="caisseApproModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="{{ route('caisse.approvisionnement.store') }}">
-                        @csrf
-                        <input type="hidden" name="redirect_to" value="{{ route('caisse.solde.index') }}">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="caisseApproModalLabel">Approvisionnement caisse</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-0">
-                                <label for="caisse_montant_display" class="form-label">Montant <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="text" id="caisse_montant_display"
-                                        class="form-control @error('montant') is-invalid @enderror"
-                                        data-amount-input inputmode="numeric" autocomplete="off"
-                                        placeholder="Ex : 500 000" required
-                                        value="{{ old('montant') ? number_format((float) old('montant'), 0, '', ' ') : '' }}">
-                                    <input type="hidden" name="montant" id="caisse_montant" data-amount-target value="{{ old('montant') }}">
-                                    <span class="input-group-text">FCFA</span>
-                                </div>
-                                @error('montant')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                            <button type="submit" class="btn btn-success">Enregistrer</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
 @endsection
 
 @push('scripts')
     <script src="{{ asset('assets/js/amount-input.js') }}"></script>
-    @if ($errors->has('montant') || request()->query('open_appro') || session('open_appro_modal'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                new bootstrap.Modal(document.getElementById('caisseApproModal')).show();
-            });
-        </script>
-    @endif
     @if ($errors->has('montant_utilisable') || session('open_utilisable_modal'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {

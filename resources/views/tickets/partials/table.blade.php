@@ -8,6 +8,9 @@
             @endif
             <th>Date ticket</th>
             <th>N° Ticket</th>
+            @if (! empty($showCodeTransfert))
+                <th>Code transfert</th>
+            @endif
             <th>Usine</th>
             <th>Chargé de mission</th>
             <th>Pont</th>
@@ -48,6 +51,9 @@
                 @endif
                 <td>{{ $ticket->date_ticket?->format('d/m/Y') ?? '-' }}</td>
                 <td>{{ $ticket->numero_ticket ?? '-' }}</td>
+                @if (! empty($showCodeTransfert))
+                    <td><span class="badge bg-primary">{{ $ticket->code_transfert }}</span></td>
+                @endif
                 <td>{{ $ticket->usine?->nom_usine ?? '-' }}</td>
                 <td>{{ $ticket->agent?->full_name ?? '-' }}</td>
                 <td>
@@ -177,6 +183,7 @@
             @php
                 $columnCount = 12
                     + (empty($compactView) ? 3 : 0)
+                    + (! empty($showCodeTransfert) ? 1 : 0)
                     + (! empty($showValidateAction) ? 1 : 0)
                     + (! empty($showEditAction) ? 1 : 0)
                     + (! empty($showDeleteAction) ? 1 : 0)

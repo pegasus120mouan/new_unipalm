@@ -93,6 +93,7 @@ class CompteGroupeService
         $page = max(1, (int) request()->query('page', 1));
         $items = $all->slice(($page - 1) * $perPage, $perPage)->values();
         $items = $this->attachDemandesPaiementEnAttente($items);
+        $items = $this->attachCommissions($items, $filters);
 
         return new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
@@ -166,6 +167,46 @@ class CompteGroupeService
             }
             $groupe->demandes_paiement_en_attente = $total;
             $groupe->demande_paiement_agent_id = $firstAgentId;
+
+            return $groupe;
+        });
+    }
+
+    /**
+     * Commission of each group: sum over its agents' tickets of poids × the commission
+     * amount whose period covers the ticket date.
+     *
+     * @param  Collection<int, object>  $groupes
+     * @param  array<string, string>  $filters
+     * @return Collection<int, object>
+     */
+    public function attachCommissions(Collection $groupes, array $filters): Collection
+    {
+        $chefIds = $groupes->pluck('id_chef')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+        $commissions = [];
+
+        if ($chefIds !== []) {
+            $query = Ticket::query()
+                ->join('agents as a', 'tickets.id_agent', '=', 'a.id_agent')
+                ->join('commissions_groupe as c', function ($join) {
+                    $join->whereColumn('tickets.date_ticket', '>=', 'c.date_debut')
+                        ->whereColumn('tickets.date_ticket', '<=', 'c.date_fin');
+                })
+                ->whereIn('a.id_chef', $chefIds)
+                ->whereNull('a.date_suppression')
+                ->groupBy('a.id_chef')
+                ->select([
+                    'a.id_chef',
+                    DB::raw('COALESCE(SUM(tickets.poids * c.montant), 0) AS commission'),
+                ]);
+
+            $this->applyTicketDateFilters($query, $filters, 'tickets.date_ticket');
+
+            $commissions = $query->pluck('commission', 'id_chef')->all();
+        }
+
+        return $groupes->map(function ($groupe) use ($commissions) {
+            $groupe->commission = (float) ($commissions[(int) $groupe->id_chef] ?? 0);
 
             return $groupe;
         });

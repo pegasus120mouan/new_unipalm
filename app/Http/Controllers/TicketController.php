@@ -231,6 +231,62 @@ class TicketController extends Controller
         return view('tickets.paid', compact('tickets', 'filters', 'agents', 'usines'));
     }
 
+    public function bismar(Request $request): View
+    {
+        $filters = [
+            'agent_id' => $request->input('agent_id'),
+            'usine_id' => $request->input('usine_id'),
+            'date_debut' => $request->input('date_debut'),
+            'date_fin' => $request->input('date_fin'),
+            'numero_ticket' => trim((string) $request->input('numero_ticket', '')),
+            'code_transfert' => trim((string) $request->input('code_transfert', '')),
+        ];
+
+        $query = $this->ticketQuery()
+            ->whereNotNull('code_transfert')
+            ->where('code_transfert', '<>', '');
+
+        if ($filters['agent_id']) {
+            $query->where('id_agent', (int) $filters['agent_id']);
+        }
+
+        if ($filters['usine_id']) {
+            $query->where('id_usine', (int) $filters['usine_id']);
+        }
+
+        if ($filters['date_debut']) {
+            $query->whereDate('date_ticket', '>=', $filters['date_debut']);
+        }
+
+        if ($filters['date_fin']) {
+            $query->whereDate('date_ticket', '<=', $filters['date_fin']);
+        }
+
+        if ($filters['numero_ticket'] !== '') {
+            $query->where('numero_ticket', 'like', '%'.$filters['numero_ticket'].'%');
+        }
+
+        if ($filters['code_transfert'] !== '') {
+            $query->where('code_transfert', 'like', '%'.$filters['code_transfert'].'%');
+        }
+
+        $tickets = $query
+            ->orderByDesc('date_ticket')
+            ->orderByDesc('id_ticket')
+            ->paginate(15)
+            ->withQueryString();
+
+        $agents = Agent::query()
+            ->whereNull('date_suppression')
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
+
+        $usines = Usine::query()->orderBy('nom_usine')->get();
+
+        return view('tickets.bismar', compact('tickets', 'filters', 'agents', 'usines'));
+    }
+
     public function validated(Request $request): View
     {
         $filters = [
@@ -393,6 +449,7 @@ class TicketController extends Controller
         $usinesForAutocomplete = $usines->map(fn (Usine $usine) => [
             'id' => $usine->id_usine,
             'label' => $usine->nom_usine,
+            'bismar' => $usine->requiresBismar(),
         ])->values();
 
         $vehiculesForAutocomplete = $vehicules->map(fn (Vehicule $vehicule) => [
@@ -816,6 +873,7 @@ class TicketController extends Controller
         $usinesForAutocomplete = $usines->map(fn (Usine $usine) => [
             'id' => $usine->id_usine,
             'label' => $usine->nom_usine,
+            'bismar' => $usine->requiresBismar(),
         ])->values();
 
         $vehiculesForAutocomplete = $vehicules->map(fn (Vehicule $vehicule) => [
@@ -862,7 +920,33 @@ class TicketController extends Controller
             'id_pont' => ['nullable', 'integer', Rule::exists('pont_bascule', 'id_pont')],
             'vehicule_id' => ['required', 'integer', 'exists:vehicules,vehicules_id'],
             'poids' => $this->poidsRules(),
+            'bismar' => ['nullable', 'boolean'],
+            'code_transfert' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $usine = Usine::query()->find($validated['id_usine']);
+
+        if ($usine?->requiresBismar()) {
+            if (! isset($validated['bismar'])) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['bismar' => 'Veuillez indiquer si le ticket est BISMAR.']);
+            }
+
+            $validated['bismar'] = (bool) $validated['bismar'];
+            $validated['code_transfert'] = $validated['bismar']
+                ? trim((string) ($validated['code_transfert'] ?? ''))
+                : null;
+
+            if ($validated['bismar'] && $validated['code_transfert'] === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors(['code_transfert' => 'Veuillez saisir le code transfert du ticket BISMAR.']);
+            }
+        } else {
+            $validated['bismar'] = false;
+            $validated['code_transfert'] = null;
+        }
 
         $agentPontsCount = PontBascule::query()
             ->where('id_agent', $validated['id_agent'])

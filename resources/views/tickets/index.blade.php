@@ -218,6 +218,14 @@
                                 Enregistrement nombre à virgule interdit
                             </div>
                         </div>
+
+                        <input type="hidden" name="bismar" id="bismar" value="{{ old('bismar') }}">
+                        <input type="hidden" name="code_transfert" id="code_transfert" value="{{ old('code_transfert') }}">
+                        @if ($errors->has('bismar') || $errors->has('code_transfert'))
+                            <div class="alert alert-danger py-2 mb-0">
+                                {{ $errors->first('bismar') ?: $errors->first('code_transfert') }}
+                            </div>
+                        @endif
                     </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">
@@ -233,6 +241,7 @@
     </div>
 
     @include('tickets.partials.poids-decimal-forbidden-modal')
+    @include('tickets.partials.bismar-modal')
 
     <div class="modal fade" id="printUsineModal" tabindex="-1" aria-labelledby="printUsineModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -554,6 +563,14 @@
                 }
 
                 addTicketForm.addEventListener('submit', rejectInvalidPoids, true);
+
+                window.setupBismarPrompt({
+                    form: addTicketForm,
+                    usineInput: document.getElementById('id_usine'),
+                    bismarInput: document.getElementById('bismar'),
+                    codeInput: document.getElementById('code_transfert'),
+                    usines: @json($usinesForAutocomplete),
+                });
                 poidsInput.addEventListener('input', function () {
                     if (!poidsValueHasDecimal(poidsInput.value) && !poidsValueMustEndWithZero(poidsInput.value)) {
                         poidsInput.classList.remove('is-invalid');

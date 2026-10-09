@@ -3,7 +3,9 @@
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\AgentDocumentController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BordereauBismarController;
 use App\Http\Controllers\BordereauController;
+use App\Http\Controllers\CommissionGroupeController;
 use App\Http\Controllers\CompteAgentController;
 use App\Http\Controllers\CompteGroupeController;
 use App\Http\Controllers\FinancementController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\DoublonPlanteurController;
 use App\Http\Controllers\PlantationController;
 use App\Http\Controllers\PlanteurTransfertController;
+use App\Http\Controllers\PrimeBismarController;
 use App\Http\Controllers\PrixUnitaireController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RolePermissionController;
@@ -68,6 +71,7 @@ Route::get('/', function () {
     Route::get('/tickets/valides', [TicketController::class, 'validated'])->name('tickets.validated');
     Route::get('/tickets/verifies', [TicketController::class, 'verified'])->name('tickets.verified');
     Route::get('/tickets/payes', [TicketController::class, 'paid'])->name('tickets.paid');
+    Route::get('/tickets/bismar', [TicketController::class, 'bismar'])->name('tickets.bismar');
     Route::get('/tickets/modifications', [TicketController::class, 'modifications'])->name('tickets.modifications');
     Route::get('/tickets/recherche', [TicketController::class, 'search'])->name('tickets.search');
     Route::get('/tickets/recherche/pdf', [TicketController::class, 'pdfSearch'])->name('tickets.search-pdf');
@@ -173,7 +177,6 @@ Route::get('/', function () {
     Route::delete('/caisse/banques/{banque:id_banque}', [CaisseBanqueController::class, 'destroy'])->name('caisse.banques.destroy');
 
     Route::get('/caisse/solde', [CaisseSoldeController::class, 'index'])->name('caisse.solde.index');
-    Route::post('/caisse/approvisionnement', [CaisseSoldeController::class, 'storeApprovisionnement'])->name('caisse.approvisionnement.store');
     Route::post('/caisse/utilisable', [CaisseSoldeController::class, 'updateMontantUtilisable'])->name('caisse.utilisable.update');
 
     Route::get('/caisse/paiements', [CaissePaiementController::class, 'index'])->name('caisse.paiements.index');
@@ -298,6 +301,16 @@ Route::get('/', function () {
     Route::post('/prix-unitaires', [PrixUnitaireController::class, 'store'])->name('prix-unitaires.store');
     Route::put('/prix-unitaires/{prixUnitaire}', [PrixUnitaireController::class, 'update'])->name('prix-unitaires.update');
 
+    Route::get('/primes-bismar', [PrimeBismarController::class, 'index'])->name('primes-bismar.index');
+    Route::post('/primes-bismar', [PrimeBismarController::class, 'store'])->name('primes-bismar.store');
+    Route::put('/primes-bismar/{primeBismar}', [PrimeBismarController::class, 'update'])->name('primes-bismar.update');
+    Route::delete('/primes-bismar/{primeBismar}', [PrimeBismarController::class, 'destroy'])->name('primes-bismar.destroy');
+
+    Route::get('/commissions-groupe', [CommissionGroupeController::class, 'index'])->name('commissions-groupe.index');
+    Route::post('/commissions-groupe', [CommissionGroupeController::class, 'store'])->name('commissions-groupe.store');
+    Route::put('/commissions-groupe/{commissionGroupe}', [CommissionGroupeController::class, 'update'])->name('commissions-groupe.update');
+    Route::delete('/commissions-groupe/{commissionGroupe}', [CommissionGroupeController::class, 'destroy'])->name('commissions-groupe.destroy');
+
     Route::get('/bordereaux', [BordereauController::class, 'index'])->name('bordereaux.index');
     Route::post('/bordereaux/preview', [BordereauController::class, 'preview'])->name('bordereaux.preview');
     Route::post('/bordereaux', [BordereauController::class, 'store'])->name('bordereaux.store');
@@ -306,6 +319,15 @@ Route::get('/', function () {
     Route::get('/bordereaux/{numero}/pdf', [BordereauController::class, 'pdf'])
         ->where('numero', 'BORD-[0-9\-]+')
         ->name('bordereaux.pdf');
+
+    Route::get('/bordereaux-bismar', [BordereauBismarController::class, 'index'])->name('bordereaux-bismar.index');
+    Route::post('/bordereaux-bismar/preview', [BordereauBismarController::class, 'preview'])->name('bordereaux-bismar.preview');
+    Route::post('/bordereaux-bismar', [BordereauBismarController::class, 'store'])->name('bordereaux-bismar.store');
+    Route::post('/bordereaux-bismar/{bordereauBismar}/validate', [BordereauBismarController::class, 'valider'])->name('bordereaux-bismar.validate');
+    Route::delete('/bordereaux-bismar/{bordereauBismar}', [BordereauBismarController::class, 'destroy'])->name('bordereaux-bismar.destroy');
+    Route::get('/bordereaux-bismar/{numero}/pdf', [BordereauBismarController::class, 'pdf'])
+        ->where('numero', 'BISM-[0-9\-]+')
+        ->name('bordereaux-bismar.pdf');
 
     Route::get('/mon-profil', [ProfilController::class, 'show'])->name('profil.show');
     Route::post('/mon-profil/mot-de-passe', [ProfilController::class, 'updatePassword'])->name('profil.password.update');

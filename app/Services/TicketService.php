@@ -68,6 +68,8 @@ class TicketService
             'id_pont' => $data['id_pont'] ?? null,
             'vehicule_id' => $data['vehicule_id'],
             'poids' => $poids,
+            'bismar' => (bool) ($data['bismar'] ?? false),
+            'code_transfert' => $data['code_transfert'] ?? null,
             'id_utilisateur' => $data['id_utilisateur'],
             'prix_unitaire' => $prix,
             'montant_paie' => $prix !== null ? $prix * $poids : 0,

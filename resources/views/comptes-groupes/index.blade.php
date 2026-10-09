@@ -139,6 +139,7 @@
                                 <th class="text-center">Agents</th>
                                 <th class="text-center">Tickets</th>
                                 <th class="text-center">Financement en attente</th>
+                                <th class="text-end">Commission</th>
                                 <th class="text-end">Montant Total</th>
                                 <th class="text-end">Payé</th>
                                 <th class="text-end">Montant Dû</th>
@@ -181,6 +182,9 @@
                                             <span class="text-muted">0</span>
                                         @endif
                                     </td>
+                                    <td class="text-end fw-semibold {{ (float) $groupe->commission > 0 ? 'text-primary' : 'text-muted' }}">
+                                        {{ number_format((float) $groupe->commission, 0, '', ' ') }} FCFA
+                                    </td>
                                     <td class="text-end">{{ number_format((float) $groupe->montant_total, 0, '', ' ') }} FCFA</td>
                                     <td class="text-end text-success">{{ number_format((float) $groupe->montant_paye, 0, '', ' ') }} FCFA</td>
                                     <td class="text-end {{ (float) $groupe->montant_du > 0 ? 'text-danger' : 'text-muted' }}">
@@ -194,7 +198,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         <i class="bi bi-people fs-1 d-block mb-2"></i>
                                         Aucun chef d'équipe trouvé.
                                     </td>

@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'id_pont',
     'vehicule_id',
     'poids',
+    'bismar',
+    'code_transfert',
     'id_utilisateur',
     'prix_unitaire',
     'date_validation_boss',
@@ -23,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'montant_reste',
     'statut_ticket',
     'numero_bordereau',
+    'numero_bordereau_bismar',
+    'prime_bismar',
     'verification',
     'date_verification',
     'verifie_par',
@@ -50,6 +54,8 @@ class Ticket extends Model
             'montant_payer' => 'decimal:2',
             'montant_reste' => 'decimal:2',
             'verification' => 'boolean',
+            'bismar' => 'boolean',
+            'prime_bismar' => 'decimal:2',
             'date_verification' => 'datetime',
         ];
     }
@@ -148,6 +154,20 @@ class Ticket extends Model
         }
 
         return $query;
+    }
+
+    public function scopeEligibleForBordereauBismar($query, int $idAgent, string $dateDebut, string $dateFin)
+    {
+        return $query
+            ->where('id_agent', $idAgent)
+            ->whereDate('created_at', '>=', $dateDebut)
+            ->whereDate('created_at', '<=', $dateFin)
+            ->whereNotNull('code_transfert')
+            ->where('code_transfert', '<>', '')
+            ->where(function ($query) {
+                $query->whereNull('numero_bordereau_bismar')
+                    ->orWhere('numero_bordereau_bismar', '');
+            });
     }
 
     public function scopeEligibleForBordereau($query, int $idAgent, string $dateDebut, string $dateFin)

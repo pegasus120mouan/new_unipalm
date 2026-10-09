@@ -91,21 +91,13 @@ class BanqueService
         string $libelle,
         Utilisateur $utilisateur,
     ): void {
-        DB::transaction(function () use ($banque, $montant, $libelle, $utilisateur): void {
-            $this->crediter(
-                $banque,
-                $montant,
-                BanqueMouvement::TYPE_MANUEL,
-                $libelle,
-                $utilisateur,
-            );
-
-            $this->approvisionnementService->createManual(
-                $montant,
-                $banque->nom_banque.' — '.$libelle,
-                $utilisateur,
-            );
-        });
+        $this->crediter(
+            $banque,
+            $montant,
+            BanqueMouvement::TYPE_MANUEL,
+            $libelle,
+            $utilisateur,
+        );
     }
 
     public function approvisionnementCaisse(

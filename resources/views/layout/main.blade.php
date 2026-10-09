@@ -225,7 +225,7 @@
 
 
                         @auth
-                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.bismar', 'tickets.modifications', 'tickets.search']))
                         <li class="sidebar-item has-sub {{ request()->routeIs('tickets.*') && ! request()->routeIs('tickets.index') ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
@@ -304,6 +304,17 @@
                                 </li>
                                 @endif
 
+                                @if ($canModule('tickets.bismar'))
+                                <li class="submenu-item {{ request()->routeIs('tickets.bismar') ? 'active' : '' }}">
+
+                                    <a href="{{ route('tickets.bismar') }}">
+                                        <i class="bi bi-arrow-left-right submenu-icon--bismar"></i>
+                                        <span>Tickets BISMAR</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
                                 @if ($canModule('tickets.modifications'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.modifications') ? 'active' : '' }}">
 
@@ -335,8 +346,8 @@
 
 
                         @auth
-                        @if ($canModuleAny(['prix-unitaires', 'bordereaux', 'financements', 'prets', 'usines.amounts', 'comptes-agents', 'comptes-groupes']))
-                        <li class="sidebar-item has-sub {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'bordereaux.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
+                        @if ($canModuleAny(['prix-unitaires', 'primes-bismar', 'commissions-groupe', 'bordereaux', 'bordereaux-bismar', 'financements', 'prets', 'usines.amounts', 'comptes-agents', 'comptes-groupes']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -350,7 +361,7 @@
                                 </span>
                             </a>
 
-                            <ul class="submenu {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'bordereaux.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
+                            <ul class="submenu {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
                                 @if ($canModule('prix-unitaires'))
                                 <li class="submenu-item {{ request()->routeIs('prix-unitaires.*') ? 'active' : '' }}">
@@ -363,12 +374,45 @@
                                 </li>
                                 @endif
 
+                                @if ($canModule('primes-bismar'))
+                                <li class="submenu-item {{ request()->routeIs('primes-bismar.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('primes-bismar.index') }}">
+                                        <i class="bi bi-award submenu-icon--bismar"></i>
+                                        <span>Primes BISMAR</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('commissions-groupe'))
+                                <li class="submenu-item {{ request()->routeIs('commissions-groupe.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('commissions-groupe.index') }}">
+                                        <i class="bi bi-percent submenu-icon--commission"></i>
+                                        <span>Commission Groupe</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
                                 @if ($canModule('bordereaux'))
                                 <li class="submenu-item {{ request()->routeIs('bordereaux.*') ? 'active' : '' }}">
 
                                     <a href="{{ route('bordereaux.index') }}">
                                         <i class="bi bi-file-earmark-text submenu-icon--bordereau"></i>
                                         <span>Bordereaux</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('bordereaux-bismar'))
+                                <li class="submenu-item {{ request()->routeIs('bordereaux-bismar.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('bordereaux-bismar.index') }}">
+                                        <i class="bi bi-file-earmark-ruled submenu-icon--bismar"></i>
+                                        <span>Bordereaux BISMAR</span>
                                     </a>
 
                                 </li>
@@ -980,7 +1024,7 @@
                         </a>
 
                         @auth
-                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.modifications', 'tickets.search']))
+                        @if ($canModuleAny(['tickets.index', 'tickets.today', 'tickets.pending', 'tickets.validated', 'tickets.verified', 'tickets.paid', 'tickets.bismar', 'tickets.modifications', 'tickets.search']))
                         <a href="{{ route('tickets.index') }}"
                             class="btn btn-sm {{ request()->routeIs('tickets.*') ? 'btn-primary' : 'btn-outline-primary' }}">
                             <i class="bi bi-collection-fill"></i> Tickets
