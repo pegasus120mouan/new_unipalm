@@ -75,6 +75,14 @@ class VerifTicketController extends Controller
         $verifiePar = $this->resolveVerifiePar($request);
         $wasAlreadyVerified = (bool) $ticket->verification;
 
+        if ($ticket->isNonConforme()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Ce ticket a été rejeté : les informations ne sont pas conformes.',
+                'ticket' => $this->formatTicket($ticket),
+            ], 422);
+        }
+
         if (! $ticket->verification) {
             $ticket->verification = true;
             $ticket->date_verification = now();
@@ -93,6 +101,79 @@ class VerifTicketController extends Controller
             'message' => $wasAlreadyVerified
                 ? 'Ticket déjà vérifié.'
                 : 'Ticket vérifié.',
+            'ticket' => $this->formatTicket($ticket->fresh(['usine', 'agent', 'vehicule', 'utilisateur'])),
+        ]);
+    }
+
+    public function markRejected(Request $request, int $id_ticket): JsonResponse
+    {
+        $validated = $request->validate([
+            'motif' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        $ticket = Ticket::query()
+            ->with(['usine', 'agent', 'vehicule', 'utilisateur'])
+            ->find($id_ticket);
+
+        if ($ticket === null) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Ticket introuvable.',
+            ], 404);
+        }
+
+        if ($ticket->isVerified()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Ce ticket est déjà vérifié. Il ne peut plus être rejeté.',
+            ], 422);
+        }
+
+        $motif = trim($validated['motif']);
+        $wasAlreadyRejected = $ticket->isNonConforme();
+
+        $ticket->non_conforme = true;
+        $ticket->motif_non_conforme = $motif;
+        $ticket->date_non_conforme = now();
+        $ticket->rejete_par = $this->resolveVerifiePar($request);
+        $ticket->verification = false;
+        $ticket->date_verification = null;
+        $ticket->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => $wasAlreadyRejected
+                ? 'Ticket déjà marqué non conforme.'
+                : 'Ticket marqué non conforme.',
+            'ticket' => $this->formatTicket($ticket->fresh(['usine', 'agent', 'vehicule', 'utilisateur'])),
+        ]);
+    }
+
+    public function markConforme(Request $request, int $id_ticket): JsonResponse
+    {
+        $ticket = Ticket::query()
+            ->with(['usine', 'agent', 'vehicule', 'utilisateur'])
+            ->find($id_ticket);
+
+        if ($ticket === null) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Ticket introuvable.',
+            ], 404);
+        }
+
+        $ticket->non_conforme = false;
+        $ticket->motif_non_conforme = null;
+        $ticket->date_non_conforme = null;
+        $ticket->rejete_par = null;
+        $ticket->verification = true;
+        $ticket->date_verification = now();
+        $ticket->verifie_par = $this->resolveVerifiePar($request);
+        $ticket->save();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Ticket revérifié et rendu conforme.',
             'ticket' => $this->formatTicket($ticket->fresh(['usine', 'agent', 'vehicule', 'utilisateur'])),
         ]);
     }
@@ -178,6 +259,10 @@ class VerifTicketController extends Controller
             'verification' => (bool) $ticket->verification,
             'date_verification' => $ticket->date_verification?->toIso8601String(),
             'verifie_par' => $ticket->verifie_par,
+            'non_conforme' => $ticket->isNonConforme(),
+            'motif_non_conforme' => $ticket->motif_non_conforme,
+            'date_non_conforme' => $ticket->date_non_conforme?->toIso8601String(),
+            'rejete_par' => $ticket->rejete_par,
             'id_utilisateur' => $ticket->id_utilisateur,
             'utilisateur_nom' => $utilisateur?->nom,
             'created_at' => $ticket->created_at?->toIso8601String(),

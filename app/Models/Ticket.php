@@ -30,6 +30,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'verification',
     'date_verification',
     'verifie_par',
+    'non_conforme',
+    'motif_non_conforme',
+    'date_non_conforme',
+    'rejete_par',
     'created_at',
 ])]
 class Ticket extends Model
@@ -54,9 +58,11 @@ class Ticket extends Model
             'montant_payer' => 'decimal:2',
             'montant_reste' => 'decimal:2',
             'verification' => 'boolean',
+            'non_conforme' => 'boolean',
             'bismar' => 'boolean',
             'prime_bismar' => 'decimal:2',
             'date_verification' => 'datetime',
+            'date_non_conforme' => 'datetime',
         ];
     }
 
@@ -105,6 +111,19 @@ class Ticket extends Model
     public function isVerified(): bool
     {
         return (bool) $this->verification;
+    }
+
+    public function isNonConforme(): bool
+    {
+        return (bool) $this->non_conforme;
+    }
+
+    public function scopeConforme($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('non_conforme', false)
+                ->orWhereNull('non_conforme');
+        });
     }
 
     public function scopePaid($query)
@@ -168,6 +187,7 @@ class Ticket extends Model
                 $query->whereNull('numero_bordereau_bismar')
                     ->orWhere('numero_bordereau_bismar', '');
             })
+            ->conforme()
             ->when(TicketParametre::requiresVerification(), fn ($query) => $query->verified());
     }
 
@@ -182,6 +202,7 @@ class Ticket extends Model
                 $query->whereNull('numero_bordereau')
                     ->orWhere('numero_bordereau', '');
             })
+            ->conforme()
             ->when(TicketParametre::requiresVerification(), fn ($query) => $query->verified());
     }
 }

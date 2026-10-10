@@ -23,5 +23,9 @@ Route::middleware(['verif.env', 'verif.api'])->prefix('verif')->group(function (
     Route::get('/tickets', [VerifTicketController::class, 'index']);
     Route::post('/tickets/{id_ticket}/verify', [VerifTicketController::class, 'markVerified'])
         ->whereNumber('id_ticket');
+    Route::post('/tickets/{id_ticket}/reject', [VerifTicketController::class, 'markRejected'])
+        ->whereNumber('id_ticket');
+    Route::post('/tickets/{id_ticket}/conform', [VerifTicketController::class, 'markConforme'])
+        ->whereNumber('id_ticket');
     Route::get('/mes_tickets.php', [VerifTicketController::class, 'index']);
 });
