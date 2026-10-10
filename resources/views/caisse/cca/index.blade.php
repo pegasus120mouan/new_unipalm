@@ -232,7 +232,6 @@
                             <select name="source" id="remb_source" class="form-select" required>
                                 <option value="banque" @selected($rembSource === 'banque')>Banque</option>
                                 <option value="caisse" @selected($rembSource === 'caisse')>Caisse</option>
-                                <option value="pret_agent" @selected($rembSource === 'pret_agent')>Prêts agents</option>
                             </select>
                         </div>
 
@@ -272,15 +271,6 @@
                                 <span class="text-muted">Montant utilisable en caisse :</span>
                                 <strong class="text-primary">{{ number_format($montantUtilisableCaisse, 0, ',', ' ') }} FCFA</strong>
                             </div>
-                        </div>
-
-                        <div data-remb-block="pret_agent" class="mb-3 @if ($rembSource !== 'pret_agent') d-none @endif">
-                            <label for="remb_id_agent" class="form-label">Agent <span class="text-danger">*</span></label>
-                            <select name="id_agent" id="remb_id_agent" class="form-select @error('id_agent') is-invalid @enderror">
-                                <option value="">Sélectionner un agent</option>
-                            </select>
-                            @error('id_agent')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                            <p class="form-text mb-0" id="remb_agent_vide" hidden>Ce CCA n'a aucun prêt agent encore dû.</p>
                         </div>
 
                         <div class="mb-0">
@@ -366,11 +356,6 @@
             const chequeInput = document.getElementById('remb_numero_cheque');
             const resteInfo = document.getElementById('remb_reste_info');
             const mode = document.getElementById('remb_mode');
-            const agent = document.getElementById('remb_id_agent');
-            const agentVide = document.getElementById('remb_agent_vide');
-            const montantDisplay = document.getElementById('remb_montant_display');
-            const pretsParCca = @json($pretsAgentsParCca);
-            const agentSelectionne = @json((string) old('id_agent', ''));
 
             if (!source) {
                 return;
@@ -380,39 +365,8 @@
                 return new Intl.NumberFormat('fr-FR').format(Math.round(valeur)) + ' FCFA';
             }
 
-            function remplirMontant(valeur) {
-                if (!montantDisplay || !valeur) {
-                    return;
-                }
-                montantDisplay.value = String(Math.round(valeur));
-                montantDisplay.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-
-            function remplirAgents() {
-                if (!agent || !cca) {
-                    return;
-                }
-                const lignes = pretsParCca[cca.value] || [];
-                const courant = agent.value || agentSelectionne;
-                agent.innerHTML = '<option value="">Sélectionner un agent</option>';
-                lignes.forEach(function (ligne) {
-                    const option = document.createElement('option');
-                    option.value = String(ligne.id_agent);
-                    option.dataset.reste = String(ligne.reste);
-                    option.textContent = ligne.nom + ' — ' + formatFcfa(ligne.reste);
-                    if (String(ligne.id_agent) === String(courant)) {
-                        option.selected = true;
-                    }
-                    agent.appendChild(option);
-                });
-                if (agentVide) {
-                    agentVide.hidden = lignes.length > 0;
-                }
-            }
-
-            function update(remplir) {
+            function update() {
                 const estBanque = source.value === 'banque';
-                const estPret = source.value === 'pret_agent';
 
                 document.querySelectorAll('[data-remb-block]').forEach(function (block) {
                     block.classList.toggle('d-none', block.dataset.rembBlock !== source.value);
@@ -428,34 +382,18 @@
                 chequeInput.disabled = !estCheque;
 
                 const option = cca.options[cca.selectedIndex];
-                const resteCca = option && option.value ? parseFloat(option.dataset.reste || '0') : 0;
                 resteInfo.textContent = option && option.value
-                    ? 'Reste à rembourser : ' + formatFcfa(resteCca)
+                    ? 'Reste à rembourser : ' + formatFcfa(parseFloat(option.dataset.reste || '0'))
                     : '';
-
-                if (agent) {
-                    agent.required = estPret;
-                    agent.disabled = !estPret;
-                    const agentOption = agent.options[agent.selectedIndex];
-                    if (remplir && estPret && agentOption && agentOption.value) {
-                        const resteAgent = parseFloat(agentOption.dataset.reste || '0');
-                        remplirMontant(Math.min(resteAgent, resteCca || resteAgent));
-                    }
-                }
             }
 
-            source.addEventListener('change', function () { update(true); });
-            cca.addEventListener('change', function () {
-                remplirAgents();
-                update(true);
-            });
-            mode.addEventListener('change', function () { update(false); });
-            agent?.addEventListener('change', function () { update(true); });
-            remplirAgents();
-            update(false);
+            source.addEventListener('change', update);
+            cca.addEventListener('change', update);
+            mode.addEventListener('change', update);
+            update();
         })();
 
-        @if (session('open_rembourser_modal') || $errors->hasAny(['rembourser', 'id_cca', 'source', 'id_banque', 'mode_paiement', 'numero_cheque', 'id_agent', 'montant']))
+        @if (session('open_rembourser_modal') || $errors->hasAny(['rembourser', 'id_cca', 'source', 'id_banque', 'mode_paiement', 'numero_cheque', 'montant']))
             document.addEventListener('DOMContentLoaded', function () {
                 new bootstrap.Modal(document.getElementById('rembourserCcaModal')).show();
             });

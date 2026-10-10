@@ -50,8 +50,6 @@ class CcaController extends Controller
         $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
         $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
 
-        $pretsAgentsParCca = $this->ccaService->agentsPretesParCca();
-
         return view('caisse.cca.index', compact(
             'ccas',
             'stats',
@@ -59,7 +57,6 @@ class CcaController extends Controller
             'ccasRemboursables',
             'banques',
             'montantUtilisableCaisse',
-            'pretsAgentsParCca',
         ));
     }
 
@@ -97,9 +94,8 @@ class CcaController extends Controller
         $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
         $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
         $reste = max(0, (float) $cca->total_prete - (float) $cca->total_rembourse);
-        $agentsPrets = $this->ccaService->agentsPretesParCca()[$cca->id_cca] ?? [];
 
-        return view('caisse.cca.show', compact('cca', 'mouvements', 'filters', 'banques', 'montantUtilisableCaisse', 'reste', 'agentsPrets'));
+        return view('caisse.cca.show', compact('cca', 'mouvements', 'filters', 'banques', 'montantUtilisableCaisse', 'reste'));
     }
 
     public function rembourser(Request $request): RedirectResponse
@@ -114,7 +110,6 @@ class CcaController extends Controller
             'source' => ['required', Rule::in([
                 CcaMouvement::SOURCE_BANQUE,
                 CcaMouvement::SOURCE_CAISSE,
-                CcaMouvement::SOURCE_PRET_AGENT,
             ])],
             'id_banque' => [
                 'required_if:source,'.CcaMouvement::SOURCE_BANQUE,
@@ -128,17 +123,10 @@ class CcaController extends Controller
                 Rule::in([CcaMouvement::MODE_VIREMENT, CcaMouvement::MODE_CHEQUE]),
             ],
             'numero_cheque' => ['nullable', 'string', 'max:100'],
-            'id_agent' => [
-                'required_if:source,'.CcaMouvement::SOURCE_PRET_AGENT,
-                'nullable',
-                'integer',
-                Rule::exists('agents', 'id_agent'),
-            ],
             'montant' => ['required', 'numeric', 'min:1'],
         ], [
             'id_banque.required_if' => 'Sélectionnez une banque.',
             'mode_paiement.required_if' => 'Choisissez Virement ou Chèque.',
-            'id_agent.required_if' => 'Sélectionnez l\'agent.',
         ]);
 
         $estBanque = $validated['source'] === CcaMouvement::SOURCE_BANQUE;
@@ -162,7 +150,6 @@ class CcaController extends Controller
                 $validated['mode_paiement'] ?? null,
                 $validated['numero_cheque'] ?? null,
                 $request->user(),
-                isset($validated['id_agent']) ? (int) $validated['id_agent'] : null,
             );
         } catch (\InvalidArgumentException $e) {
             return back()
@@ -171,11 +158,9 @@ class CcaController extends Controller
                 ->with('open_rembourser_modal', true);
         }
 
-        $origine = match ($validated['source']) {
-            CcaMouvement::SOURCE_BANQUE => $banque->nom_banque.' ('.($validated['mode_paiement'] === CcaMouvement::MODE_CHEQUE ? 'chèque n° '.$validated['numero_cheque'] : 'virement').')',
-            CcaMouvement::SOURCE_PRET_AGENT => 'le prêt agent',
-            default => 'la caisse',
-        };
+        $origine = $validated['source'] === CcaMouvement::SOURCE_BANQUE
+            ? $banque->nom_banque.' ('.($validated['mode_paiement'] === CcaMouvement::MODE_CHEQUE ? 'chèque n° '.$validated['numero_cheque'] : 'virement').')'
+            : 'la caisse';
 
         return redirect()
             ->back()
