@@ -93,6 +93,7 @@ Route::get('/', function () {
 
     Route::get('/prets', [PretController::class, 'index'])->name('prets.index');
     Route::get('/prets/agents/{agent:id_agent}', [PretController::class, 'show'])->name('prets.show');
+    Route::post('/prets/agents/{agent:id_agent}/remboursement', [PretController::class, 'rembourser'])->name('prets.rembourser');
     Route::post('/prets', [PretController::class, 'store'])->name('prets.store');
 
     Route::get('/comptes-agents', [CompteAgentController::class, 'index'])->name('comptes-agents.index');

@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\Cca;
+use App\Models\CcaMouvement;
 use App\Models\Pret;
+use App\Models\PretRemboursement;
 use App\Models\Utilisateur;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -214,6 +216,104 @@ class PretService
         ]);
 
         $this->caisseService->debiterUtilisable($montant);
+    }
+
+    public function rembourser(
+        int $agentId,
+        float $montant,
+        string $origine,
+        ?int $idCca,
+        Utilisateur $utilisateur,
+    ): void {
+        $agent = Agent::query()
+            ->whereNull('date_suppression')
+            ->findOrFail($agentId);
+
+        if ($origine === 'caisse') {
+            $this->rembourserVersCaisse($agent, $montant, $utilisateur);
+
+            return;
+        }
+
+        $cca = Cca::query()->findOrFail($idCca);
+        $this->ccaService->rembourser(
+            $cca,
+            $montant,
+            CcaMouvement::SOURCE_PRET_AGENT,
+            null,
+            null,
+            null,
+            $utilisateur,
+            (int) $agent->id_agent,
+        );
+    }
+
+    private function rembourserVersCaisse(Agent $agent, float $montant, Utilisateur $utilisateur): void
+    {
+        DB::transaction(function () use ($agent, $montant, $utilisateur): void {
+            $prets = Pret::query()
+                ->where('id_agent', $agent->id_agent)
+                ->where('origine', 'caisse')
+                ->where('montant_restant', '>', 0)
+                ->orderBy('date_octroi')
+                ->orderBy('id_pret')
+                ->lockForUpdate()
+                ->get();
+
+            $disponible = (float) $prets->sum(fn (Pret $pret) => (float) $pret->montant_restant);
+
+            if ($prets->isEmpty() || $montant > $disponible + 0.009) {
+                throw new \InvalidArgumentException(
+                    'Le montant dépasse le prêt restant à rembourser en caisse ('
+                    .number_format($disponible, 0, ',', ' ')
+                    .' FCFA).',
+                );
+            }
+
+            $reste = $montant;
+            $applications = [];
+
+            foreach ($prets as $pret) {
+                if ($reste <= 0.009) {
+                    break;
+                }
+
+                $du = (float) $pret->montant_restant;
+                $applique = min($du, $reste);
+                $pret->montant_restant = round($du - $applique, 2) <= 0.009 ? 0 : round($du - $applique, 2);
+                if ((float) $pret->montant_restant <= 0) {
+                    $pret->statut = 'termine';
+                }
+                $pret->save();
+                $applications[] = ['id_pret' => (int) $pret->id_pret, 'montant' => $applique];
+                $reste -= $applique;
+            }
+
+            $nouveauSolde = $this->caisseService->getSolde() + $montant;
+
+            DB::table('transactions')->insert([
+                'type_transaction' => 'approvisionnement',
+                'montant' => $montant,
+                'date_transaction' => now(),
+                'motifs' => 'Remboursement prêt agent : '.$agent->full_name,
+                'source' => ApprovisionnementService::SOURCE_PRET_AGENT,
+                'id_utilisateur' => $utilisateur->id,
+                'solde' => $nouveauSolde,
+                'numero_cheque' => null,
+            ]);
+
+            $this->caisseService->crediterUtilisable($montant);
+
+            foreach ($applications as $application) {
+                PretRemboursement::create([
+                    'id_pret' => $application['id_pret'],
+                    'montant' => $application['montant'],
+                    'date_remboursement' => now(),
+                    'libelle' => 'Remboursement en caisse',
+                    'id_utilisateur' => $utilisateur->id,
+                ]);
+            }
+        });
     }
 
     /**

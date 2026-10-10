@@ -85,8 +85,8 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="pret_motif" class="form-label">Motif</label>
-                        <textarea name="motif" id="pret_motif" rows="3"
+                        <label for="pret_motif" class="form-label">Motif <span class="text-danger">*</span></label>
+                        <textarea name="motif" id="pret_motif" rows="3" required
                             class="form-control @error('motif') is-invalid @enderror">{{ old('motif') }}</textarea>
                         @error('motif')
                             <div class="invalid-feedback">{{ $message }}</div>

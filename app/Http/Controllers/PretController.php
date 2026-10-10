@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\Cca;
+use App\Models\Pret;
 use App\Services\PretService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -59,28 +61,50 @@ class PretController extends Controller
             ->get();
 
         $ccas = $this->ccaOptions();
+        $resteCaisse = (float) Pret::query()
+            ->where('id_agent', $agent->id_agent)
+            ->where('origine', 'caisse')
+            ->sum('montant_restant');
+        $ccasPrets = Pret::query()
+            ->with('cca')
+            ->where('id_agent', $agent->id_agent)
+            ->where('origine', 'cca')
+            ->where('montant_restant', '>', 0)
+            ->orderBy('id_pret')
+            ->get()
+            ->groupBy('id_cca')
+            ->map(function ($rows) {
+                $cca = $rows->first()->cca;
 
-        return view('prets.show', compact('agent', 'stats', 'prets', 'filters', 'agents', 'ccas'));
+                return [
+                    'id_cca' => (int) $rows->first()->id_cca,
+                    'nom' => $cca?->nom ?: 'CCA',
+                    'reste' => (float) $rows->sum('montant_restant'),
+                ];
+            })
+            ->values();
+
+        return view('prets.show', compact('agent', 'stats', 'prets', 'filters', 'agents', 'ccas', 'resteCaisse', 'ccasPrets'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        if ($request->has('montant_initial')) {
-            $request->merge([
-                'montant_initial' => preg_replace('/\s+/', '', (string) $request->input('montant_initial')),
-            ]);
-        }
+        $request->merge([
+            'montant_initial' => preg_replace('/\s+/', '', (string) $request->input('montant_initial', '')),
+            'motif' => trim((string) $request->input('motif', '')),
+        ]);
 
         $validated = $request->validate([
             'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
             'montant_initial' => ['required', 'numeric', 'min:1'],
-            'motif' => ['nullable', 'string', 'max:255'],
+            'motif' => ['required', 'string', 'max:255'],
             'origine' => ['required', Rule::in(['caisse', 'cca'])],
             'id_cca' => ['required_if:origine,cca', 'nullable', 'integer', 'exists:ccas,id_cca'],
             'redirect_to' => ['nullable', 'string'],
         ], [
             'origine.required' => 'Choisissez l\'origine du prêt.',
             'id_cca.required_if' => 'Sélectionnez le CCA.',
+            'motif.required' => 'Indiquez le motif du prêt.',
         ]);
 
         $cca = $validated['origine'] === 'cca'
@@ -113,6 +137,58 @@ class PretController extends Controller
             : 'Prêt enregistré. La caisse a été débitée de '.$montant.' FCFA.';
 
         return redirect($redirectTo)->with('success', $message);
+    }
+
+    public function rembourser(Request $request, Agent $agent): RedirectResponse
+    {
+        abort_if($agent->date_suppression !== null, 404);
+
+        $request->merge([
+            'montant' => preg_replace('/\s+/', '', (string) $request->input('montant', '')),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'origine' => ['required', Rule::in(['caisse', 'cca'])],
+            'id_cca' => ['required_if:origine,cca', 'nullable', 'integer', 'exists:ccas,id_cca'],
+            'montant' => ['required', 'numeric', 'min:1'],
+        ], [
+            'origine.required' => 'Choisissez la source à rembourser.',
+            'id_cca.required_if' => 'Sélectionnez le CCA.',
+            'montant.required' => 'Indiquez le montant.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('open_remboursement_modal', true);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $this->pretService->rembourser(
+                (int) $agent->id_agent,
+                (float) $validated['montant'],
+                $validated['origine'],
+                isset($validated['id_cca']) ? (int) $validated['id_cca'] : null,
+                $request->user(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()
+                ->withErrors(['remboursement' => $e->getMessage()])
+                ->withInput()
+                ->with('open_remboursement_modal', true);
+        }
+
+        $montant = number_format((float) $validated['montant'], 0, ',', ' ');
+        $message = $validated['origine'] === 'caisse'
+            ? 'Remboursement de '.$montant.' FCFA enregistré. La caisse a été créditée.'
+            : 'Remboursement de '.$montant.' FCFA enregistré. Le CCA a été crédité.';
+
+        return redirect()
+            ->route('prets.show', $agent)
+            ->with('success', $message);
     }
 
     /**

@@ -170,6 +170,7 @@ return [
         'prets.index' => 'prets',
         'prets.show' => 'prets',
         'prets.store' => 'prets',
+        'prets.rembourser' => 'prets',
 
         'usines.amounts' => 'usines.amounts',
         'usines.amounts.show' => 'usines.amounts',

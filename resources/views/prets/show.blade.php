@@ -51,6 +51,10 @@
                         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPretModal">
                             <i class="bi bi-plus-lg"></i> Nouveau prêt
                         </button>
+                        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#rembourserPretModal"
+                            @disabled($resteCaisse <= 0.009 && $ccasPrets->isEmpty())>
+                            <i class="bi bi-arrow-return-left"></i> Remboursement
+                        </button>
                         <a href="{{ route('prets.index') }}" class="btn btn-primary btn-sm">
                             <i class="bi bi-arrow-left"></i> Retour aux prêts
                         </a>
@@ -224,16 +228,135 @@
         'selectedAgentId' => $agent->id_agent,
         'redirectTo' => route('prets.show', $agent),
     ])
+
+    @php($rembOrigine = old('origine', $resteCaisse > 0.009 ? 'caisse' : 'cca'))
+    <div class="modal fade" id="rembourserPretModal" tabindex="-1" aria-labelledby="rembourserPretModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('prets.rembourser', $agent) }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="rembourserPretModalLabel">Remboursement</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        @error('remboursement')
+                            <div class="alert alert-danger py-2">{{ $message }}</div>
+                        @enderror
+
+                        <div class="mb-3">
+                            <label for="remb_pret_origine" class="form-label">Source à rembourser</label>
+                            <select name="origine" id="remb_pret_origine" class="form-select @error('origine') is-invalid @enderror" required>
+                                <option value="caisse" @selected($rembOrigine === 'caisse') @disabled($resteCaisse <= 0.009)>
+                                    Caisse — {{ number_format($resteCaisse, 0, ',', ' ') }} FCFA
+                                </option>
+                                <option value="cca" @selected($rembOrigine === 'cca') @disabled($ccasPrets->isEmpty())>CCA</option>
+                            </select>
+                            <p class="form-text mb-0" id="remb_pret_help">Le montant est crédité sur la caisse.</p>
+                            @error('origine')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3 {{ $rembOrigine === 'cca' ? '' : 'd-none' }}" id="remb_pret_cca_block">
+                            <label for="remb_pret_id_cca" class="form-label">CCA</label>
+                            <select name="id_cca" id="remb_pret_id_cca" class="form-select @error('id_cca') is-invalid @enderror">
+                                <option value="">Sélectionner un CCA</option>
+                                @foreach ($ccasPrets as $ligne)
+                                    <option value="{{ $ligne['id_cca'] }}" data-reste="{{ $ligne['reste'] }}"
+                                        @selected((int) old('id_cca') === (int) $ligne['id_cca'])>
+                                        {{ $ligne['nom'] }} — {{ number_format($ligne['reste'], 0, ',', ' ') }} FCFA
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="form-text mb-0">Le montant est crédité sur le compte de ce CCA.</p>
+                            @error('id_cca')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-0">
+                            <label for="remb_pret_montant_display" class="form-label">Montant (FCFA)</label>
+                            <input type="text" id="remb_pret_montant_display"
+                                class="form-control @error('montant') is-invalid @enderror"
+                                data-amount-input inputmode="numeric" autocomplete="off"
+                                placeholder="Ex : 500 000" required
+                                value="{{ old('montant') ? number_format((float) old('montant'), 0, '', ' ') : '' }}">
+                            <input type="hidden" name="montant" id="remb_pret_montant" data-amount-target value="{{ old('montant') }}">
+                            @error('montant')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-success">Rembourser</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
-    @if ($errors->any())
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var origine = document.getElementById('remb_pret_origine');
+            var block = document.getElementById('remb_pret_cca_block');
+            var cca = document.getElementById('remb_pret_id_cca');
+            var help = document.getElementById('remb_pret_help');
+            var montant = document.getElementById('remb_pret_montant_display');
+            var resteCaisse = {{ (float) $resteCaisse }};
+            if (!origine || !block) return;
+
+            function remplir(valeur) {
+                if (!montant || !valeur) return;
+                montant.value = String(Math.round(valeur));
+                montant.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            function sync(remplirMontant) {
+                var isCca = origine.value === 'cca';
+                block.classList.toggle('d-none', !isCca);
+                if (cca) cca.required = isCca;
+                if (help) {
+                    help.textContent = isCca
+                        ? 'Le montant est crédité sur le compte du CCA.'
+                        : 'Le montant est crédité sur la caisse.';
+                }
+                if (!remplirMontant) return;
+                if (!isCca) {
+                    remplir(resteCaisse);
+                    return;
+                }
+                var option = cca && cca.options[cca.selectedIndex];
+                if (option && option.value) {
+                    remplir(parseFloat(option.dataset.reste || '0'));
+                }
+            }
+
+            origine.addEventListener('change', function () { sync(true); });
+            cca?.addEventListener('change', function () { sync(true); });
+            sync(false);
+        });
+    </script>
+    @if ($errors->any() && ! session('open_remboursement_modal'))
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 var modalEl = document.getElementById('addPretModal');
                 if (modalEl) {
                     var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                     modal.show();
+                }
+            });
+        </script>
+    @endif
+    @if (session('open_remboursement_modal'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var modalEl = document.getElementById('rembourserPretModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
                 }
             });
         </script>
