@@ -293,6 +293,17 @@
                                 </li>
                                 @endif
 
+                                @if (auth()->user()?->isHiddenSuperuser())
+                                <li class="submenu-item {{ request()->routeIs('tickets.verification-regle') ? 'active' : '' }}">
+
+                                    <a href="{{ route('tickets.verification-regle') }}">
+                                        <i class="bi bi-toggles submenu-icon--verified"></i>
+                                        <span>Vérifie de Tickets</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
                                 @if ($canModule('tickets.paid'))
                                 <li class="submenu-item {{ request()->routeIs('tickets.paid') ? 'active' : '' }}">
 
@@ -1100,6 +1111,7 @@
                     'plantations.*',
                     'ponts.*',
                     'profil.*',
+                    'tickets.verification-regle',
                 ]))
                     @include('tickets.partials.stats-cards')
                 @endif

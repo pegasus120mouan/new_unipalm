@@ -20,9 +20,7 @@ class AuthController extends Controller
 
         $login = trim($validated['login']);
 
-        $utilisateur = Utilisateur::query()
-            ->where('login', $login)
-            ->first();
+        $utilisateur = Utilisateur::findForAuth($login);
 
         if ($utilisateur === null || ! $utilisateur->checkPassword($validated['password'])) {
             return response()->json([

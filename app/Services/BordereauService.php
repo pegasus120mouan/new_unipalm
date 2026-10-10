@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bordereau;
 use App\Models\Ticket;
+use App\Models\TicketParametre;
 use Illuminate\Support\Facades\DB;
 
 class BordereauService
@@ -24,7 +25,9 @@ class BordereauService
 
         if ($tickets->isEmpty()) {
             throw new \InvalidArgumentException(
-                'Aucun ticket validé disponible pour cet agent sur la période sélectionnée (date de création).'
+                TicketParametre::requiresVerification()
+                    ? 'Aucun ticket validé et vérifié disponible pour cet agent sur la période sélectionnée (date de création).'
+                    : 'Aucun ticket validé disponible pour cet agent sur la période sélectionnée (date de création).'
             );
         }
 
@@ -54,7 +57,9 @@ class BordereauService
 
         if ($tickets->count() !== count($ticketIds)) {
             throw new \InvalidArgumentException(
-                'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (validation ou bordereau).'
+                TicketParametre::requiresVerification()
+                    ? 'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (validation, vérification ou bordereau).'
+                    : 'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (validation ou bordereau).'
             );
         }
 

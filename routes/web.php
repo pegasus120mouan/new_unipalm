@@ -30,6 +30,7 @@ use App\Http\Controllers\PrixUnitaireController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketVerificationRegleController;
 use App\Http\Controllers\UsineController;
 use App\Http\Controllers\UsineFinancementController;
 use App\Http\Controllers\UtilisateurController;
@@ -71,6 +72,8 @@ Route::get('/', function () {
     Route::get('/tickets/en-attente', [TicketController::class, 'pending'])->name('tickets.pending');
     Route::get('/tickets/valides', [TicketController::class, 'validated'])->name('tickets.validated');
     Route::get('/tickets/verifies', [TicketController::class, 'verified'])->name('tickets.verified');
+    Route::get('/tickets/verification-regle', [TicketVerificationRegleController::class, 'edit'])->name('tickets.verification-regle');
+    Route::post('/tickets/verification-regle', [TicketVerificationRegleController::class, 'update'])->name('tickets.verification-regle.update');
     Route::get('/tickets/payes', [TicketController::class, 'paid'])->name('tickets.paid');
     Route::get('/tickets/bismar', [TicketController::class, 'bismar'])->name('tickets.bismar');
     Route::get('/tickets/modifications', [TicketController::class, 'modifications'])->name('tickets.modifications');

@@ -67,7 +67,10 @@ class ApprovisionnementService
     public function paginatedApprovisionnements(array $filters): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = DB::table('transactions as t')
-            ->leftJoin('utilisateurs as u', 't.id_utilisateur', '=', 'u.id')
+            ->leftJoin('utilisateurs as u', function ($join): void {
+                $join->on('t.id_utilisateur', '=', 'u.id')
+                    ->where('u.est_cache', false);
+            })
             ->where(function ($builder): void {
                 $builder
                     ->where('t.type_transaction', 'approvisionnement')
@@ -89,6 +92,10 @@ class ApprovisionnementService
             ])
             ->orderByDesc('t.date_transaction')
             ->orderByDesc('t.id_transaction');
+
+        if (! empty($filters['entrees_seulement'])) {
+            $query->where('t.type_transaction', 'approvisionnement');
+        }
 
         $origine = $filters['origine'] ?? 'all';
         if ($origine === 'usine') {

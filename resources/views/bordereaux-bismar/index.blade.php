@@ -244,6 +244,9 @@
                             Sélectionnez l'agent et la période (<strong>date de création</strong>), puis cliquez sur
                             <strong>Voir</strong> pour afficher les tickets ayant un <strong>code transfert</strong>
                             et pas encore de bordereau BISMAR.
+                            @if (\App\Models\TicketParametre::requiresVerification())
+                                Seuls les tickets <strong>vérifiés</strong> sont proposés.
+                            @endif
                         </p>
 
                         <div class="mb-3">

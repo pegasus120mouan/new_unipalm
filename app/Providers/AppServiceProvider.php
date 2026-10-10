@@ -2,10 +2,14 @@
 
 namespace App\Providers;
 
-use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\View;
+use App\Models\PersonalAccessToken;
 use App\Services\TicketService;
+use Illuminate\Auth\EloquentUserProvider;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +26,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Auth::provider('eloquent', function ($app, array $config) {
+            return (new EloquentUserProvider($app['hash'], $config['model']))
+                ->withQuery(function ($query): void {
+                    $query->withoutGlobalScope('visible');
+                });
+        });
+
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+
         Paginator::useBootstrapFive();
 
         View::composer('*', function ($view): void {

@@ -246,7 +246,11 @@
                         <p class="text-muted small mb-3">
                             Sélectionnez l'agent et la période (<strong>date de création</strong>), puis cliquez sur
                             <strong>Voir</strong> pour afficher les tickets <strong>validés</strong> sans bordereau
-                            (la vérification du ticket n'est pas obligatoire).
+                            @if (\App\Models\TicketParametre::requiresVerification())
+                                et <strong>vérifiés</strong> par le vérificateur.
+                            @else
+                                (la vérification du ticket n'est pas obligatoire).
+                            @endif
                         </p>
 
                         <div class="mb-3">

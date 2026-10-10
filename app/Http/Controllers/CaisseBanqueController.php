@@ -6,6 +6,7 @@ use App\Models\Banque;
 use App\Models\Cca;
 use App\Models\Ticket;
 use App\Models\Usine;
+use App\Services\ApprovisionnementService;
 use App\Services\BanqueService;
 use App\Services\CcaService;
 use App\Services\UsinePaymentService;
@@ -20,6 +21,7 @@ class CaisseBanqueController extends Controller
         private readonly BanqueService $banqueService,
         private readonly UsinePaymentService $usinePaymentService,
         private readonly CcaService $ccaService,
+        private readonly ApprovisionnementService $approvisionnementService,
     ) {}
 
     public function index(Request $request): View
@@ -78,17 +80,20 @@ class CaisseBanqueController extends Controller
     public function approvisionnementCaisseIndex(Request $request): View
     {
         $filters = [
-            'id_banque' => $request->query('id_banque'),
+            'origine' => (string) $request->query('origine', 'all'),
+            'search' => trim((string) $request->query('search', '')),
             'date_debut' => $request->query('date_debut'),
             'date_fin' => $request->query('date_fin'),
+            'entrees_seulement' => true,
         ];
 
         $stats = $this->banqueService->statsApprovisionnementsCaisse();
+        $stats['total_verse_caisse'] = $this->approvisionnementService->stats()['total_montant'];
         $banques = Banque::query()
             ->where('actif', true)
             ->orderBy('nom_banque')
             ->get();
-        $historique = $this->banqueService->paginatedApprovisionnementsCaisse($filters);
+        $historique = $this->approvisionnementService->paginatedApprovisionnements($filters);
 
         $restesUsines = Ticket::query()
             ->validated()

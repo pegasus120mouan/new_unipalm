@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agent;
 use App\Models\BordereauBismar;
+use App\Models\TicketParametre;
 use App\Models\Usine;
 use App\Services\BordereauBismarService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -124,7 +125,9 @@ class BordereauBismarController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'bordereau' => 'Aucun ticket BISMAR (avec code transfert) disponible pour cet agent sur la période (date de création, sans bordereau BISMAR).',
+                    'bordereau' => TicketParametre::requiresVerification()
+                        ? 'Aucun ticket BISMAR vérifié (avec code transfert) disponible pour cet agent sur la période (date de création, sans bordereau BISMAR).'
+                        : 'Aucun ticket BISMAR (avec code transfert) disponible pour cet agent sur la période (date de création, sans bordereau BISMAR).',
                 ]);
         }
 

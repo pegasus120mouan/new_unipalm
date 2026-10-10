@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agent;
 use App\Models\Bordereau;
 use App\Models\Ticket;
+use App\Models\TicketParametre;
 use App\Models\Usine;
 use App\Services\BordereauPdfService;
 use App\Services\BordereauService;
@@ -136,7 +137,9 @@ class BordereauController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'bordereau' => 'Aucun ticket validé disponible pour cet agent sur la période (date de création, sans bordereau).',
+                    'bordereau' => TicketParametre::requiresVerification()
+                        ? 'Aucun ticket validé et vérifié disponible pour cet agent sur la période (date de création, sans bordereau).'
+                        : 'Aucun ticket validé disponible pour cet agent sur la période (date de création, sans bordereau).',
                 ]);
         }
 

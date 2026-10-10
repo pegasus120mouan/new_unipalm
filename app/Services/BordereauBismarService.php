@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BordereauBismar;
 use App\Models\PrimeBismar;
 use App\Models\Ticket;
+use App\Models\TicketParametre;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -49,7 +50,9 @@ class BordereauBismarService
 
         if ($tickets->count() !== count($ticketIds)) {
             throw new \InvalidArgumentException(
-                'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (déjà dans un bordereau BISMAR).'
+                TicketParametre::requiresVerification()
+                    ? 'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (vérification ou bordereau BISMAR).'
+                    : 'Un ou plusieurs tickets sélectionnés ne sont plus disponibles (déjà dans un bordereau BISMAR).'
             );
         }
 

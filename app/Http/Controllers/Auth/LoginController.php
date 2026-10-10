@@ -29,9 +29,7 @@ class LoginController extends Controller
 
         $login = trim($credentials['login']);
 
-        $utilisateur = Utilisateur::query()
-            ->where('login', $login)
-            ->first();
+        $utilisateur = Utilisateur::findForAuth($login);
 
         if (
             $utilisateur

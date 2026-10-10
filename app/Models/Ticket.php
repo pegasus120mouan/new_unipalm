@@ -167,7 +167,8 @@ class Ticket extends Model
             ->where(function ($query) {
                 $query->whereNull('numero_bordereau_bismar')
                     ->orWhere('numero_bordereau_bismar', '');
-            });
+            })
+            ->when(TicketParametre::requiresVerification(), fn ($query) => $query->verified());
     }
 
     public function scopeEligibleForBordereau($query, int $idAgent, string $dateDebut, string $dateFin)
@@ -180,6 +181,7 @@ class Ticket extends Model
             ->where(function ($query) {
                 $query->whereNull('numero_bordereau')
                     ->orWhere('numero_bordereau', '');
-            });
+            })
+            ->when(TicketParametre::requiresVerification(), fn ($query) => $query->verified());
     }
 }

@@ -127,30 +127,33 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span>Historique banques → caisse</span>
+                    <span>Historique des approvisionnements caisse</span>
                     <span class="text-muted">{{ $historique->total() }} opération(s)</span>
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ route('caisse.banques.approvisionnement-caisse.index') }}" class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <select name="id_banque" class="form-select">
-                                <option value="">Toutes les banques</option>
-                                @foreach ($banques as $banque)
-                                    <option value="{{ $banque->id_banque }}" @selected((int) ($filters['id_banque'] ?? 0) === (int) $banque->id_banque)>
-                                        {{ $banque->nom_banque }}
-                                    </option>
-                                @endforeach
+                        <div class="col-md-3">
+                            <select name="origine" class="form-select">
+                                <option value="all" @selected($filters['origine'] === 'all')>Toutes les origines</option>
+                                <option value="banque" @selected($filters['origine'] === 'banque')>Banques</option>
+                                <option value="usine" @selected($filters['origine'] === 'usine')>Usines</option>
+                                <option value="cca" @selected($filters['origine'] === 'cca')>CCA</option>
+                                <option value="manuel" @selected($filters['origine'] === 'manuel')>Manuels</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <input type="date" name="date_debut" class="form-control" value="{{ $filters['date_debut'] }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <input type="date" name="date_fin" class="form-control" value="{{ $filters['date_fin'] }}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="search" class="form-control" placeholder="Rechercher..."
+                                value="{{ $filters['search'] }}">
                         </div>
                         <div class="col-md-2 d-flex gap-2">
                             <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
-                            @if ($filters['id_banque'] || $filters['date_debut'] || $filters['date_fin'])
+                            @if ($filters['origine'] !== 'all' || $filters['search'] !== '' || $filters['date_debut'] || $filters['date_fin'])
                                 <a href="{{ route('caisse.banques.approvisionnement-caisse.index') }}" class="btn btn-outline-secondary">
                                     <i class="bi bi-x-lg"></i>
                                 </a>
@@ -163,29 +166,44 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Banque</th>
+                                    <th>Origine</th>
                                     <th class="text-end">Montant</th>
-                                    <th class="text-end">Solde banque après</th>
+                                    <th>Motif</th>
+                                    <th class="text-end">Solde caisse après</th>
                                     <th>Utilisateur</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($historique as $mouvement)
+                                @php($approService = app(\App\Services\ApprovisionnementService::class))
+                                @forelse ($historique as $appro)
                                     <tr>
-                                        <td>{{ $mouvement->date_mouvement?->format('d/m/Y H:i') }}</td>
-                                        <td class="fw-semibold">{{ $mouvement->banque?->nom_banque ?? '—' }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($appro->date_transaction)->format('d/m/Y H:i') }}</td>
+                                        <td>
+                                            @if ($approService->isUsineSource($appro->source))
+                                                <span class="badge bg-info">Usine</span>
+                                                {{ $approService->usineNameFromSource($appro->source) }}
+                                            @elseif ($approService->isBanqueSource($appro->source))
+                                                <span class="badge bg-warning text-dark">Banque</span>
+                                                {{ $approService->banqueNameFromSource($appro->source) }}
+                                            @elseif ($approService->isCcaSource($appro->source))
+                                                <span class="badge bg-primary">CCA</span>
+                                                {{ $approService->ccaNameFromSource($appro->source) }}
+                                            @else
+                                                <span class="badge bg-secondary">Manuel</span>
+                                                {{ $appro->source ?: '—' }}
+                                            @endif
+                                        </td>
                                         <td class="text-end fw-semibold text-success">
-                                            {{ number_format((float) $mouvement->montant, 0, ',', ' ') }} FCFA
+                                            {{ number_format((float) $appro->montant, 0, ',', ' ') }} FCFA
                                         </td>
-                                        <td class="text-end">
-                                            {{ number_format((float) $mouvement->solde_apres, 0, ',', ' ') }} FCFA
-                                        </td>
-                                        <td>{{ $mouvement->utilisateur?->full_name ?? '—' }}</td>
+                                        <td>{{ $appro->motifs ?: '—' }}</td>
+                                        <td class="text-end">{{ number_format((float) $appro->solde, 0, ',', ' ') }} FCFA</td>
+                                        <td>{{ trim($appro->nom_utilisateur) ?: '—' }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">
-                                            Aucun approvisionnement banque → caisse enregistré.
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            Aucun approvisionnement de la caisse enregistré.
                                         </td>
                                     </tr>
                                 @endforelse

@@ -1,5 +1,32 @@
 <?php
 
+// Apache réutilise parfois DB_DATABASE d'un autre vhost (ex. verif-ticket).
+// Le fichier .env de cette application doit toujours gagner.
+$databaseEnvFile = dirname(__DIR__).DIRECTORY_SEPARATOR.'.env';
+if (is_file($databaseEnvFile)) {
+    $databaseEnvKeys = ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'];
+
+    foreach (file($databaseEnvFile, FILE_IGNORE_NEW_LINES) ?: [] as $databaseEnvLine) {
+        $databaseEnvLine = trim($databaseEnvLine);
+
+        if ($databaseEnvLine === '' || str_starts_with($databaseEnvLine, '#') || ! str_contains($databaseEnvLine, '=')) {
+            continue;
+        }
+
+        [$databaseEnvKey, $databaseEnvValue] = explode('=', $databaseEnvLine, 2);
+        $databaseEnvKey = trim($databaseEnvKey);
+
+        if (! in_array($databaseEnvKey, $databaseEnvKeys, true)) {
+            continue;
+        }
+
+        $databaseEnvValue = trim($databaseEnvValue, " \t\"'");
+        putenv($databaseEnvKey.'='.$databaseEnvValue);
+        $_ENV[$databaseEnvKey] = $databaseEnvValue;
+        $_SERVER[$databaseEnvKey] = $databaseEnvValue;
+    }
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
