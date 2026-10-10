@@ -160,6 +160,7 @@
                                 <th class="text-end">Restant</th>
                                 <th>Échéance</th>
                                 <th>Statut</th>
+                                <th>Origine</th>
                                 <th>Motif</th>
                             </tr>
                         </thead>
@@ -181,11 +182,27 @@
                                     <td>
                                         <span class="badge {{ $pret->statutBadgeClass() }}">{{ $pret->statutLabel() }}</span>
                                     </td>
+                                    <td>{{ $pret->origineLabel() }}</td>
                                     <td>{{ $pret->motif ?: '—' }}</td>
                                 </tr>
+                                @foreach ($pret->remboursements as $remboursement)
+                                    <tr>
+                                        <td class="ps-4 text-muted">#{{ $pret->id_pret }}</td>
+                                        <td>{{ $remboursement->date_remboursement?->format('d/m/Y H:i') ?? '—' }}</td>
+                                        <td class="text-end text-muted">—</td>
+                                        <td class="text-end montant-negatif">
+                                            {{ number_format((float) $remboursement->montant, 0, '', ' ') }} FCFA
+                                        </td>
+                                        <td class="text-end text-muted">—</td>
+                                        <td>—</td>
+                                        <td><span class="badge bg-success">Remboursement</span></td>
+                                        <td>{{ $pret->origineLabel() }}</td>
+                                        <td>{{ $remboursement->libelle ?: 'Remboursement' }}</td>
+                                    </tr>
+                                @endforeach
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         Aucun prêt trouvé pour cet agent.
                                     </td>
                                 </tr>

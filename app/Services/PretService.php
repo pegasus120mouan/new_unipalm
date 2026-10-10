@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Agent;
+use App\Models\Cca;
 use App\Models\Pret;
+use App\Models\Utilisateur;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -11,6 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class PretService
 {
+    public function __construct(
+        private readonly CaisseService $caisseService,
+        private readonly CcaService $ccaService,
+    ) {}
     /**
      * @param  array<string, mixed>  $filters
      */
@@ -81,7 +87,7 @@ class PretService
     public function detailedList(array $filters): Collection
     {
         $query = Pret::query()
-            ->with('agent')
+            ->with(['agent', 'cca'])
             ->orderByDesc('id_pret');
 
         $this->applyListFilters($query, $filters);
@@ -118,6 +124,7 @@ class PretService
     public function paginatedAgentPrets(int $agentId, array $filters, int $perPage = 15): LengthAwarePaginator
     {
         $query = Pret::query()
+            ->with(['cca', 'remboursements'])
             ->where('id_agent', $agentId)
             ->orderByDesc('date_octroi')
             ->orderByDesc('id_pret');
@@ -146,17 +153,67 @@ class PretService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function create(int $agentId, float $montantInitial, ?string $motif = null): Pret
+    public function create(
+        int $agentId,
+        float $montantInitial,
+        ?string $motif,
+        string $origine,
+        ?int $idCca,
+        Utilisateur $utilisateur,
+    ): Pret {
+        return DB::transaction(function () use ($agentId, $montantInitial, $motif, $origine, $idCca, $utilisateur): Pret {
+            $agent = Agent::query()
+                ->whereNull('date_suppression')
+                ->findOrFail($agentId);
+
+            if ($origine === 'caisse') {
+                $this->debiterCaisse($montantInitial, $agent->full_name, $utilisateur);
+                $idCca = null;
+            } else {
+                $cca = Cca::query()->findOrFail($idCca);
+                $this->ccaService->reverserPretAgent($cca, $montantInitial, $agent->full_name, $utilisateur);
+            }
+
+            return Pret::create([
+                'id_agent' => $agent->id_agent,
+                'montant_initial' => $montantInitial,
+                'montant_restant' => $montantInitial,
+                'date_octroi' => now()->toDateString(),
+                'date_echeance' => null,
+                'statut' => 'en_cours',
+                'motif' => $motif,
+                'origine' => $origine,
+                'id_cca' => $idCca,
+            ]);
+        });
+    }
+
+    private function debiterCaisse(float $montant, string $agentNom, Utilisateur $utilisateur): void
     {
-        return Pret::create([
-            'id_agent' => $agentId,
-            'montant_initial' => $montantInitial,
-            'montant_restant' => $montantInitial,
-            'date_octroi' => now()->toDateString(),
-            'date_echeance' => null,
-            'statut' => 'en_cours',
-            'motif' => $motif,
+        $utilisable = $this->caisseService->getMontantUtilisable();
+
+        if ($montant > $utilisable) {
+            throw new \InvalidArgumentException(
+                'Montant utilisable insuffisant. Disponible : '
+                .number_format($utilisable, 0, ',', ' ')
+                .' FCFA.',
+            );
+        }
+
+        $nouveauSolde = $this->caisseService->getSolde() - $montant;
+
+        DB::table('transactions')->insert([
+            'type_transaction' => 'paiement',
+            'montant' => $montant,
+            'date_transaction' => now(),
+            'motifs' => 'Prêt agent : '.$agentNom,
+            'source' => ApprovisionnementService::SOURCE_PRET_AGENT,
+            'id_utilisateur' => $utilisateur->id,
+            'solde' => $nouveauSolde,
+            'numero_cheque' => null,
         ]);
+
+        $this->caisseService->debiterUtilisable($montant);
     }
 
     /**

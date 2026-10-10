@@ -214,6 +214,7 @@
                                     <th class="text-end">Remboursé</th>
                                     <th class="text-end">Restant</th>
                                     <th>Statut</th>
+                                    <th>Origine</th>
                                     <th>Motif</th>
                                 </tr>
                             </thead>
@@ -227,11 +228,12 @@
                                         <td class="text-end">{{ number_format($pret->montantRembourse(), 0, '', ' ') }} FCFA</td>
                                         <td class="text-end">{{ number_format((float) ($pret->montant_restant ?? 0), 0, '', ' ') }} FCFA</td>
                                         <td><span class="badge {{ $pret->statutBadgeClass() }}">{{ $pret->statutLabel() }}</span></td>
+                                        <td>{{ $pret->origineLabel() }}</td>
                                         <td>{{ $pret->motif ?: '—' }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-3">Aucun prêt trouvé.</td>
+                                        <td colspan="9" class="text-center text-muted py-3">Aucun prêt trouvé.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

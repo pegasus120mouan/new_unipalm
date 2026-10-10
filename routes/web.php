@@ -182,6 +182,7 @@ Route::get('/', function () {
     Route::get('/caisse/cca', [CcaController::class, 'index'])->name('caisse.cca.index');
     Route::post('/caisse/cca', [CcaController::class, 'store'])->name('caisse.cca.store');
     Route::post('/caisse/cca/rembourser', [CcaController::class, 'rembourser'])->name('caisse.cca.rembourser');
+    Route::get('/caisse/cca/{cca:id_cca}', [CcaController::class, 'show'])->name('caisse.cca.show');
     Route::put('/caisse/cca/{cca:id_cca}', [CcaController::class, 'update'])->name('caisse.cca.update');
     Route::delete('/caisse/cca/{cca:id_cca}', [CcaController::class, 'destroy'])->name('caisse.cca.destroy');
 

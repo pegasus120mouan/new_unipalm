@@ -38,6 +38,36 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="pret_origine" class="form-label">Origine du prêt</label>
+                        <select name="origine" id="pret_origine"
+                            class="form-select @error('origine') is-invalid @enderror" required>
+                            <option value="caisse" @selected(old('origine', 'caisse') === 'caisse')>Caisse</option>
+                            <option value="cca" @selected(old('origine') === 'cca') @disabled(($ccas ?? collect())->isEmpty())>CCA</option>
+                        </select>
+                        <p class="form-text mb-0" id="pret_origine_help">La caisse est débitée de ce montant.</p>
+                        @error('origine')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3 {{ old('origine') === 'cca' ? '' : 'd-none' }}" id="pret_cca_block">
+                        <label for="pret_id_cca" class="form-label">CCA</label>
+                        <select name="id_cca" id="pret_id_cca"
+                            class="form-select @error('id_cca') is-invalid @enderror">
+                            <option value="">Sélectionner un CCA</option>
+                            @foreach ($ccas ?? [] as $cca)
+                                <option value="{{ $cca->id_cca }}" @selected((int) old('id_cca') === (int) $cca->id_cca)>
+                                    {{ $cca->nom }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="form-text mb-0">Le montant est reversé sur le compte de ce CCA. La caisse n'est pas débitée.</p>
+                        @error('id_cca')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
                         <label for="pret_montant_display" class="form-label">Montant du prêt (FCFA)</label>
                         <input type="text" id="pret_montant_display"
                             class="form-control @error('montant_initial') is-invalid @enderror"
@@ -76,4 +106,27 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/amount-input.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var origine = document.getElementById('pret_origine');
+            var block = document.getElementById('pret_cca_block');
+            var select = document.getElementById('pret_id_cca');
+            var help = document.getElementById('pret_origine_help');
+            if (!origine || !block) return;
+
+            function syncOrigine() {
+                var isCca = origine.value === 'cca';
+                block.classList.toggle('d-none', !isCca);
+                if (select) select.required = isCca;
+                if (help) {
+                    help.textContent = isCca
+                        ? 'Le montant est reversé sur le compte du CCA. La caisse n\'est pas débitée.'
+                        : 'La caisse est débitée de ce montant.';
+                }
+            }
+
+            origine.addEventListener('change', syncOrigine);
+            syncOrigine();
+        });
+    </script>
 @endpush

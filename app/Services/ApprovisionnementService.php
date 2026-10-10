@@ -15,6 +15,8 @@ class ApprovisionnementService
 
     public const SOURCE_CCA_PREFIX = 'CCA: ';
 
+    public const SOURCE_PRET_AGENT = 'Prêt agent';
+
     public function __construct(
         private readonly CaisseService $caisseService,
     ) {}
@@ -77,7 +79,11 @@ class ApprovisionnementService
                     ->orWhere(function ($inner): void {
                         $inner
                             ->where('t.type_transaction', 'paiement')
-                            ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%');
+                            ->where(function ($sources): void {
+                                $sources
+                                    ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%')
+                                    ->orWhere('t.source', self::SOURCE_PRET_AGENT);
+                            });
                     });
             })
             ->select([
@@ -106,7 +112,10 @@ class ApprovisionnementService
             $query->where('t.type_transaction', 'approvisionnement')
                 ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%');
         } elseif ($origine === 'cca_remboursement') {
-            $query->where('t.type_transaction', 'paiement');
+            $query->where('t.type_transaction', 'paiement')
+                ->where('t.source', 'like', self::SOURCE_CCA_PREFIX.'%');
+        } elseif ($origine === 'pret') {
+            $query->where('t.source', self::SOURCE_PRET_AGENT);
         } elseif ($origine === 'manuel') {
             $query->where('t.type_transaction', 'approvisionnement');
             $query->where(function ($builder): void {
@@ -213,6 +222,11 @@ class ApprovisionnementService
         }
 
         return trim(substr($source, strlen(self::SOURCE_BANQUE_PREFIX)));
+    }
+
+    public function isPretAgentSource(?string $source): bool
+    {
+        return $source === self::SOURCE_PRET_AGENT;
     }
 
     public function isCcaSource(?string $source): bool

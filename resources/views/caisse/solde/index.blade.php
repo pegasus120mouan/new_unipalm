@@ -43,7 +43,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span>Historique des approvisionnements et remboursements CCA</span>
+                    <span>Historique des approvisionnements, prêts et remboursements CCA</span>
                     <span class="text-muted">{{ $approvisionnements->total() }} opération(s)</span>
                 </div>
                 <div class="card-body">
@@ -55,6 +55,7 @@
                                 <option value="banque" @selected($filters['origine'] === 'banque')>Depuis banques</option>
                                 <option value="cca" @selected($filters['origine'] === 'cca')>Prêts CCA</option>
                                 <option value="cca_remboursement" @selected($filters['origine'] === 'cca_remboursement')>Remboursements CCA</option>
+                                <option value="pret" @selected($filters['origine'] === 'pret')>Prêts agents</option>
                                 <option value="usine" @selected($filters['origine'] === 'usine')>Paiements usines</option>
                             </select>
                         </div>
@@ -109,6 +110,8 @@
                                             @elseif ($approService->isCcaSource($appro->source))
                                                 <span class="badge {{ $estSortie ? 'bg-danger' : 'bg-primary' }}">{{ $estSortie ? 'Remb. CCA' : 'CCA' }}</span>
                                                 {{ $approService->ccaNameFromSource($appro->source) }}
+                                            @elseif ($approService->isPretAgentSource($appro->source))
+                                                <span class="badge bg-danger">Prêt</span>
                                             @else
                                                 <span class="badge bg-secondary">Manuel</span>
                                                 {{ $appro->source ?: '—' }}

@@ -268,6 +268,7 @@ return [
         'caisse.banques.update' => 'caisse.banques',
         'caisse.banques.destroy' => 'caisse.banques',
         'caisse.cca.index' => 'caisse.cca',
+        'caisse.cca.show' => 'caisse.cca',
         'caisse.cca.store' => 'caisse.cca',
         'caisse.cca.rembourser' => 'caisse.cca',
         'caisse.cca.update' => 'caisse.cca',

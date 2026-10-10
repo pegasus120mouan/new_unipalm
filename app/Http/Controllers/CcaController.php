@@ -31,7 +31,7 @@ class CcaController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $totalPrete = (float) CcaMouvement::query()->where('type_mouvement', CcaMouvement::TYPE_PRET_CAISSE)->sum('montant');
+        $totalPrete = (float) CcaMouvement::query()->whereIn('type_mouvement', CcaMouvement::typesAvance())->sum('montant');
         $totalRembourse = (float) CcaMouvement::query()->where('type_mouvement', CcaMouvement::TYPE_REMBOURSEMENT)->sum('montant');
 
         $stats = [
@@ -50,6 +50,8 @@ class CcaController extends Controller
         $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
         $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
 
+        $pretsAgentsParCca = $this->ccaService->agentsPretesParCca();
+
         return view('caisse.cca.index', compact(
             'ccas',
             'stats',
@@ -57,7 +59,47 @@ class CcaController extends Controller
             'ccasRemboursables',
             'banques',
             'montantUtilisableCaisse',
+            'pretsAgentsParCca',
         ));
+    }
+
+    public function show(Request $request, Cca $cca): View
+    {
+        $filters = [
+            'type' => (string) $request->query('type', 'all'),
+            'search' => trim((string) $request->query('search', '')),
+            'date_debut' => $request->query('date_debut'),
+            'date_fin' => $request->query('date_fin'),
+        ];
+
+        $cca = Cca::query()->withTotaux()->findOrFail($cca->id_cca);
+
+        $mouvements = CcaMouvement::query()
+            ->with(['banque', 'utilisateur'])
+            ->where('id_cca', $cca->id_cca)
+            ->when($filters['type'] === CcaMouvement::TYPE_PRET_CAISSE, fn ($query) => $query->where('type_mouvement', CcaMouvement::TYPE_PRET_CAISSE))
+            ->when($filters['type'] === CcaMouvement::TYPE_PRET_AGENT, fn ($query) => $query->where('type_mouvement', CcaMouvement::TYPE_PRET_AGENT))
+            ->when($filters['type'] === CcaMouvement::TYPE_REMBOURSEMENT, fn ($query) => $query->where('type_mouvement', CcaMouvement::TYPE_REMBOURSEMENT))
+            ->when($filters['search'] !== '', function ($query) use ($filters): void {
+                $search = $filters['search'];
+                $query->where(function ($inner) use ($search): void {
+                    $inner->where('libelle', 'like', '%'.$search.'%')
+                        ->orWhere('numero_cheque', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($filters['date_debut'], fn ($query) => $query->whereDate('date_mouvement', '>=', $filters['date_debut']))
+            ->when($filters['date_fin'], fn ($query) => $query->whereDate('date_mouvement', '<=', $filters['date_fin']))
+            ->orderByDesc('date_mouvement')
+            ->orderByDesc('id_mouvement')
+            ->paginate(15)
+            ->withQueryString();
+
+        $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
+        $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
+        $reste = max(0, (float) $cca->total_prete - (float) $cca->total_rembourse);
+        $agentsPrets = $this->ccaService->agentsPretesParCca()[$cca->id_cca] ?? [];
+
+        return view('caisse.cca.show', compact('cca', 'mouvements', 'filters', 'banques', 'montantUtilisableCaisse', 'reste', 'agentsPrets'));
     }
 
     public function rembourser(Request $request): RedirectResponse
@@ -69,7 +111,11 @@ class CcaController extends Controller
 
         $validated = $request->validate([
             'id_cca' => ['required', 'integer', Rule::exists('ccas', 'id_cca')],
-            'source' => ['required', Rule::in([CcaMouvement::SOURCE_BANQUE, CcaMouvement::SOURCE_CAISSE])],
+            'source' => ['required', Rule::in([
+                CcaMouvement::SOURCE_BANQUE,
+                CcaMouvement::SOURCE_CAISSE,
+                CcaMouvement::SOURCE_PRET_AGENT,
+            ])],
             'id_banque' => [
                 'required_if:source,'.CcaMouvement::SOURCE_BANQUE,
                 'nullable',
@@ -82,10 +128,17 @@ class CcaController extends Controller
                 Rule::in([CcaMouvement::MODE_VIREMENT, CcaMouvement::MODE_CHEQUE]),
             ],
             'numero_cheque' => ['nullable', 'string', 'max:100'],
+            'id_agent' => [
+                'required_if:source,'.CcaMouvement::SOURCE_PRET_AGENT,
+                'nullable',
+                'integer',
+                Rule::exists('agents', 'id_agent'),
+            ],
             'montant' => ['required', 'numeric', 'min:1'],
         ], [
             'id_banque.required_if' => 'Sélectionnez une banque.',
             'mode_paiement.required_if' => 'Choisissez Virement ou Chèque.',
+            'id_agent.required_if' => 'Sélectionnez l\'agent.',
         ]);
 
         $estBanque = $validated['source'] === CcaMouvement::SOURCE_BANQUE;
@@ -109,6 +162,7 @@ class CcaController extends Controller
                 $validated['mode_paiement'] ?? null,
                 $validated['numero_cheque'] ?? null,
                 $request->user(),
+                isset($validated['id_agent']) ? (int) $validated['id_agent'] : null,
             );
         } catch (\InvalidArgumentException $e) {
             return back()
@@ -117,12 +171,14 @@ class CcaController extends Controller
                 ->with('open_rembourser_modal', true);
         }
 
-        $origine = $estBanque
-            ? $banque->nom_banque.' ('.($validated['mode_paiement'] === CcaMouvement::MODE_CHEQUE ? 'chèque n° '.$validated['numero_cheque'] : 'virement').')'
-            : 'la caisse';
+        $origine = match ($validated['source']) {
+            CcaMouvement::SOURCE_BANQUE => $banque->nom_banque.' ('.($validated['mode_paiement'] === CcaMouvement::MODE_CHEQUE ? 'chèque n° '.$validated['numero_cheque'] : 'virement').')',
+            CcaMouvement::SOURCE_PRET_AGENT => 'le prêt agent',
+            default => 'la caisse',
+        };
 
         return redirect()
-            ->route('caisse.cca.index')
+            ->back()
             ->with('success', 'Remboursement de '
                 .number_format($montant, 0, ',', ' ')
                 .' FCFA à '.$cca->nom.' effectué depuis '.$origine.'.');

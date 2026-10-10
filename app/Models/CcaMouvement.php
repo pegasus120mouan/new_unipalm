@@ -24,11 +24,23 @@ class CcaMouvement extends Model
 {
     public const TYPE_PRET_CAISSE = 'pret_caisse';
 
+    public const TYPE_PRET_AGENT = 'pret_agent';
+
     public const TYPE_REMBOURSEMENT = 'remboursement';
+
+    /**
+     * @return list<string>
+     */
+    public static function typesAvance(): array
+    {
+        return [self::TYPE_PRET_CAISSE, self::TYPE_PRET_AGENT];
+    }
 
     public const SOURCE_BANQUE = 'banque';
 
     public const SOURCE_CAISSE = 'caisse';
+
+    public const SOURCE_PRET_AGENT = 'pret_agent';
 
     public const MODE_VIREMENT = 'Virement';
 
@@ -55,5 +67,25 @@ class CcaMouvement extends Model
     public function banque(): BelongsTo
     {
         return $this->belongsTo(Banque::class, 'id_banque', 'id_banque');
+    }
+
+    public function utilisateur(): BelongsTo
+    {
+        return $this->belongsTo(Utilisateur::class, 'id_utilisateur', 'id');
+    }
+
+    public function typeLabel(): string
+    {
+        return match ($this->type_mouvement) {
+            self::TYPE_PRET_CAISSE => 'Prêt à la caisse',
+            self::TYPE_PRET_AGENT => 'Prêt agent',
+            self::TYPE_REMBOURSEMENT => 'Remboursement',
+            default => (string) $this->type_mouvement,
+        };
+    }
+
+    public function diminueLaDette(): bool
+    {
+        return $this->type_mouvement === self::TYPE_REMBOURSEMENT;
     }
 }
