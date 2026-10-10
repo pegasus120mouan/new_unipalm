@@ -45,7 +45,7 @@ class CcaController extends Controller
             ->withTotaux()
             ->orderBy('nom')
             ->get()
-            ->filter(fn (Cca $cca) => (float) $cca->total_prete - (float) $cca->total_rembourse > 0.009);
+            ->filter(fn (Cca $cca) => $cca->restePretCaisse() > 0.009);
 
         $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
         $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
@@ -94,8 +94,9 @@ class CcaController extends Controller
         $banques = Banque::query()->where('actif', true)->orderBy('nom_banque')->get();
         $montantUtilisableCaisse = $this->caisseService->getMontantUtilisable();
         $reste = max(0, (float) $cca->total_prete - (float) $cca->total_rembourse);
+        $resteCaisse = $cca->restePretCaisse();
 
-        return view('caisse.cca.show', compact('cca', 'mouvements', 'filters', 'banques', 'montantUtilisableCaisse', 'reste'));
+        return view('caisse.cca.show', compact('cca', 'mouvements', 'filters', 'banques', 'montantUtilisableCaisse', 'reste', 'resteCaisse'));
     }
 
     public function rembourser(Request $request): RedirectResponse

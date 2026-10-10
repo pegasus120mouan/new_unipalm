@@ -36,8 +36,8 @@
                 <i class="bi bi-arrow-left"></i> Retour à la liste
             </a>
             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#rembourserCcaModal"
-                @disabled($reste <= 0.009)
-                title="{{ $reste <= 0.009 ? 'Rien à rembourser' : '' }}">
+                @disabled($resteCaisse <= 0.009)
+                title="{{ $resteCaisse <= 0.009 ? 'Le prêt à la caisse est soldé. Le prêt d\'un agent se rembourse depuis sa fiche.' : '' }}">
                 <i class="bi bi-arrow-return-left"></i> Rembourser
             </button>
         </div>
@@ -65,8 +65,12 @@
                 <div class="card-body py-3">
                     <h6 class="text-muted mb-1">Reste à rembourser</h6>
                     <h4 class="mb-0 text-danger">
-                        {{ number_format(max(0, (float) $cca->total_prete - (float) $cca->total_rembourse), 0, ',', ' ') }} FCFA
+                        {{ number_format($reste, 0, ',', ' ') }} FCFA
                     </h4>
+                    <p class="text-muted small mb-0 mt-1">
+                        Prêt caisse : {{ number_format($resteCaisse, 0, ',', ' ') }} FCFA
+                        · Prêts agents : {{ number_format(max(0, $reste - $resteCaisse), 0, ',', ' ') }} FCFA
+                    </p>
                 </div>
             </div>
         </div>
@@ -193,9 +197,10 @@
                             <div class="alert alert-danger py-2">{{ $message }}</div>
                         @enderror
 
-                        <div class="alert alert-light border">
-                            Reste à rembourser :
-                            <strong class="text-danger">{{ number_format($reste, 0, ',', ' ') }} FCFA</strong>
+                        <div class="alert alert-light border mb-3">
+                            Reste du prêt caisse :
+                            <strong class="text-danger">{{ number_format($resteCaisse, 0, ',', ' ') }} FCFA</strong>
+                            <div class="small text-muted mt-1">Le prêt d'un agent se rembourse depuis sa fiche.</div>
                         </div>
 
                         <div class="mb-3">

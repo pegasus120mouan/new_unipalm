@@ -217,10 +217,10 @@
                             <select name="id_cca" id="remb_id_cca" class="form-select @error('id_cca') is-invalid @enderror" required>
                                 <option value="">Sélectionner un CCA</option>
                                 @foreach ($ccasRemboursables as $cca)
-                                    @php($resteCca = (float) $cca->total_prete - (float) $cca->total_rembourse)
+                                    @php($resteCca = $cca->restePretCaisse())
                                     <option value="{{ $cca->id_cca }}" data-reste="{{ $resteCca }}"
                                         @selected((int) old('id_cca') === (int) $cca->id_cca)>
-                                        {{ $cca->nom }} — reste {{ number_format($resteCca, 0, ',', ' ') }} FCFA
+                                        {{ $cca->nom }} — prêt caisse {{ number_format($resteCca, 0, ',', ' ') }} FCFA
                                     </option>
                                 @endforeach
                             </select>
@@ -286,6 +286,7 @@
                             </div>
                             @error('montant')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             <div class="form-text" id="remb_reste_info"></div>
+                            <div class="form-text">Le prêt d'un agent se rembourse depuis sa fiche.</div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -383,7 +384,7 @@
 
                 const option = cca.options[cca.selectedIndex];
                 resteInfo.textContent = option && option.value
-                    ? 'Reste à rembourser : ' + formatFcfa(parseFloat(option.dataset.reste || '0'))
+                    ? 'Reste du prêt caisse : ' + formatFcfa(parseFloat(option.dataset.reste || '0'))
                     : '';
             }
 

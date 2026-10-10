@@ -133,13 +133,17 @@ class CcaService
         DB::transaction(function () use ($cca, $montant, $source, $banque, $modePaiement, $numeroCheque, $utilisateur, $idAgent): void {
             $cca = Cca::query()->lockForUpdate()->findOrFail($cca->id_cca);
             $reste = $cca->resteARembourser();
+            $depuisSociete = $source !== CcaMouvement::SOURCE_PRET_AGENT;
+            $plafond = $depuisSociete ? $cca->restePretCaisse() : $reste;
 
-            if ($montant > $reste + 0.009) {
-                throw new \InvalidArgumentException(
-                    'Le montant dépasse le reste à rembourser à '.$cca->nom.' ('
-                    .number_format($reste, 0, ',', ' ')
-                    .' FCFA).',
-                );
+            if ($montant > $plafond + 0.009) {
+                throw new \InvalidArgumentException($depuisSociete
+                    ? 'La banque et la caisse ne remboursent que le prêt accordé à la caisse ('
+                        .number_format($plafond, 0, ',', ' ')
+                        .' FCFA). Le prêt d\'un agent se rembourse depuis sa fiche.'
+                    : 'Le montant dépasse le reste à rembourser à '.$cca->nom.' ('
+                        .number_format($reste, 0, ',', ' ')
+                        .' FCFA).');
             }
 
             $libelle = 'Remboursement CCA '.$cca->nom;
