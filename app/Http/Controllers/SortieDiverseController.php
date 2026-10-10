@@ -73,7 +73,7 @@ class SortieDiverseController extends Controller
 
         return redirect()
             ->route('sorties.diverses.index')
-            ->with('success', 'Sortie diverse '.$sortie->numero_sorties.' de '
+            ->with('success', 'Charge Unipalm '.$sortie->numero_sorties.' de '
                 .number_format((float) $sortie->montant, 0, ',', ' ').' FCFA enregistrée avec succès.');
     }
 
@@ -85,6 +85,6 @@ class SortieDiverseController extends Controller
 
         return redirect()
             ->route('sorties.diverses.index')
-            ->with('success', "La sortie diverse {$numero} a été supprimée.");
+            ->with('success', "La charge Unipalm {$numero} a été supprimée.");
     }
 }

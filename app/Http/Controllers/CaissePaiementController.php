@@ -7,6 +7,7 @@ use App\Services\CaissePaiementService;
 use App\Services\CaisseService;
 use App\Services\CompteAgentService;
 use App\Services\DemandeSortiePaymentService;
+use App\Services\FinancementService;
 use App\Services\SortieDiverseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,12 +22,13 @@ class CaissePaiementController extends Controller
         private readonly CompteAgentService $compteAgentService,
         private readonly DemandeSortiePaymentService $demandePaymentService,
         private readonly SortieDiverseService $sortieDiverseService,
+        private readonly FinancementService $financementService,
     ) {}
 
     public function index(Request $request): View
     {
         $tab = (string) $request->query('tab', 'bordereaux');
-        if (! in_array($tab, ['bordereaux', 'demandes', 'divers'], true)) {
+        if (! in_array($tab, ['bordereaux', 'demandes', 'financement', 'divers'], true)) {
             $tab = 'bordereaux';
         }
 
@@ -37,6 +39,7 @@ class CaissePaiementController extends Controller
         $bordereaux = null;
         $demandes = null;
         $sorties = null;
+        $financements = null;
         $agents = null;
         $financementByAgent = [];
         $filters = [];
@@ -64,6 +67,15 @@ class CaissePaiementController extends Controller
             ];
 
             $demandes = $this->caissePaiementService->paginatedDemandesAPayer($filters);
+        } elseif ($tab === 'financement') {
+            $filters = [
+                'search' => trim((string) $request->query('search', '')),
+                'date_debut' => $request->query('date_debut'),
+                'date_fin' => $request->query('date_fin'),
+            ];
+
+            $financements = $this->caissePaiementService->paginatedFinancementsCaisse($filters);
+            $agents = $this->caissePaiementService->agentsForFilter();
         } else {
             $filters = [
                 'search' => trim((string) $request->query('search', '')),
@@ -83,6 +95,7 @@ class CaissePaiementController extends Controller
             'bordereaux',
             'demandes',
             'sorties',
+            'financements',
             'agents',
             'financementByAgent',
         ));
@@ -115,6 +128,41 @@ class CaissePaiementController extends Controller
             ->with('success', 'Paiement de la demande enregistré avec succès.');
     }
 
+    public function storeFinancement(Request $request): RedirectResponse
+    {
+        if ($request->has('montant')) {
+            $request->merge([
+                'montant' => preg_replace('/\s+/', '', (string) $request->input('montant')),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'id_agent' => ['required', 'integer', 'exists:agents,id_agent'],
+            'montant' => ['required', 'numeric', 'min:1'],
+            'motif' => ['required', 'string', 'max:1000'],
+            'redirect_to' => ['nullable', 'string'],
+        ]);
+
+        try {
+            $financement = $this->financementService->payerDepuisCaisse(
+                (int) $validated['id_agent'],
+                (float) $validated['montant'],
+                $validated['motif'],
+                $request->user(),
+            );
+        } catch (InvalidArgumentException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['paiement' => $e->getMessage()]);
+        }
+
+        $redirect = $validated['redirect_to'] ?? route('caisse.paiements.index', ['tab' => 'financement']);
+
+        return redirect()->to($redirect)
+            ->with('success', 'Financement '.$financement->code_affiche.' de '
+                .number_format((float) $financement->montant, 0, '', ' ').' FCFA enregistré avec succès.');
+    }
+
     public function storeSortieDiverse(Request $request): RedirectResponse
     {
         if ($request->has('montant')) {
@@ -144,7 +192,7 @@ class CaissePaiementController extends Controller
         $redirect = $validated['redirect_to'] ?? route('caisse.paiements.index', ['tab' => 'divers']);
 
         return redirect()->to($redirect)
-            ->with('success', 'Sortie diverse '.$sortie->numero_sorties.' de '
+            ->with('success', 'Charge Unipalm '.$sortie->numero_sorties.' de '
                 .number_format((float) $sortie->montant, 0, '', ' ').' FCFA enregistrée avec succès.');
     }
 }

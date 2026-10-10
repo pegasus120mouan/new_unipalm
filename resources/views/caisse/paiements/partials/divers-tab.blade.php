@@ -7,7 +7,7 @@
         <div class="card">
             <div class="card-body py-3">
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#nouvelleSortieDiverseModal">
-                    <i class="bi bi-dash-circle"></i> Nouvelle sortie diverse
+                    <i class="bi bi-dash-circle"></i> Nouvelle charge Unipalm
                 </button>
             </div>
         </div>
@@ -53,8 +53,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span>Sorties diverses</span>
-                <span class="text-muted">{{ $sorties->total() }} sortie(s)</span>
+                <span>Charges Unipalm</span>
+                <span class="text-muted">{{ $sorties->total() }} charge(s)</span>
             </div>
             <div class="card-body table-responsive">
                 <table class="table table-bordered table-striped table-hover align-middle mb-0">
@@ -76,7 +76,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Aucune sortie diverse enregistrée.</td>
+                                <td colspan="4" class="text-center text-muted py-4">Aucune charge Unipalm enregistrée.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -99,7 +99,7 @@
                 @csrf
                 <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="nouvelleSortieDiverseModalLabel">Nouvelle sortie diverse</h5>
+                    <h5 class="modal-title" id="nouvelleSortieDiverseModalLabel">Nouvelle charge Unipalm</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                 </div>
                 <div class="modal-body">
@@ -117,7 +117,7 @@
                     <div class="mb-3">
                         <label for="motifs" class="form-label">Motifs <span class="text-danger">*</span></label>
                         <textarea name="motifs" id="motifs" class="form-control" rows="4" required
-                            placeholder="Décrivez la raison de cette sortie diverse...">{{ old('motifs') }}</textarea>
+                            placeholder="Décrivez la raison de cette charge Unipalm...">{{ old('motifs') }}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

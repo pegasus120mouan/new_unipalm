@@ -91,7 +91,7 @@ return [
                 'sorties.demandes' => 'Liste des demandes',
                 'sorties.pending' => 'Demandes en attente',
                 'sorties.validated' => 'Demandes validées',
-                'sorties.diverses' => 'Sorties diverses',
+                'sorties.diverses' => 'Charges Unipalm',
             ],
         ],
         'caisse' => [
@@ -278,6 +278,7 @@ return [
         'caisse.utilisable.update' => 'caisse.approvisionnement',
         'caisse.paiements.index' => 'caisse.paiements',
         'caisse.paiements.demandes.store' => 'caisse.paiements',
+        'caisse.paiements.financement.store' => 'caisse.paiements',
         'caisse.paiements.divers.store' => 'caisse.paiements',
 
         'recus.tickets.index' => 'recus.tickets',

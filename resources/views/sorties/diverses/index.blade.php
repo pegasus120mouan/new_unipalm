@@ -1,14 +1,14 @@
 @extends('layout.main')
 
-@section('title', 'Sorties diverses')
+@section('title', 'Charges Unipalm')
 
 @section('page-heading')
     <div class="page-heading d-flex justify-content-between align-items-center">
-        <h3>Sorties diverses</h3>
+        <h3>Charges Unipalm</h3>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="{{ route('tickets.index') }}">Accueil</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Sorties diverses</li>
+                <li class="breadcrumb-item active" aria-current="page">Charges Unipalm</li>
             </ol>
         </nav>
     </div>
@@ -49,7 +49,7 @@
         <div class="col-md-4 col-sm-6">
             <div class="card">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">Total sorties diverses</h6>
+                    <h6 class="text-muted mb-1">Total charges Unipalm</h6>
                     <h4 class="mb-0 text-danger">{{ number_format($stats['total_montant'], 0, ',', ' ') }} FCFA</h4>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                 <div class="card-body py-3">
                     <div class="d-flex flex-wrap gap-2">
                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#addSortieModal">
-                            <i class="bi bi-dash-circle"></i> Nouvelle sortie diverse
+                            <i class="bi bi-dash-circle"></i> Nouvelle charge Unipalm
                         </button>
                         <a href="#sortie-filters" class="btn btn-info">
                             <i class="bi bi-search"></i> Rechercher
@@ -119,7 +119,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Historique des sorties diverses</span>
+                    <span>Historique des charges Unipalm</span>
                     <span class="text-muted">{{ $sorties->total() }} sortie(s)</span>
                 </div>
                 <div class="card-body table-responsive">
@@ -161,9 +161,9 @@
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-4">
                                         @if ($search !== '' || $dateDebut || $dateFin)
-                                            Aucune sortie diverse ne correspond à vos critères.
+                                            Aucune charge Unipalm ne correspond à vos critères.
                                         @else
-                                            Aucune sortie diverse enregistrée pour le moment.
+                                            Aucune charge Unipalm enregistrée pour le moment.
                                         @endif
                                     </td>
                                 </tr>
@@ -187,7 +187,7 @@
                 <form method="POST" action="{{ route('sorties.diverses.store') }}">
                     @csrf
                     <div class="modal-header">
-                        <h5 class="modal-title" id="addSortieModalLabel">Nouvelle sortie diverse</h5>
+                        <h5 class="modal-title" id="addSortieModalLabel">Nouvelle charge Unipalm</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
                     </div>
                     <div class="modal-body">

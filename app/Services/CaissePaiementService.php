@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\DemandeSortie;
+use App\Models\Financement;
 use App\Models\SortieDiverse;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -104,6 +105,40 @@ class CaissePaiementService
 
         if (! empty($filters['date_fin'])) {
             $query->whereDate('date_sortie', '<=', $filters['date_fin']);
+        }
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * @param  array<string, string>  $filters
+     */
+    public function paginatedFinancementsCaisse(array $filters, int $perPage = 20): LengthAwarePaginator
+    {
+        $query = Financement::query()
+            ->with('agent')
+            ->where('origine', Financement::ORIGINE_CAISSE)
+            ->orderByDesc('date_financement')
+            ->orderByDesc('Numero_financement');
+
+        if (($filters['search'] ?? '') !== '') {
+            $term = $filters['search'];
+            $query->where(function (Builder $q) use ($term): void {
+                $q->where('code_financement', 'like', '%'.$term.'%')
+                    ->orWhere('motif', 'like', '%'.$term.'%')
+                    ->orWhereHas('agent', function (Builder $agentQuery) use ($term): void {
+                        $agentQuery->where('nom', 'like', '%'.$term.'%')
+                            ->orWhere('prenom', 'like', '%'.$term.'%');
+                    });
+            });
+        }
+
+        if (! empty($filters['date_debut'])) {
+            $query->whereDate('date_financement', '>=', $filters['date_debut']);
+        }
+
+        if (! empty($filters['date_fin'])) {
+            $query->whereDate('date_financement', '<=', $filters['date_fin']);
         }
 
         return $query->paginate($perPage)->withQueryString();

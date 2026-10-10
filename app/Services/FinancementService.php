@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Agent;
 use App\Models\Financement;
 use App\Models\Ticket;
+use App\Models\Utilisateur;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +14,9 @@ use InvalidArgumentException;
 
 class FinancementService
 {
+    public function __construct(
+        private readonly CaisseService $caisseService,
+    ) {}
     /**
      * @param  array<string, mixed>  $filters
      */
@@ -214,12 +218,13 @@ class FinancementService
         float $montant,
         string $motif,
         string $statut = Financement::STATUT_VALIDE,
+        bool $imputerSurChef = true,
     ): Financement {
         $statut = $statut === Financement::STATUT_EN_ATTENTE
             ? Financement::STATUT_EN_ATTENTE
             : Financement::STATUT_VALIDE;
 
-        return DB::transaction(function () use ($agentId, $montant, $motif, $statut) {
+        return DB::transaction(function () use ($agentId, $montant, $motif, $statut, $imputerSurChef) {
             Financement::query()
                 ->orderByDesc('Numero_financement')
                 ->lockForUpdate()
@@ -238,8 +243,9 @@ class FinancementService
                 'date_financement' => now(),
             ]);
 
-            // Tout crédit financement validé réduit le solde du chef de groupe.
-            if ($statut === Financement::STATUT_VALIDE && $montant > 0) {
+            // Un crédit validé imputé sur le groupe réduit le solde du chef.
+            // Un versement depuis la caisse ne touche pas ce solde.
+            if ($imputerSurChef && $statut === Financement::STATUT_VALIDE && $montant > 0) {
                 if (! $agent || $agent->date_suppression !== null) {
                     throw new InvalidArgumentException('Agent introuvable pour ce financement.');
                 }
@@ -253,6 +259,52 @@ class FinancementService
             }
 
             return $financement;
+        });
+    }
+
+    /**
+     * Verse un financement depuis la caisse : la caisse est débitée et le solde de l'agent augmente.
+     */
+    public function payerDepuisCaisse(int $agentId, float $montant, string $motif, Utilisateur $utilisateur): Financement
+    {
+        if ($montant <= 0) {
+            throw new InvalidArgumentException('Le montant doit être supérieur à 0.');
+        }
+
+        return DB::transaction(function () use ($agentId, $montant, $motif, $utilisateur): Financement {
+            $agent = Agent::query()->whereNull('date_suppression')->find($agentId);
+            if (! $agent) {
+                throw new InvalidArgumentException('Agent introuvable.');
+            }
+
+            $utilisable = $this->caisseService->getMontantUtilisable();
+            if ($montant > $utilisable + 0.009) {
+                throw new InvalidArgumentException(
+                    'Montant utilisable insuffisant. Disponible : '
+                    .number_format($utilisable, 0, ',', ' ')
+                    .' FCFA.',
+                );
+            }
+
+            $financement = $this->create($agentId, $montant, $motif, Financement::STATUT_VALIDE, false);
+            $financement->update(['origine' => Financement::ORIGINE_CAISSE]);
+
+            $soldeActuel = $this->caisseService->getSolde();
+
+            DB::table('transactions')->insert([
+                'type_transaction' => 'paiement',
+                'montant' => $montant,
+                'date_transaction' => now(),
+                'motifs' => 'Financement '.$financement->code_affiche.' : '.$agent->full_name.' — '.$motif,
+                'source' => ApprovisionnementService::SOURCE_FINANCEMENT,
+                'id_utilisateur' => $utilisateur->id,
+                'solde' => $soldeActuel - $montant,
+                'numero_cheque' => null,
+            ]);
+
+            $this->caisseService->debiterUtilisable($montant);
+
+            return $financement->refresh();
         });
     }
 

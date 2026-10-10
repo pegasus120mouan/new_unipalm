@@ -192,6 +192,7 @@ Route::get('/', function () {
 
     Route::get('/caisse/paiements', [CaissePaiementController::class, 'index'])->name('caisse.paiements.index');
     Route::post('/caisse/paiements/demandes/{demande:id_demande}', [CaissePaiementController::class, 'storeDemandePayment'])->name('caisse.paiements.demandes.store');
+    Route::post('/caisse/paiements/financement', [CaissePaiementController::class, 'storeFinancement'])->name('caisse.paiements.financement.store');
     Route::post('/caisse/paiements/divers', [CaissePaiementController::class, 'storeSortieDiverse'])->name('caisse.paiements.divers.store');
 
     Route::get('/recus/tickets-bordereaux', [RecuPaiementController::class, 'index'])->name('recus.tickets.index');

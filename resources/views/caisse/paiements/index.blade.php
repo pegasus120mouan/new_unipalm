@@ -46,9 +46,13 @@
                     class="btn {{ $tab === 'demandes' ? 'btn-primary' : 'btn-outline-primary' }}">
                     <i class="bi bi-clipboard-check"></i> Demandes
                 </a>
+                <a href="{{ route('caisse.paiements.index', ['tab' => 'financement']) }}"
+                    class="btn {{ $tab === 'financement' ? 'btn-primary' : 'btn-outline-primary' }}">
+                    <i class="bi bi-cash-stack"></i> Financement
+                </a>
                 <a href="{{ route('caisse.paiements.index', ['tab' => 'divers']) }}"
                     class="btn {{ $tab === 'divers' ? 'btn-primary' : 'btn-outline-primary' }}">
-                    <i class="bi bi-box-arrow-right"></i> Divers
+                    <i class="bi bi-box-arrow-right"></i> Charges Unipalm
                 </a>
             </div>
         </div>
@@ -58,6 +62,8 @@
         @include('caisse.paiements.partials.bordereaux-tab')
     @elseif ($tab === 'demandes')
         @include('caisse.paiements.partials.demandes-tab')
+    @elseif ($tab === 'financement')
+        @include('caisse.paiements.partials.financement-tab')
     @else
         @include('caisse.paiements.partials.divers-tab')
     @endif
@@ -127,7 +133,7 @@
     @endpush
 @endif
 
-@if ($tab === 'divers')
+@if ($tab === 'financement' || $tab === 'divers')
     @push('scripts')
         <script src="{{ asset('assets/js/amount-input.js') }}"></script>
     @endpush

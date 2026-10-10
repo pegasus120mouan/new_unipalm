@@ -357,8 +357,8 @@
 
 
                         @auth
-                        @if ($canModuleAny(['prix-unitaires', 'primes-bismar', 'commissions-groupe', 'bordereaux', 'bordereaux-bismar', 'financements', 'prets', 'usines.amounts', 'comptes-agents', 'comptes-groupes']))
-                        <li class="sidebar-item has-sub {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
+                        @if ($canModuleAny(['prix-unitaires', 'primes-bismar', 'commissions-groupe', 'bordereaux', 'bordereaux-bismar', 'usines.amounts', 'comptes-agents', 'comptes-groupes']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
@@ -372,7 +372,7 @@
                                 </span>
                             </a>
 
-                            <ul class="submenu {{ request()->routeIs(['financements.*', 'prets.*', 'prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
+                            <ul class="submenu {{ request()->routeIs(['prix-unitaires.*', 'primes-bismar.*', 'commissions-groupe.*', 'bordereaux.*', 'bordereaux-bismar.*', 'usines.amounts*', 'comptes-agents.*', 'comptes-groupes.*']) ? 'active' : '' }}">
 
                                 @if ($canModule('prix-unitaires'))
                                 <li class="submenu-item {{ request()->routeIs('prix-unitaires.*') ? 'active' : '' }}">
@@ -424,33 +424,6 @@
                                     <a href="{{ route('bordereaux-bismar.index') }}">
                                         <i class="bi bi-file-earmark-ruled submenu-icon--bismar"></i>
                                         <span>Bordereaux BISMAR</span>
-                                    </a>
-
-                                </li>
-                                @endif
-
-                                @if ($canModule('financements'))
-                                <li class="submenu-item {{ request()->routeIs('financements.*') ? 'active' : '' }}">
-
-                                    <a href="{{ route('financements.index') }}">
-                                        <i class="bi bi-cash-stack submenu-icon--financement"></i>
-                                        <span>
-                                            Financements
-                                            @if(($financementsEnAttenteValidationCount ?? 0) > 0 && $canModule('financements.valider'))
-                                                <span class="badge bg-danger rounded-pill ms-1">{{ $financementsEnAttenteValidationCount }}</span>
-                                            @endif
-                                        </span>
-                                    </a>
-
-                                </li>
-                                @endif
-
-                                @if ($canModule('prets'))
-                                <li class="submenu-item {{ request()->routeIs('prets.*') ? 'active' : '' }}">
-
-                                    <a href="{{ route('prets.index') }}">
-                                        <i class="bi bi-wallet2 submenu-icon--pret"></i>
-                                        <span>Prêts agents</span>
                                     </a>
 
                                 </li>
@@ -879,7 +852,7 @@
 
                                     <a href="{{ route('sorties.diverses.index') }}">
                                         <i class="bi bi-cash-stack submenu-icon--sorties-diverses"></i>
-                                        <span>Sorties Diverses</span>
+                                        <span>Charges Unipalm</span>
                                     </a>
 
                                 </li>
@@ -890,18 +863,23 @@
                         </li>
                         @endif
 
-                        @if ($canModuleAny(['caisse.banques', 'caisse.cca']))
-                        <li class="sidebar-item has-sub">
+                        @if ($canModuleAny(['caisse.banques', 'caisse.cca', 'financements', 'prets']))
+                        <li class="sidebar-item has-sub {{ request()->routeIs(['caisse.banques.*', 'caisse.cca.*', 'financements.*', 'prets.*']) ? 'active' : '' }}">
 
                             <a href="#" class='sidebar-link'>
 
                                 <span class="sidebar-icon sidebar-icon--banques"><i class="bi bi-building"></i></span>
 
-                                <span>Gestion trésorerie</span>
+                                <span>
+                                    Gestion trésorerie
+                                    @if(($financementsEnAttenteValidationCount ?? 0) > 0 && $canModule('financements.valider'))
+                                        <span class="badge bg-danger rounded-pill ms-1">{{ $financementsEnAttenteValidationCount }}</span>
+                                    @endif
+                                </span>
 
                             </a>
 
-                            <ul class="submenu ">
+                            <ul class="submenu {{ request()->routeIs(['caisse.banques.*', 'caisse.cca.*', 'financements.*', 'prets.*']) ? 'active' : '' }}">
 
                                 @if ($canModule('caisse.banques'))
                                 <li class="submenu-item {{ request()->routeIs('caisse.banques.index', 'caisse.banques.show') ? 'active' : '' }}">
@@ -929,6 +907,33 @@
                                     <a href="{{ route('caisse.banques.approvisionnement-caisse.index') }}">
                                         <i class="bi bi-cash-stack submenu-icon--caisse-banques"></i>
                                         <span>Approvisionnement caisse</span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('financements'))
+                                <li class="submenu-item {{ request()->routeIs('financements.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('financements.index') }}">
+                                        <i class="bi bi-cash-stack submenu-icon--financement"></i>
+                                        <span>
+                                            Financements
+                                            @if(($financementsEnAttenteValidationCount ?? 0) > 0 && $canModule('financements.valider'))
+                                                <span class="badge bg-danger rounded-pill ms-1">{{ $financementsEnAttenteValidationCount }}</span>
+                                            @endif
+                                        </span>
+                                    </a>
+
+                                </li>
+                                @endif
+
+                                @if ($canModule('prets'))
+                                <li class="submenu-item {{ request()->routeIs('prets.*') ? 'active' : '' }}">
+
+                                    <a href="{{ route('prets.index') }}">
+                                        <i class="bi bi-wallet2 submenu-icon--pret"></i>
+                                        <span>Prêts agents</span>
                                     </a>
 
                                 </li>

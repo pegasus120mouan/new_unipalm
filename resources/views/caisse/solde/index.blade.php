@@ -56,6 +56,7 @@
                                 <option value="cca" @selected($filters['origine'] === 'cca')>Prêts CCA</option>
                                 <option value="cca_remboursement" @selected($filters['origine'] === 'cca_remboursement')>Remboursements CCA</option>
                                 <option value="pret" @selected($filters['origine'] === 'pret')>Prêts agents</option>
+                                <option value="financement" @selected($filters['origine'] === 'financement')>Financements</option>
                                 <option value="usine" @selected($filters['origine'] === 'usine')>Paiements usines</option>
                             </select>
                         </div>
@@ -112,6 +113,8 @@
                                                 {{ $approService->ccaNameFromSource($appro->source) }}
                                             @elseif ($approService->isPretAgentSource($appro->source))
                                                 <span class="badge bg-danger">Prêt</span>
+                                            @elseif ($approService->isFinancementSource($appro->source))
+                                                <span class="badge bg-info">Financement</span>
                                             @else
                                                 <span class="badge bg-secondary">Manuel</span>
                                                 {{ $appro->source ?: '—' }}

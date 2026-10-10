@@ -22,12 +22,15 @@ class Financement extends Model
         'montant',
         'motif',
         'statut',
+        'origine',
         'date_financement',
     ];
 
     public const STATUT_VALIDE = 'valide';
 
     public const STATUT_EN_ATTENTE = 'en_attente';
+
+    public const ORIGINE_CAISSE = 'caisse';
 
     protected function casts(): array
     {
