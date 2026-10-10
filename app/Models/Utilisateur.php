@@ -157,6 +157,11 @@ class Utilisateur extends Authenticatable
         return (bool) $this->statut_compte;
     }
 
+    public function isCaissiere(): bool
+    {
+        return in_array(strtolower((string) $this->role), ['caissier', 'caissiere'], true);
+    }
+
     public function getRoleLabelAttribute(): string
     {
         return match ($this->role) {

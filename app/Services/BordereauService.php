@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bordereau;
 use App\Models\Ticket;
 use App\Models\TicketParametre;
+use App\Models\Utilisateur;
 use Illuminate\Support\Facades\DB;
 
 class BordereauService
@@ -86,6 +87,7 @@ class BordereauService
                 'montant_payer' => 0,
                 'montant_reste' => $montantTotal,
                 'statut_bordereau' => 'non soldé',
+                'date_validation_boss' => $this->generatedByCaissiere() ? now() : null,
                 'created_at' => now(),
             ]);
 
@@ -126,6 +128,13 @@ class BordereauService
         ]);
 
         return $bordereau->fresh(['agent']);
+    }
+
+    private function generatedByCaissiere(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof Utilisateur && $user->isCaissiere();
     }
 
     private function generateNumeroBordereau(): string
