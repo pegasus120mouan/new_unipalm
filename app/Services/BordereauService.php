@@ -130,6 +130,28 @@ class BordereauService
         return $bordereau->fresh(['agent']);
     }
 
+    /**
+     * @return array{total: int, valides: int, en_attente: int}
+     */
+    public function syntheseValidations(): array
+    {
+        $total = Bordereau::query()->count();
+        $enAttente = Bordereau::query()->whereNull('date_validation_boss')->count();
+
+        return [
+            'total' => $total,
+            'en_attente' => $enAttente,
+            'valides' => max(0, $total - $enAttente),
+        ];
+    }
+
+    public function validerTous(): int
+    {
+        return Bordereau::query()
+            ->whereNull('date_validation_boss')
+            ->update(['date_validation_boss' => now()]);
+    }
+
     private function generatedByCaissiere(): bool
     {
         $user = auth()->user();

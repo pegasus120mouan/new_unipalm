@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Utilisateur;
 use App\Services\AgentBordereauPaymentService;
+use App\Services\BordereauService;
 use App\Services\ParametrePurgeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -12,6 +13,7 @@ class ParametreController extends Controller
 {
     public function __construct(
         private readonly AgentBordereauPaymentService $bordereauPaymentService,
+        private readonly BordereauService $bordereauService,
         private readonly ParametrePurgeService $purgeService,
     ) {}
 
@@ -21,6 +23,7 @@ class ParametreController extends Controller
 
         return view('parametres.index', [
             'synthese' => $this->bordereauPaymentService->syntheseSoldes(),
+            'validations' => $this->bordereauService->syntheseValidations(),
             'compteurs' => $this->purgeService->compteurs(),
         ]);
     }
@@ -36,6 +39,19 @@ class ParametreController extends Controller
             ->with('success', $nombre > 0
                 ? $nombre.' bordereau'.($nombre > 1 ? 'x ont été soldés' : ' a été soldé').'.'
                 : 'Tous les bordereaux étaient déjà soldés.');
+    }
+
+    public function validerBordereaux(): RedirectResponse
+    {
+        $this->authorizeHidden();
+
+        $nombre = $this->bordereauService->validerTous();
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', $nombre > 0
+                ? $nombre.' bordereau'.($nombre > 1 ? 'x ont été validés' : ' a été validé').'.'
+                : 'Tous les bordereaux étaient déjà validés.');
     }
 
     public function viderFinancements(): RedirectResponse
@@ -80,6 +96,17 @@ class ParametreController extends Controller
         return redirect()
             ->route('parametres.index')
             ->with('success', 'La caisse a été vidée. Le solde et le montant utilisable sont à 0.');
+    }
+
+    public function viderCcas(): RedirectResponse
+    {
+        $this->authorizeHidden();
+
+        $nombre = $this->purgeService->viderCcas();
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', $nombre.' mouvement'.($nombre > 1 ? 's CCA ont été supprimés' : ' CCA a été supprimé').'. Les soldes sont à 0.');
     }
 
     private function authorizeHidden(): void

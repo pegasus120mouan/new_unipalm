@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Banque;
 use App\Models\CaisseParametre;
+use App\Models\Cca;
+use App\Models\CcaMouvement;
 use App\Models\Financement;
 use App\Models\Pret;
 use App\Models\PretRemboursement;
@@ -28,6 +30,9 @@ class ParametrePurgeService
             'mouvements_caisse' => (int) DB::table('transactions')->count(),
             'solde_caisse' => $this->caisseService->getSolde(),
             'utilisable_caisse' => $this->caisseService->getMontantUtilisable(),
+            'ccas' => Cca::query()->count(),
+            'mouvements_cca' => CcaMouvement::query()->count(),
+            'solde_cca' => (float) Cca::query()->sum('solde'),
         ];
     }
 
@@ -60,6 +65,16 @@ class ParametrePurgeService
             }
 
             CaisseParametre::query()->update(['montant_utilisable' => 0]);
+
+            return $nombre;
+        });
+    }
+
+    public function viderCcas(): int
+    {
+        return (int) DB::transaction(function () {
+            $nombre = CcaMouvement::query()->delete();
+            Cca::query()->update(['solde' => 0]);
 
             return $nombre;
         });

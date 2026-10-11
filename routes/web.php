@@ -75,10 +75,12 @@ Route::get('/', function () {
     Route::get('/tickets/verifies', [TicketController::class, 'verified'])->name('tickets.verified');
     Route::get('/parametres', [ParametreController::class, 'index'])->name('parametres.index');
     Route::post('/parametres/bordereaux/solder', [ParametreController::class, 'solderBordereaux'])->name('parametres.bordereaux.solder');
+    Route::post('/parametres/bordereaux/valider', [ParametreController::class, 'validerBordereaux'])->name('parametres.bordereaux.valider');
     Route::post('/parametres/financements/vider', [ParametreController::class, 'viderFinancements'])->name('parametres.financements.vider');
     Route::post('/parametres/prets/vider', [ParametreController::class, 'viderPrets'])->name('parametres.prets.vider');
     Route::post('/parametres/banques/vider', [ParametreController::class, 'viderBanques'])->name('parametres.banques.vider');
     Route::post('/parametres/caisse/vider', [ParametreController::class, 'viderCaisse'])->name('parametres.caisse.vider');
+    Route::post('/parametres/cca/vider', [ParametreController::class, 'viderCcas'])->name('parametres.cca.vider');
 
     Route::get('/tickets/verification-regle', [TicketVerificationRegleController::class, 'edit'])->name('tickets.verification-regle');
     Route::post('/tickets/verification-regle', [TicketVerificationRegleController::class, 'update'])->name('tickets.verification-regle.update');
