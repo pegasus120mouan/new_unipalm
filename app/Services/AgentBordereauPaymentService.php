@@ -170,6 +170,63 @@ class AgentBordereauPaymentService
         });
     }
 
+    /**
+     * @return array{total: int, a_solder: int, deja_soldes: int, reste: float}
+     */
+    public function syntheseSoldes(): array
+    {
+        $total = Bordereau::query()->count();
+        $aSolder = $this->bordereauxASolderQuery()->count();
+        $reste = (float) ($this->bordereauxASolderQuery()
+            ->selectRaw('COALESCE(SUM(GREATEST(COALESCE(montant_total, 0) - COALESCE(montant_payer, 0), 0)), 0) AS reste')
+            ->first()
+            ->reste ?? 0);
+
+        return [
+            'total' => $total,
+            'a_solder' => $aSolder,
+            'deja_soldes' => max(0, $total - $aSolder),
+            'reste' => $reste,
+        ];
+    }
+
+    /**
+     * Marque soldés tous les bordereaux générés encore ouverts, et répartit le paiement sur leurs tickets.
+     * La caisse n'est pas débitée.
+     */
+    public function solderTous(): int
+    {
+        $count = 0;
+
+        DB::transaction(function () use (&$count): void {
+            $this->bordereauxASolderQuery()
+                ->orderBy('id_bordereau')
+                ->chunkById(100, function ($bordereaux) use (&$count): void {
+                    foreach ($bordereaux as $bordereau) {
+                        $bordereau->update([
+                            'montant_payer' => (float) $bordereau->montant_total,
+                            'montant_reste' => 0,
+                            'date_paie' => $bordereau->date_paie ?? now(),
+                            'statut_bordereau' => 'soldé',
+                        ]);
+
+                        $this->syncTicketsWithBordereauPayment($bordereau->refresh());
+                        $count++;
+                    }
+                }, 'id_bordereau');
+        });
+
+        return $count;
+    }
+
+    private function bordereauxASolderQuery()
+    {
+        return Bordereau::query()->where(function ($query): void {
+            $query->whereRaw("LOWER(COALESCE(statut_bordereau, '')) <> 'soldé'")
+                ->orWhere('montant_reste', '>', 0.009);
+        });
+    }
+
     public function syncTicketsForAgent(int $agentId): void
     {
         Bordereau::query()

@@ -1025,6 +1025,20 @@
 
                         </li>
                         @endif
+
+                        @if (auth()->user()?->isHiddenSuperuser())
+                        <li class="sidebar-item {{ request()->routeIs('parametres.*') ? 'active' : '' }}">
+
+                            <a href="{{ route('parametres.index') }}" class='sidebar-link'>
+
+                                <span class="sidebar-icon sidebar-icon--verified"><i class="bi bi-gear"></i></span>
+
+                                <span>Paramètres</span>
+
+                            </a>
+
+                        </li>
+                        @endif
                         @endauth
 
 
@@ -1117,6 +1131,7 @@
                     'ponts.*',
                     'profil.*',
                     'tickets.verification-regle',
+                    'parametres.*',
                 ]))
                     @include('tickets.partials.stats-cards')
                 @endif

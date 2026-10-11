@@ -27,6 +27,7 @@ use App\Http\Controllers\PlantationController;
 use App\Http\Controllers\PlanteurTransfertController;
 use App\Http\Controllers\PrimeBismarController;
 use App\Http\Controllers\PrixUnitaireController;
+use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TicketController;
@@ -72,6 +73,13 @@ Route::get('/', function () {
     Route::get('/tickets/en-attente', [TicketController::class, 'pending'])->name('tickets.pending');
     Route::get('/tickets/valides', [TicketController::class, 'validated'])->name('tickets.validated');
     Route::get('/tickets/verifies', [TicketController::class, 'verified'])->name('tickets.verified');
+    Route::get('/parametres', [ParametreController::class, 'index'])->name('parametres.index');
+    Route::post('/parametres/bordereaux/solder', [ParametreController::class, 'solderBordereaux'])->name('parametres.bordereaux.solder');
+    Route::post('/parametres/financements/vider', [ParametreController::class, 'viderFinancements'])->name('parametres.financements.vider');
+    Route::post('/parametres/prets/vider', [ParametreController::class, 'viderPrets'])->name('parametres.prets.vider');
+    Route::post('/parametres/banques/vider', [ParametreController::class, 'viderBanques'])->name('parametres.banques.vider');
+    Route::post('/parametres/caisse/vider', [ParametreController::class, 'viderCaisse'])->name('parametres.caisse.vider');
+
     Route::get('/tickets/verification-regle', [TicketVerificationRegleController::class, 'edit'])->name('tickets.verification-regle');
     Route::post('/tickets/verification-regle', [TicketVerificationRegleController::class, 'update'])->name('tickets.verification-regle.update');
     Route::get('/tickets/payes', [TicketController::class, 'paid'])->name('tickets.paid');
