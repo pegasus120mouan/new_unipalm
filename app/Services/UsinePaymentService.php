@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\Usine;
+use App\Models\UsineEntree;
 use App\Models\Utilisateur;
 use App\Services\ApprovisionnementService;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,84 @@ class UsinePaymentService
         private readonly ApprovisionnementService $approvisionnementService,
         private readonly UsineFinancementService $usineFinancementService,
     ) {}
+
+    /**
+     * @return array{total: int, a_solder: int, reste: float}
+     */
+    public function syntheseSoldes(): array
+    {
+        $dus = UsineEntree::query()
+            ->selectRaw('id_usine, COALESCE(SUM(ROUND(poids_usine * prix_unitaire, 2)), 0) AS montant_du')
+            ->groupBy('id_usine')
+            ->pluck('montant_du', 'id_usine');
+
+        $payes = Payment::query()
+            ->selectRaw('id_usine, COALESCE(SUM(montant), 0) AS montant_paye')
+            ->groupBy('id_usine')
+            ->pluck('montant_paye', 'id_usine');
+
+        $aSolder = 0;
+        $reste = 0.0;
+
+        foreach ($dus->keys()->merge($payes->keys())->unique() as $idUsine) {
+            $gap = max(0, (float) ($dus[$idUsine] ?? 0) - (float) ($payes[$idUsine] ?? 0));
+            if ($gap > 0.009) {
+                $aSolder++;
+                $reste += $gap;
+            }
+        }
+
+        return [
+            'total' => Usine::query()->count(),
+            'a_solder' => $aSolder,
+            'reste' => $reste,
+        ];
+    }
+
+    /**
+     * Enregistre le paiement manquant de chaque usine. La caisse n'est pas créditée.
+     */
+    public function solderToutes(): int
+    {
+        $count = 0;
+
+        foreach (Usine::query()->orderBy('id_usine')->get() as $usine) {
+            $reste = $this->resteBilan((int) $usine->id_usine);
+            if ($reste <= 0.009) {
+                continue;
+            }
+
+            $this->create(
+                $usine,
+                $reste,
+                now()->toDateString(),
+                'Régularisation',
+                'Solder toutes les usines',
+                null,
+                false,
+                $reste,
+                true,
+            );
+            $count++;
+        }
+
+        return $count;
+    }
+
+    public function resteBilan(int $idUsine): float
+    {
+        $du = (float) (UsineEntree::query()
+            ->where('id_usine', $idUsine)
+            ->selectRaw('COALESCE(SUM(ROUND(poids_usine * prix_unitaire, 2)), 0) AS montant_du')
+            ->first()
+            ->montant_du ?? 0);
+
+        $paye = (float) Payment::query()
+            ->where('id_usine', $idUsine)
+            ->sum('montant');
+
+        return max(0, $du - $paye);
+    }
 
     public function resteAPayer(int $idUsine): float
     {

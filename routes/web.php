@@ -76,6 +76,7 @@ Route::get('/', function () {
     Route::get('/parametres', [ParametreController::class, 'index'])->name('parametres.index');
     Route::post('/parametres/bordereaux/solder', [ParametreController::class, 'solderBordereaux'])->name('parametres.bordereaux.solder');
     Route::post('/parametres/bordereaux/valider', [ParametreController::class, 'validerBordereaux'])->name('parametres.bordereaux.valider');
+    Route::post('/parametres/usines/solder', [ParametreController::class, 'solderUsines'])->name('parametres.usines.solder');
     Route::post('/parametres/financements/vider', [ParametreController::class, 'viderFinancements'])->name('parametres.financements.vider');
     Route::post('/parametres/prets/vider', [ParametreController::class, 'viderPrets'])->name('parametres.prets.vider');
     Route::post('/parametres/banques/vider', [ParametreController::class, 'viderBanques'])->name('parametres.banques.vider');

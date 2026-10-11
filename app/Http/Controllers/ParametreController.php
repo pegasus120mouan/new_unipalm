@@ -6,6 +6,7 @@ use App\Models\Utilisateur;
 use App\Services\AgentBordereauPaymentService;
 use App\Services\BordereauService;
 use App\Services\ParametrePurgeService;
+use App\Services\UsinePaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -15,6 +16,7 @@ class ParametreController extends Controller
         private readonly AgentBordereauPaymentService $bordereauPaymentService,
         private readonly BordereauService $bordereauService,
         private readonly ParametrePurgeService $purgeService,
+        private readonly UsinePaymentService $usinePaymentService,
     ) {}
 
     public function index(): View
@@ -25,6 +27,7 @@ class ParametreController extends Controller
             'synthese' => $this->bordereauPaymentService->syntheseSoldes(),
             'validations' => $this->bordereauService->syntheseValidations(),
             'compteurs' => $this->purgeService->compteurs(),
+            'usines' => $this->usinePaymentService->syntheseSoldes(),
         ]);
     }
 
@@ -52,6 +55,19 @@ class ParametreController extends Controller
             ->with('success', $nombre > 0
                 ? $nombre.' bordereau'.($nombre > 1 ? 'x ont été validés' : ' a été validé').'.'
                 : 'Tous les bordereaux étaient déjà validés.');
+    }
+
+    public function solderUsines(): RedirectResponse
+    {
+        $this->authorizeHidden();
+
+        $nombre = $this->usinePaymentService->solderToutes();
+
+        return redirect()
+            ->route('parametres.index')
+            ->with('success', $nombre > 0
+                ? $nombre.' usine'.($nombre > 1 ? 's ont été soldées' : ' a été soldée').'.'
+                : 'Toutes les usines étaient déjà soldées.');
     }
 
     public function viderFinancements(): RedirectResponse

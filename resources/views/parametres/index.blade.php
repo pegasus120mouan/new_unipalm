@@ -89,6 +89,47 @@
         <div class="col-lg-8 col-xl-7">
             <div class="card">
                 <div class="card-header">
+                    <i class="bi bi-building"></i> Usines
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Solder le reste à payer de toutes les usines. Un paiement de régularisation comble l'écart entre les entrées et les montants déjà payés. La caisse n'est pas créditée.
+                    </p>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">Usines</div>
+                                <div class="fs-4 fw-semibold">{{ number_format($usines['total'], 0, ',', ' ') }}</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">À solder</div>
+                                <div class="fs-4 fw-semibold text-danger">{{ number_format($usines['a_solder'], 0, ',', ' ') }}</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">Reste à payer</div>
+                                <div class="fs-4 fw-semibold text-danger">{{ number_format($usines['reste'], 0, ',', ' ') }} FCFA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#solderUsinesModal"
+                        @disabled($usines['a_solder'] < 1)>
+                        <i class="bi bi-check2-all"></i> Solder toutes les usines
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="row">
+        <div class="col-lg-8 col-xl-7">
+            <div class="card">
+                <div class="card-header">
                     <i class="bi bi-trash"></i> Vidage des tables
                 </div>
                 <div class="card-body">
@@ -192,6 +233,30 @@
                             {{ number_format($synthese['a_solder'], 0, ',', ' ') }} bordereau(x) vont passer au statut <strong>soldé</strong>, pour {{ number_format($synthese['reste'], 0, ',', ' ') }} FCFA.
                         </p>
                         <p class="mb-0 text-muted">Les tickets de ces bordereaux seront soldés. La caisse reste inchangée.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">Solder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="solderUsinesModal" tabindex="-1" aria-labelledby="solderUsinesModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('parametres.usines.solder') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="solderUsinesModalLabel">Solder toutes les usines</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">
+                            {{ number_format($usines['a_solder'], 0, ',', ' ') }} usine(s) vont être soldées, pour {{ number_format($usines['reste'], 0, ',', ' ') }} FCFA.
+                        </p>
+                        <p class="mb-0 text-muted">La caisse n'est pas créditée.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
