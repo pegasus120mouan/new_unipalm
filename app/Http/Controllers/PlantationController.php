@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PlantationExportService;
 use App\Services\PlanteurApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlantationController extends Controller
 {
     public function __construct(
         private readonly PlanteurApiService $planteurApi,
+        private readonly PlantationExportService $exports,
     ) {}
 
     public function index(): View
@@ -27,6 +31,33 @@ class PlantationController extends Controller
     public function plantations(): View
     {
         return view('plantations.plantations');
+    }
+
+    public function export(Request $request, string $format): StreamedResponse|Response|JsonResponse
+    {
+        try {
+            $query = $request->only(['q', 'region', 'village']);
+
+            return match ($format) {
+                'csv' => $this->exports->csv($query),
+                'xls' => $this->exports->xls($query),
+                'pdf' => $this->exports->pdf($query),
+                default => response()->json([
+                    'success' => false,
+                    'error' => 'Format d\'export inconnu.',
+                ], 404),
+            };
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'error' => $exception->getMessage(),
+            ], 502);
+        } catch (\Throwable) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Impossible d\'exporter les plantations. Réessayez dans quelques instants.',
+            ], 502);
+        }
     }
 
     public function show(int $id): View

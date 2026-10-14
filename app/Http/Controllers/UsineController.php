@@ -312,7 +312,7 @@ class UsineController extends Controller
                 'usines.nom_usine',
                 DB::raw('COALESCE(SUM(t.montant_paie), 0) AS total_montant'),
                 DB::raw('COALESCE(SUM(t.montant_payer), 0) AS montant_paye'),
-                DB::raw('COALESCE(SUM(t.montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COALESCE(SUM(GREATEST(COALESCE(t.montant_paie, 0) - COALESCE(t.montant_payer, 0), 0)), 0) AS reste_a_payer'),
             ])
             ->leftJoin('tickets as t', function ($join) {
                 $join->on('usines.id_usine', '=', 't.id_usine')
@@ -334,7 +334,7 @@ class UsineController extends Controller
             ->select([
                 DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
                 DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
-                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COALESCE(SUM(GREATEST(COALESCE(montant_paie, 0) - COALESCE(montant_payer, 0), 0)), 0) AS reste_a_payer'),
             ])
             ->first();
 
@@ -355,7 +355,7 @@ class UsineController extends Controller
                 DB::raw("DATE_FORMAT(date_ticket, '%Y-%m') AS mois"),
                 DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
                 DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
-                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COALESCE(SUM(GREATEST(COALESCE(montant_paie, 0) - COALESCE(montant_payer, 0), 0)), 0) AS reste_a_payer'),
                 DB::raw('COUNT(id_ticket) AS nombre_tickets'),
             ])
             ->groupBy('mois')
@@ -368,7 +368,7 @@ class UsineController extends Controller
             ->select([
                 DB::raw('COALESCE(SUM(montant_paie), 0) AS total_montant'),
                 DB::raw('COALESCE(SUM(montant_payer), 0) AS montant_paye'),
-                DB::raw('COALESCE(SUM(montant_reste), 0) AS reste_a_payer'),
+                DB::raw('COALESCE(SUM(GREATEST(COALESCE(montant_paie, 0) - COALESCE(montant_payer, 0), 0)), 0) AS reste_a_payer'),
                 DB::raw('COUNT(id_ticket) AS nombre_tickets'),
             ])
             ->first();

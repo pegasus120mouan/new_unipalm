@@ -5,46 +5,46 @@ use App\Http\Controllers\AgentDocumentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BordereauBismarController;
 use App\Http\Controllers\BordereauController;
+use App\Http\Controllers\CaisseBanqueController;
+use App\Http\Controllers\CaissePaiementController;
+use App\Http\Controllers\CaisseSoldeController;
+use App\Http\Controllers\CcaController;
+use App\Http\Controllers\CollecteurController;
+use App\Http\Controllers\CommisController;
 use App\Http\Controllers\CommissionGroupeController;
 use App\Http\Controllers\CompteAgentController;
 use App\Http\Controllers\CompteGroupeController;
+use App\Http\Controllers\DemandeSortieController;
+use App\Http\Controllers\DoublonPlanteurController;
 use App\Http\Controllers\FinancementController;
 use App\Http\Controllers\GroupeController;
-use App\Http\Controllers\PretController;
-use App\Http\Controllers\PontBasculeController;
-use App\Http\Controllers\PontRegionController;
-use App\Http\Controllers\PontDepartementController;
-use App\Http\Controllers\PontSousPrefectureController;
-use App\Http\Controllers\PontVillageController;
-use App\Http\Controllers\TypePontController;
-use App\Http\Controllers\CollecteurController;
-use App\Http\Controllers\CommisController;
 use App\Http\Controllers\LocalisationController;
-use App\Http\Controllers\RegionController;
-use App\Http\Controllers\ZoneController;
-use App\Http\Controllers\DoublonPlanteurController;
+use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\PlantationController;
 use App\Http\Controllers\PlanteurTransfertController;
+use App\Http\Controllers\PontBasculeController;
+use App\Http\Controllers\PontDepartementController;
+use App\Http\Controllers\PontRegionController;
+use App\Http\Controllers\PontSousPrefectureController;
+use App\Http\Controllers\PontVillageController;
+use App\Http\Controllers\PretController;
 use App\Http\Controllers\PrimeBismarController;
 use App\Http\Controllers\PrixUnitaireController;
-use App\Http\Controllers\ParametreController;
 use App\Http\Controllers\ProfilController;
+use App\Http\Controllers\RecuPaiementController;
+use App\Http\Controllers\RegionController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\SortieDiverseController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketVerificationRegleController;
+use App\Http\Controllers\TypePontController;
 use App\Http\Controllers\UsineController;
 use App\Http\Controllers\UsineFinancementController;
 use App\Http\Controllers\UtilisateurController;
 use App\Http\Controllers\UtilisateurPhotoController;
-use App\Models\Utilisateur;
-use App\Http\Controllers\CaisseBanqueController;
-use App\Http\Controllers\CcaController;
-use App\Http\Controllers\CaisseSoldeController;
-use App\Http\Controllers\CaissePaiementController;
-use App\Http\Controllers\RecuPaiementController;
-use App\Http\Controllers\SortieDiverseController;
-use App\Http\Controllers\DemandeSortieController;
 use App\Http\Controllers\VehiculeController;
+use App\Http\Controllers\ZoneController;
+use App\Models\Utilisateur;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -53,7 +53,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-Route::get('/', function () {
+    Route::get('/', function () {
         $routeName = auth()->user()?->homeRouteName();
 
         if ($routeName) {
@@ -264,6 +264,9 @@ Route::get('/', function () {
     Route::get('/plantations', [PlantationController::class, 'index'])->name('plantations.index');
     Route::get('/plantations/create', [PlantationController::class, 'create'])->name('plantations.create');
     Route::get('/plantations/liste', [PlantationController::class, 'plantations'])->name('plantations.liste');
+    Route::get('/plantations/liste/export/{format}', [PlantationController::class, 'export'])
+        ->name('plantations.liste.export')
+        ->whereIn('format', ['pdf', 'csv', 'xls']);
     Route::get('/plantations/{id}/champs/{champId}', [PlantationController::class, 'champShow'])
         ->name('plantations.champ.show')
         ->whereNumber('id')

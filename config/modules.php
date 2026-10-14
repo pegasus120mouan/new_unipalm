@@ -327,6 +327,7 @@ return [
         'plantations.index' => 'plantations.index',
         'plantations.create' => 'plantations.index',
         'plantations.liste' => 'plantations.index',
+        'plantations.liste.export' => 'plantations.index',
         'plantations.show' => 'plantations.index',
         'plantations.fiches' => 'plantations.index',
         'plantations.champs' => 'plantations.index',

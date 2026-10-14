@@ -26,6 +26,69 @@
             white-space: nowrap;
             background: #111;
         }
+
+        .plantations-io-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #1e3a5f;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .plantations-io-label i {
+            color: #2f6fed;
+            font-size: 1.15rem;
+        }
+
+        .plantations-io-btn {
+            width: 72px;
+            height: 72px;
+            border: none;
+            border-radius: 12px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .plantations-io-btn i {
+            font-size: 1.45rem;
+            line-height: 1;
+        }
+
+        .plantations-io-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .plantations-io-btn:disabled {
+            opacity: 0.65;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .plantations-io-btn--pdf {
+            background: #ffe4e6;
+            color: #e11d48;
+        }
+
+        .plantations-io-btn--csv {
+            background: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .plantations-io-btn--xls {
+            background: #dcfce7;
+            color: #15803d;
+        }
     </style>
 
     <div class="row g-3 mb-3">
@@ -80,6 +143,30 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="plantations-io-label">
+                    <i class="bi bi-download"></i>
+                    Exporter les données
+                </span>
+                <button type="button" class="plantations-io-btn plantations-io-btn--pdf" id="plantationsExportPdfBtn" title="Exporter en PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                    <span>PDF</span>
+                </button>
+                <button type="button" class="plantations-io-btn plantations-io-btn--csv" id="plantationsExportCsvBtn" title="Exporter en CSV">
+                    <i class="bi bi-filetype-csv"></i>
+                    <span>CSV</span>
+                </button>
+                <button type="button" class="plantations-io-btn plantations-io-btn--xls" id="plantationsExportXlsBtn" title="Exporter en Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                    <span>XLS</span>
+                </button>
+            </div>
+            <div class="text-muted small mt-2">L'export reprend les filtres de recherche en cours.</div>
         </div>
     </div>
 
@@ -162,9 +249,12 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const apiUrl = @json(route('plantations.api'));
+            const logoUrl = @json(asset('assets/images/logo/logo.png'));
             const baseUrl = @json(url('/plantations'));
             const csrfToken = @json(csrf_token());
             const limit = 15;
@@ -299,6 +389,8 @@
                 lastPage = page;
                 loaderEl.classList.remove('d-none');
                 errorEl.classList.add('d-none');
+                errorEl.classList.remove('alert-warning');
+                errorEl.classList.add('alert-danger');
                 refreshBtn.disabled = true;
                 const params = new URLSearchParams({
                     action: 'plantations',
@@ -323,8 +415,16 @@
                     loadedAtEl.textContent = data.loaded_at
                         ? `· données du ${new Date(data.loaded_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' })}`
                         : '';
+                    if (data.stale && data.warning) {
+                        errorEl.classList.remove('alert-danger');
+                        errorEl.classList.add('alert-warning');
+                        errorEl.textContent = data.warning;
+                        errorEl.classList.remove('d-none');
+                    }
                     tableWrapper.classList.remove('d-none');
                 } catch (error) {
+                    errorEl.classList.remove('alert-warning');
+                    errorEl.classList.add('alert-danger');
                     errorEl.textContent = error.message || String(error);
                     errorEl.classList.remove('d-none');
                 } finally {
@@ -422,6 +522,222 @@
             document.getElementById('resetFilters').addEventListener('click', function () {
                 document.getElementById('filtersForm').reset();
                 load(1);
+            });
+
+            const EXPORT_HEADERS = [
+                'N° champ', 'Région', 'Sous-préfecture', 'Village', 'Culture',
+                'Superficie (ha)', 'Parcelle', 'Planteur', 'N° fiche', 'Téléphone',
+            ];
+
+            function exportFileStamp() {
+                return new Date().toLocaleDateString('fr-FR').replace(/\//g, '-');
+            }
+
+            function exportHa(value) {
+                const number = Number(value);
+                if (!Number.isFinite(number) || number <= 0) return '';
+                return number.toFixed(2).replace('.', ',');
+            }
+
+            function plantationExportRows(rows) {
+                return rows.map(function (row) {
+                    const superficie = row.superficie_ha > 0 ? row.superficie_ha : row.superficie_gps;
+                    return [
+                        row.numero_champ || '',
+                        row.region || '',
+                        row.sous_prefecture || '',
+                        row.village || '',
+                        row.type_culture || '',
+                        exportHa(superficie),
+                        row.parcelle_tracee ? 'Tracée' : 'Non tracée',
+                        row.planteur_nom || '',
+                        row.numero_fiche || '',
+                        row.telephone || '',
+                    ];
+                });
+            }
+
+            async function fetchAllPlantations() {
+                const params = new URLSearchParams({
+                    action: 'plantations',
+                    all: '1',
+                    q: document.getElementById('filterQ').value.trim(),
+                    region: document.getElementById('filterRegion').value,
+                    village: document.getElementById('filterVillage').value.trim(),
+                });
+                const res = await fetch(`${apiUrl}?${params}`, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                const json = await res.json().catch(function () { return {}; });
+                if (!res.ok || !json?.success) {
+                    throw new Error(json?.error || json?.message || 'Impossible de charger les plantations à exporter.');
+                }
+                const rows = json.data?.plantations || [];
+                if (!rows.length) {
+                    throw new Error('Aucune plantation à exporter.');
+                }
+                return rows;
+            }
+
+            function downloadBlob(content, filename, mime) {
+                const blob = new Blob([content], { type: mime });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            }
+
+            function rowsToCsv(body) {
+                const lines = [EXPORT_HEADERS.join(';')];
+                body.forEach(function (row) {
+                    lines.push(row.map(function (cell, index) {
+                        const text = String(cell ?? '').replace(/;/g, ',');
+                        if (index === 9 && text !== '') {
+                            return '="' + text.replace(/"/g, '""') + '"';
+                        }
+                        return text;
+                    }).join(';'));
+                });
+                return '\uFEFF' + lines.join('\n');
+            }
+
+            function rowsToXls(body) {
+                const head = EXPORT_HEADERS.map(function (header) {
+                    return `<th>${escapeHtml(header)}</th>`;
+                }).join('');
+                const rows = body.map(function (row) {
+                    return '<tr>' + row.map(function (cell) {
+                        return `<td style="mso-number-format:'\\@';">${escapeHtml(cell)}</td>`;
+                    }).join('') + '</tr>';
+                }).join('');
+                return '\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table><thead><tr>'
+                    + head + '</tr></thead><tbody>' + rows + '</tbody></table></body></html>';
+            }
+
+            function loadLogoDataUrl(url) {
+                return new Promise(function (resolve) {
+                    if (!url) {
+                        resolve(null);
+                        return;
+                    }
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth || img.width;
+                        canvas.height = img.naturalHeight || img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        try {
+                            resolve(canvas.toDataURL('image/png'));
+                        } catch (error) {
+                            resolve(null);
+                        }
+                    };
+                    img.onerror = function () { resolve(null); };
+                    img.src = url;
+                });
+            }
+
+            async function exportPdf(body) {
+                if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+                    throw new Error('Bibliothèque PDF indisponible. Rechargez la page.');
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                const logoData = await loadLogoDataUrl(logoUrl);
+                const date = new Date().toLocaleString('fr-FR');
+                const filters = [];
+                const q = document.getElementById('filterQ').value.trim();
+                const region = document.getElementById('filterRegion').value;
+                const village = document.getElementById('filterVillage').value.trim();
+                if (q) filters.push('Recherche : ' + q);
+                if (region) filters.push('Région : ' + region);
+                if (village) filters.push('Village : ' + village);
+                const subtitle = `Généré le ${date}  ·  ${body.length} plantation(s)`
+                    + (filters.length ? '  ·  ' + filters.join('  ·  ') : '');
+
+                function drawHeader() {
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    if (logoData) {
+                        doc.addImage(logoData, 'PNG', 8, 6, 24, 24);
+                    }
+                    const textX = logoData ? 36 : 10;
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(16);
+                    doc.setTextColor(0, 128, 0);
+                    doc.text('UNIPALM COOP - CA', textX, 14);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(9);
+                    doc.setTextColor(46, 125, 50);
+                    doc.text('Société Coopérative Agricole Unie pour le Palmier', textX, 20);
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(12);
+                    doc.setTextColor(17, 17, 17);
+                    doc.text('LISTE DES PLANTATIONS', pageWidth / 2, 30, { align: 'center' });
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text(subtitle, pageWidth / 2, 35, { align: 'center' });
+
+                    doc.setDrawColor(0, 128, 0);
+                    doc.setLineWidth(0.4);
+                    doc.line(8, 38, pageWidth - 8, 38);
+                }
+
+                doc.autoTable({
+                    head: [EXPORT_HEADERS],
+                    body: body,
+                    startY: 42,
+                    styles: { fontSize: 7, cellPadding: 1.5 },
+                    headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [245, 247, 250] },
+                    margin: { top: 42, left: 8, right: 8, bottom: 12 },
+                    didDrawPage: function () {
+                        drawHeader();
+                    },
+                });
+
+                doc.save(`plantations_${exportFileStamp()}.pdf`);
+            }
+
+            async function withExportLoading(button, handler) {
+                const original = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                errorEl.classList.add('d-none');
+                try {
+                    const rows = plantationExportRows(await fetchAllPlantations());
+                    await handler(rows);
+                } catch (error) {
+                    errorEl.textContent = error?.message || String(error);
+                    errorEl.classList.remove('d-none');
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = original;
+                }
+            }
+
+            document.getElementById('plantationsExportPdfBtn').addEventListener('click', function () {
+                withExportLoading(this, exportPdf);
+            });
+            document.getElementById('plantationsExportCsvBtn').addEventListener('click', function () {
+                const stamp = exportFileStamp();
+                withExportLoading(this, function (rows) {
+                    downloadBlob(rowsToCsv(rows), `plantations_${stamp}.csv`, 'text/csv;charset=utf-8;');
+                });
+            });
+            document.getElementById('plantationsExportXlsBtn').addEventListener('click', function () {
+                const stamp = exportFileStamp();
+                withExportLoading(this, function (rows) {
+                    downloadBlob(rowsToXls(rows), `plantations_${stamp}.xls`, 'application/vnd.ms-excel');
+                });
             });
 
             const initialQuery = new URLSearchParams(window.location.search).get('q');

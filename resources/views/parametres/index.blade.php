@@ -93,7 +93,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted">
-                        Solder le reste à payer de toutes les usines. Un paiement de régularisation comble l'écart entre les entrées et les montants déjà payés. La caisse n'est pas créditée.
+                        Solder le reste à payer de toutes les usines : l'écart entre le total des tickets validés et le montant déjà payé. La caisse n'est pas créditée.
                     </p>
 
                     <div class="row g-3 mb-4">

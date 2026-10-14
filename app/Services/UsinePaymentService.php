@@ -7,7 +7,7 @@ use App\Models\Ticket;
 use App\Models\Usine;
 use App\Models\UsineEntree;
 use App\Models\Utilisateur;
-use App\Services\ApprovisionnementService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class UsinePaymentService
@@ -18,25 +18,27 @@ class UsinePaymentService
     ) {}
 
     /**
+     * Écart entre le total des tickets validés et le montant déjà payé,
+     * le même reste que la page Montants usines.
+     */
+    public const RESTE_TICKETS_SQL = 'GREATEST(COALESCE(montant_paie, 0) - COALESCE(montant_payer, 0), 0)';
+
+    /**
      * @return array{total: int, a_solder: int, reste: float}
      */
     public function syntheseSoldes(): array
     {
-        $dus = UsineEntree::query()
-            ->selectRaw('id_usine, COALESCE(SUM(ROUND(poids_usine * prix_unitaire, 2)), 0) AS montant_du')
+        $rows = Ticket::query()
+            ->whereNotNull('date_validation_boss')
+            ->selectRaw('id_usine, COALESCE(SUM('.self::RESTE_TICKETS_SQL.'), 0) AS reste')
             ->groupBy('id_usine')
-            ->pluck('montant_du', 'id_usine');
-
-        $payes = Payment::query()
-            ->selectRaw('id_usine, COALESCE(SUM(montant), 0) AS montant_paye')
-            ->groupBy('id_usine')
-            ->pluck('montant_paye', 'id_usine');
+            ->get();
 
         $aSolder = 0;
         $reste = 0.0;
 
-        foreach ($dus->keys()->merge($payes->keys())->unique() as $idUsine) {
-            $gap = max(0, (float) ($dus[$idUsine] ?? 0) - (float) ($payes[$idUsine] ?? 0));
+        foreach ($rows as $row) {
+            $gap = (float) $row->reste;
             if ($gap > 0.009) {
                 $aSolder++;
                 $reste += $gap;
@@ -51,33 +53,33 @@ class UsinePaymentService
     }
 
     /**
-     * Enregistre le paiement manquant de chaque usine. La caisse n'est pas créditée.
+     * Solde les tickets validés encore ouverts. La caisse n'est pas créditée.
      */
     public function solderToutes(): int
     {
-        $count = 0;
+        return DB::transaction(function () {
+            $ids = Ticket::query()
+                ->whereNotNull('date_validation_boss')
+                ->whereRaw(self::RESTE_TICKETS_SQL.' > 0.009')
+                ->distinct()
+                ->pluck('id_usine');
 
-        foreach (Usine::query()->orderBy('id_usine')->get() as $usine) {
-            $reste = $this->resteBilan((int) $usine->id_usine);
-            if ($reste <= 0.009) {
-                continue;
+            if ($ids->isEmpty()) {
+                return 0;
             }
 
-            $this->create(
-                $usine,
-                $reste,
-                now()->toDateString(),
-                'Régularisation',
-                'Solder toutes les usines',
-                null,
-                false,
-                $reste,
-                true,
-            );
-            $count++;
-        }
+            Ticket::query()
+                ->whereNotNull('date_validation_boss')
+                ->whereRaw(self::RESTE_TICKETS_SQL.' > 0.009')
+                ->update([
+                    'montant_payer' => DB::raw('COALESCE(montant_paie, 0)'),
+                    'montant_reste' => 0,
+                    'date_paie' => now()->toDateString(),
+                    'statut_ticket' => 'soldé',
+                ]);
 
-        return $count;
+            return $ids->count();
+        });
     }
 
     public function resteBilan(int $idUsine): float
@@ -98,10 +100,11 @@ class UsinePaymentService
     public function resteAPayer(int $idUsine): float
     {
         return (float) Ticket::query()
-            ->validated()
+            ->whereNotNull('date_validation_boss')
             ->where('id_usine', $idUsine)
-            ->where('montant_reste', '>', 0)
-            ->sum('montant_reste');
+            ->selectRaw('COALESCE(SUM('.self::RESTE_TICKETS_SQL.'), 0) AS reste')
+            ->first()
+            ->reste;
     }
 
     /**
@@ -123,11 +126,7 @@ class UsinePaymentService
         ?float $restePlafond = null,
         bool $distributeToTickets = true,
     ): Payment {
-        $resteTickets = (float) Ticket::query()
-            ->validated()
-            ->where('id_usine', $usine->id_usine)
-            ->where('montant_reste', '>', 0)
-            ->sum('montant_reste');
+        $resteTickets = $this->resteAPayer((int) $usine->id_usine);
 
         $resteTotal = $restePlafond !== null ? max(0, $restePlafond) : $resteTickets;
 
@@ -176,7 +175,7 @@ class UsinePaymentService
                     $modePaiement,
                     $referencePaiement,
                     $utilisateur,
-                    \Carbon\Carbon::parse($datePaiement),
+                    Carbon::parse($datePaiement),
                 );
             }
 
@@ -260,9 +259,9 @@ class UsinePaymentService
         $remaining = $montant;
 
         $tickets = Ticket::query()
-            ->validated()
+            ->whereNotNull('date_validation_boss')
             ->where('id_usine', $usine->id_usine)
-            ->where('montant_reste', '>', 0)
+            ->whereRaw(self::RESTE_TICKETS_SQL.' > 0.009')
             ->orderBy('date_ticket')
             ->orderBy('id_ticket')
             ->get();
@@ -272,7 +271,7 @@ class UsinePaymentService
                 break;
             }
 
-            $ticketReste = (float) $ticket->montant_reste;
+            $ticketReste = max(0, (float) $ticket->montant_paie - (float) $ticket->montant_payer);
             $toApply = min($remaining, $ticketReste);
 
             $newMontantPayer = (float) $ticket->montant_payer + $toApply;

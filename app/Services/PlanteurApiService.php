@@ -358,10 +358,15 @@ class PlanteurApiService
         return 'CHAMP-'.((int) ($planteur['id'] ?? 0)).'-C'.$seq;
     }
 
-    private const PLANTATIONS_CACHE_KEY = 'planteurs.plantations_rows.v2';
+    private const PLANTATIONS_CACHE_KEY = 'planteurs.plantations_rows.v3';
 
-    /** Court : les synchronisations de l'application mobile ne vident pas ce cache */
-    private const PLANTATIONS_CACHE_SECONDS = 30;
+    private const PLANTATIONS_STALE_KEY = 'planteurs.plantations_rows.stale.v3';
+
+    /** Les pages et l'export réutilisent ce jeu sans rappeler l'API */
+    private const PLANTATIONS_CACHE_SECONDS = 900;
+
+    /** Secours si l'API dépasse le délai : dernier chargement réussi */
+    private const PLANTATIONS_STALE_SECONDS = 86400;
 
     /**
      * Liste des plantations : une ligne par champ, avec son exploitation et le planteur associé.
@@ -373,21 +378,99 @@ class PlanteurApiService
      */
     public function getPlantations(array $query): array
     {
-        if (filter_var($query['refresh'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            $this->forgetPlantationsCache();
+        $dataset = $this->plantationDataset($query);
+        $filtered = $dataset['rows'];
+        $total = count($filtered);
+        $exportAll = filter_var($query['all'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if ($exportAll) {
+            $limit = max($total, 1);
+            $page = 1;
+            $totalPages = 1;
+        } else {
+            $limit = max(1, min(100, (int) ($query['limit'] ?? 15)));
+            $totalPages = max(1, (int) ceil($total / $limit));
+            $page = min(max(1, (int) ($query['page'] ?? 1)), $totalPages);
         }
 
-        $cached = Cache::remember(self::PLANTATIONS_CACHE_KEY, self::PLANTATIONS_CACHE_SECONDS, fn (): array => [
-            'rows' => $this->buildPlantationRows(),
-            'loaded_at' => now()->toIso8601String(),
-        ]);
-        $rows = $cached['rows'] ?? [];
+        return [
+            'success' => true,
+            'data' => [
+                'plantations' => array_slice($filtered, ($page - 1) * $limit, $limit),
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit,
+                'total_pages' => $totalPages,
+                'superficie_totale' => $dataset['superficie_totale'],
+                'parcelles_tracees' => $dataset['parcelles_tracees'],
+                'nb_planteurs' => $dataset['nb_planteurs'],
+                'regions' => $dataset['regions'],
+                'loaded_at' => $dataset['loaded_at'],
+                'stale' => $dataset['stale'],
+                'warning' => $dataset['warning'],
+            ],
+        ];
+    }
 
+    /**
+     * Toutes les plantations filtrées, sans pagination (export PDF / CSV / Excel).
+     *
+     * @param  array<string, mixed>  $query
+     * @return array{
+     *     rows: list<array<string, mixed>>,
+     *     superficie_totale: float,
+     *     parcelles_tracees: int,
+     *     nb_planteurs: int,
+     *     regions: list<string>,
+     *     loaded_at: ?string,
+     *     stale: bool,
+     *     warning: ?string,
+     *     filters: array{q: string, region: string, village: string}
+     * }
+     */
+    public function plantationDataset(array $query): array
+    {
+        $cached = $this->rememberPlantationRows(
+            filter_var($query['refresh'] ?? false, FILTER_VALIDATE_BOOLEAN)
+        );
+        $rows = $cached['rows'] ?? [];
+        $filtered = $this->filterPlantationRows($rows, $query);
+
+        $regions = array_values(array_unique(array_filter(array_column($rows, 'region'))));
+        sort($regions);
+
+        return [
+            'rows' => $filtered,
+            'superficie_totale' => round(array_sum(array_map(
+                fn (array $r): float => (float) ($r['superficie_ha'] ?: $r['superficie_gps']),
+                $filtered
+            )), 2),
+            'parcelles_tracees' => count(array_filter($filtered, fn (array $r): bool => $r['parcelle_tracee'])),
+            'nb_planteurs' => count(array_unique(array_column($filtered, 'planteur_id'))),
+            'regions' => $regions,
+            'loaded_at' => $cached['loaded_at'] ?? null,
+            'stale' => (bool) ($cached['stale'] ?? false),
+            'warning' => $cached['warning'] ?? null,
+            'filters' => [
+                'q' => trim((string) ($query['q'] ?? '')),
+                'region' => trim((string) ($query['region'] ?? '')),
+                'village' => trim((string) ($query['village'] ?? '')),
+            ],
+        ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $query
+     * @return list<array<string, mixed>>
+     */
+    private function filterPlantationRows(array $rows, array $query): array
+    {
         $q = $this->normalizeName((string) ($query['q'] ?? ''));
         $region = trim((string) ($query['region'] ?? ''));
         $village = $this->normalizeName((string) ($query['village'] ?? ''));
 
-        $filtered = array_values(array_filter($rows, function (array $row) use ($q, $region, $village): bool {
+        return array_values(array_filter($rows, function (array $row) use ($q, $region, $village): bool {
             if ($region !== '' && $row['region'] !== $region) {
                 return false;
             }
@@ -408,38 +491,59 @@ class PlanteurApiService
 
             return true;
         }));
-
-        $limit = max(1, min(100, (int) ($query['limit'] ?? 15)));
-        $total = count($filtered);
-        $totalPages = max(1, (int) ceil($total / $limit));
-        $page = min(max(1, (int) ($query['page'] ?? 1)), $totalPages);
-
-        $regions = array_values(array_unique(array_filter(array_column($rows, 'region'))));
-        sort($regions);
-
-        return [
-            'success' => true,
-            'data' => [
-                'plantations' => array_slice($filtered, ($page - 1) * $limit, $limit),
-                'total' => $total,
-                'page' => $page,
-                'limit' => $limit,
-                'total_pages' => $totalPages,
-                'superficie_totale' => round(array_sum(array_map(
-                    fn (array $r): float => (float) ($r['superficie_ha'] ?: $r['superficie_gps']),
-                    $filtered
-                )), 2),
-                'parcelles_tracees' => count(array_filter($filtered, fn (array $r): bool => $r['parcelle_tracee'])),
-                'nb_planteurs' => count(array_unique(array_column($filtered, 'planteur_id'))),
-                'regions' => $regions,
-                'loaded_at' => $cached['loaded_at'] ?? null,
-            ],
-        ];
     }
 
     public function forgetPlantationsCache(): void
     {
         Cache::forget(self::PLANTATIONS_CACHE_KEY);
+    }
+
+    /**
+     * @return array{rows: list<array<string, mixed>>, loaded_at: string, stale?: bool, warning?: string}
+     */
+    private function rememberPlantationRows(bool $forceRefresh): array
+    {
+        if (! $forceRefresh) {
+            $fresh = Cache::get(self::PLANTATIONS_CACHE_KEY);
+            if (is_array($fresh) && isset($fresh['rows'])) {
+                return $fresh;
+            }
+        } else {
+            Cache::forget(self::PLANTATIONS_CACHE_KEY);
+        }
+
+        try {
+            set_time_limit(240);
+            $payload = [
+                'rows' => $this->buildPlantationRows(),
+                'loaded_at' => now()->toIso8601String(),
+            ];
+            Cache::put(self::PLANTATIONS_CACHE_KEY, $payload, self::PLANTATIONS_CACHE_SECONDS);
+            Cache::put(self::PLANTATIONS_STALE_KEY, $payload, self::PLANTATIONS_STALE_SECONDS);
+
+            return $payload;
+        } catch (RuntimeException $exception) {
+            $stale = Cache::get(self::PLANTATIONS_STALE_KEY);
+            if (! is_array($stale) || ! isset($stale['rows'])) {
+                throw $exception;
+            }
+
+            $loadedAt = is_string($stale['loaded_at'] ?? null) ? $stale['loaded_at'] : null;
+            $when = '';
+            if ($loadedAt !== null) {
+                $when = ' du '.\Illuminate\Support\Carbon::parse($loadedAt)
+                    ->timezone(config('app.timezone'))
+                    ->format('d/m/Y à H:i');
+            }
+
+            $fallback = $stale + [
+                'stale' => true,
+                'warning' => 'L\'API planteurs n\'a pas répondu à temps. Affichage des dernières données'.$when.'. Le bouton Actualiser relance le chargement.',
+            ];
+            Cache::put(self::PLANTATIONS_CACHE_KEY, $fallback, 180);
+
+            return $fallback;
+        }
     }
 
     /**
@@ -449,10 +553,9 @@ class PlanteurApiService
      */
     private function buildPlantationRows(): array
     {
-        $json = $this->requestJson('get', config('planteurs.api_base').'/planteurs.php', ['page' => 1, 'limit' => 10000]);
         $rows = [];
 
-        foreach ($json['data']['planteurs'] ?? [] as $planteur) {
+        foreach ($this->fetchPlanteursForPlantations() as $planteur) {
             if (! is_array($planteur)) {
                 continue;
             }
@@ -498,6 +601,48 @@ class PlanteurApiService
         }
 
         return $rows;
+    }
+
+    /**
+     * Pages plus petites : un seul appel de 10 000 fiches dépasse souvent le délai de l'API.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function fetchPlanteursForPlantations(): array
+    {
+        $limit = 250;
+        $page = 1;
+        $collected = [];
+        $totalPages = 1;
+
+        do {
+            $json = $this->requestJson(
+                'get',
+                config('planteurs.api_base').'/planteurs.php',
+                ['page' => $page, 'limit' => $limit],
+                [],
+                90,
+                false,
+            );
+            $batch = [];
+            foreach ($json['data']['planteurs'] ?? [] as $planteur) {
+                if (is_array($planteur)) {
+                    $batch[] = $planteur;
+                }
+            }
+
+            $collected = array_merge($collected, $batch);
+            $total = (int) ($json['data']['total'] ?? 0);
+            $totalPages = max(1, (int) ($json['data']['total_pages'] ?? 1));
+
+            if ($batch === [] || ($total > 0 && count($collected) >= $total)) {
+                break;
+            }
+
+            $page++;
+        } while ($page <= $totalPages && $page <= 80);
+
+        return $collected;
     }
 
     /**
@@ -826,7 +971,6 @@ class PlanteurApiService
     }
 
     /**
-     * @param  mixed  $raw
      * @return list<array{latitude: float, longitude: float}>
      */
     private function normalizeParcellePoints(mixed $raw): array
@@ -1134,14 +1278,17 @@ class PlanteurApiService
      * @param  array<string, string>  $headers
      * @return array<string, mixed>
      */
-    private function requestJson(string $method, string $url, array $payload = [], array $headers = []): array
+    private function requestJson(string $method, string $url, array $payload = [], array $headers = [], int $timeout = 60, bool $retry = true): array
     {
         try {
-            $pending = Http::timeout(60)
+            $pending = Http::timeout($timeout)
                 ->connectTimeout(15)
-                ->retry(2, 1500, fn ($exception): bool => $exception instanceof ConnectionException
-                    || ($exception instanceof RequestException && $exception->response->serverError()), throw: false)
                 ->acceptJson();
+
+            if ($retry) {
+                $pending = $pending->retry(2, 1500, fn ($exception): bool => $exception instanceof ConnectionException
+                    || ($exception instanceof RequestException && $exception->response->serverError()), throw: false);
+            }
 
             if ($headers !== []) {
                 $pending = $pending->withHeaders($headers);
