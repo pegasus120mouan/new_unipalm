@@ -358,9 +358,9 @@ class PlanteurApiService
         return 'CHAMP-'.((int) ($planteur['id'] ?? 0)).'-C'.$seq;
     }
 
-    private const PLANTATIONS_CACHE_KEY = 'planteurs.plantations_rows.v3';
+    private const PLANTATIONS_CACHE_KEY = 'planteurs.plantations_rows.v4';
 
-    private const PLANTATIONS_STALE_KEY = 'planteurs.plantations_rows.stale.v3';
+    private const PLANTATIONS_STALE_KEY = 'planteurs.plantations_rows.stale.v4';
 
     /** Les pages et l'export réutilisent ce jeu sans rappeler l'API */
     private const PLANTATIONS_CACHE_SECONDS = 900;
@@ -575,10 +575,11 @@ class PlanteurApiService
 
             foreach ($cultures as $index => $culture) {
                 $exploitation = $exploitations[(int) ($culture['exploitation_id'] ?? 0)] ?? $firstExploitation;
-                $parcelles = array_filter(
+                $parcelles = array_values(array_filter(
                     is_array($culture['parcelles'] ?? null) ? $culture['parcelles'] : [],
                     fn ($p): bool => is_array($p) && is_array($p['points'] ?? null) && count($p['points']) >= 3
-                );
+                ));
+                [$plantationLat, $plantationLng] = $this->centroidFromParcelles($parcelles);
 
                 $rows[] = [
                     'champ_id' => $culture['id'] ?? null,
@@ -596,6 +597,10 @@ class PlanteurApiService
                     'numero_fiche' => (string) ($planteur['numero_fiche'] ?? ''),
                     'telephone' => (string) ($planteur['telephone'] ?? ''),
                     'collecteur' => $collecteur,
+                    'planteur_latitude' => $this->formatCoordinate($exploitation['latitude'] ?? null),
+                    'planteur_longitude' => $this->formatCoordinate($exploitation['longitude'] ?? null),
+                    'plantation_latitude' => $plantationLat,
+                    'plantation_longitude' => $plantationLng,
                 ];
             }
         }
@@ -968,6 +973,50 @@ class PlanteurApiService
         }
 
         return $copied;
+    }
+
+    /**
+     * Centroïde des points GPS des parcelles tracées (plantation).
+     *
+     * @param  list<array<string, mixed>>  $parcelles
+     * @return array{0: string, 1: string}
+     */
+    private function centroidFromParcelles(array $parcelles): array
+    {
+        $sumLat = 0.0;
+        $sumLng = 0.0;
+        $count = 0;
+
+        foreach ($parcelles as $parcelle) {
+            foreach ($this->normalizeParcellePoints($parcelle['points'] ?? []) as $point) {
+                $sumLat += $point['latitude'];
+                $sumLng += $point['longitude'];
+                $count++;
+            }
+        }
+
+        if ($count === 0) {
+            return ['', ''];
+        }
+
+        return [
+            $this->formatCoordinate($sumLat / $count),
+            $this->formatCoordinate($sumLng / $count),
+        ];
+    }
+
+    private function formatCoordinate(mixed $value): string
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return '';
+        }
+
+        $number = (float) $value;
+        if ($number === 0.0) {
+            return '';
+        }
+
+        return rtrim(rtrim(sprintf('%.6F', $number), '0'), '.') ?: '0';
     }
 
     /**

@@ -21,10 +21,15 @@ class PlantationExportService
         'Superficie (ha)',
         'Superficie GPS (ha)',
         'Parcelle',
-        'Planteur',
+        'Nom',
+        'Prénom',
         'N° fiche',
         'Téléphone',
         'Collecteur',
+        'Latitude planteur',
+        'Longitude planteur',
+        'Latitude plantation',
+        'Longitude plantation',
     ];
 
     public function __construct(
@@ -114,6 +119,7 @@ class PlantationExportService
         $superficie = (float) ($row['superficie_ha'] ?? 0);
         $gps = (float) ($row['superficie_gps'] ?? 0);
         $affichee = $superficie > 0 ? $superficie : $gps;
+        [$nom, $prenom] = $this->splitPlanteurNom((string) ($row['planteur_nom'] ?? ''));
 
         return [
             (string) ($row['numero_champ'] ?? ''),
@@ -124,11 +130,36 @@ class PlantationExportService
             $this->formatHa($affichee),
             $this->formatHa($gps),
             ! empty($row['parcelle_tracee']) ? 'Tracée' : 'Non tracée',
-            (string) ($row['planteur_nom'] ?? ''),
+            $nom,
+            $prenom,
             (string) ($row['numero_fiche'] ?? ''),
             (string) ($row['telephone'] ?? ''),
             (string) ($row['collecteur'] ?? ''),
+            (string) ($row['planteur_latitude'] ?? ''),
+            (string) ($row['planteur_longitude'] ?? ''),
+            (string) ($row['plantation_latitude'] ?? ''),
+            (string) ($row['plantation_longitude'] ?? ''),
         ];
+    }
+
+    /**
+     * nom_prenoms API : premier mot = nom, reste = prénom(s).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function splitPlanteurNom(string $fullName): array
+    {
+        $parts = preg_split('/\s+/u', trim($fullName), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if ($parts === []) {
+            return ['', ''];
+        }
+
+        if (count($parts) === 1) {
+            return [$parts[0], ''];
+        }
+
+        return [$parts[0], implode(' ', array_slice($parts, 1))];
     }
 
     private function formatHa(float $value): string

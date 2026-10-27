@@ -526,7 +526,9 @@
 
             const EXPORT_HEADERS = [
                 'N° champ', 'Région', 'Sous-préfecture', 'Village', 'Culture',
-                'Superficie (ha)', 'Parcelle', 'Planteur', 'N° fiche', 'Téléphone',
+                'Superficie (ha)', 'Parcelle', 'Nom', 'Prénom', 'N° fiche', 'Téléphone',
+                'Latitude planteur', 'Longitude planteur',
+                'Latitude plantation', 'Longitude plantation',
             ];
 
             function exportFileStamp() {
@@ -539,9 +541,18 @@
                 return number.toFixed(2).replace('.', ',');
             }
 
+            /** nom_prenoms API : premier mot = nom, reste = prénom(s) */
+            function splitPlanteurNom(fullName) {
+                const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+                if (!parts.length) return { nom: '', prenom: '' };
+                if (parts.length === 1) return { nom: parts[0], prenom: '' };
+                return { nom: parts[0], prenom: parts.slice(1).join(' ') };
+            }
+
             function plantationExportRows(rows) {
                 return rows.map(function (row) {
                     const superficie = row.superficie_ha > 0 ? row.superficie_ha : row.superficie_gps;
+                    const name = splitPlanteurNom(row.planteur_nom);
                     return [
                         row.numero_champ || '',
                         row.region || '',
@@ -550,9 +561,14 @@
                         row.type_culture || '',
                         exportHa(superficie),
                         row.parcelle_tracee ? 'Tracée' : 'Non tracée',
-                        row.planteur_nom || '',
+                        name.nom,
+                        name.prenom,
                         row.numero_fiche || '',
                         row.telephone || '',
+                        row.planteur_latitude || '',
+                        row.planteur_longitude || '',
+                        row.plantation_latitude || '',
+                        row.plantation_longitude || '',
                     ];
                 });
             }
@@ -598,7 +614,7 @@
                 body.forEach(function (row) {
                     lines.push(row.map(function (cell, index) {
                         const text = String(cell ?? '').replace(/;/g, ',');
-                        if (index === 9 && text !== '') {
+                        if (index === 10 && text !== '') {
                             return '="' + text.replace(/"/g, '""') + '"';
                         }
                         return text;
