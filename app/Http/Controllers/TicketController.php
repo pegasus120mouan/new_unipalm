@@ -659,10 +659,25 @@ class TicketController extends Controller
         }
 
         $validated = $request->validate([
-            'prix_unitaire' => ['required', 'numeric', 'min:0.01'],
+            'prix_unitaire' => ['nullable', 'numeric', 'min:0.01'],
         ]);
 
-        $this->ticketService->validate($ticket, (float) $validated['prix_unitaire']);
+        try {
+            $this->ticketService->validate(
+                $ticket,
+                isset($validated['prix_unitaire']) ? (float) $validated['prix_unitaire'] : null,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
+
+            return back()->withErrors([
+                'prix_unitaire' => $exception->getMessage(),
+            ]);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -683,7 +698,7 @@ class TicketController extends Controller
         $validated = $request->validate([
             'ticket_ids' => ['required', 'array', 'min:1'],
             'ticket_ids.*' => ['integer', 'exists:tickets,id_ticket'],
-            'prix_unitaire' => ['required', 'numeric', 'min:0.01'],
+            'prix_unitaire' => ['nullable', 'numeric', 'min:0.01'],
             'update_all_usine' => ['sometimes', 'boolean'],
         ]);
 
@@ -695,11 +710,23 @@ class TicketController extends Controller
                 ->all();
         }
 
-        $result = $this->ticketService->validateMany(
-            $validated['ticket_ids'],
-            (float) $validated['prix_unitaire'],
-            $request->boolean('update_all_usine'),
-        );
+        try {
+            $result = $this->ticketService->validateMany(
+                $validated['ticket_ids'],
+                isset($validated['prix_unitaire']) ? (float) $validated['prix_unitaire'] : null,
+                $request->boolean('update_all_usine'),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                ], 422);
+            }
+
+            return back()->withErrors([
+                'prix_unitaire' => $exception->getMessage(),
+            ]);
+        }
 
         if ($result['validated'] === 0) {
             if ($request->expectsJson()) {

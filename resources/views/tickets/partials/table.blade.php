@@ -46,6 +46,7 @@
                     <td>
                         <input type="checkbox" class="form-check-input ticket-checkbox"
                             name="ticket_ids[]" value="{{ $ticket->id_ticket }}"
+                            data-usine-id="{{ $ticket->id_usine }}"
                             data-prix-unitaire="{{ $ticket->hasPrixUnitaire() ? (float) $ticket->prix_unitaire : '' }}">
                     </td>
                 @endif

@@ -88,12 +88,13 @@ class PrixUnitaireController extends Controller
             'date_fin' => $validated['date_fin'] ?? null,
         ]);
 
-        $updatedTickets = $this->ticketService->applyPrixUnitaireToPendingTickets(
+        $applied = $this->ticketService->applyPrixUnitaireToPendingTickets(
             (int) $validated['id_usine'],
             (float) $validated['prix'],
             $validated['date_debut'],
             $validated['date_fin'] ?? null,
         );
+        $updatedTickets = $applied['tickets'];
 
         $message = 'Prix unitaire enregistré avec succès.';
         if ($updatedTickets > 0) {
@@ -137,12 +138,13 @@ class PrixUnitaireController extends Controller
             'date_fin' => $validated['date_fin'] ?? $validated['date_debut'],
         ]);
 
-        $updatedTickets = $this->ticketService->applyPrixUnitaireToPendingTickets(
+        $applied = $this->ticketService->applyPrixUnitaireToPendingTickets(
             (int) $validated['id_usine'],
             (float) $validated['prix'],
             $validated['date_debut'],
             $validated['date_fin'] ?? null,
         );
+        $updatedTickets = $applied['tickets'];
 
         $message = 'Prix unitaire modifié avec succès.';
         if ($updatedTickets > 0) {

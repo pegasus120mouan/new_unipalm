@@ -78,12 +78,44 @@ class TicketService
         ]);
     }
 
-    public function validate(Ticket $ticket, float $prixUnitaire): Ticket
+    /**
+     * Prix catalogue usine + date ticket en priorité ; sinon prix saisi / déjà présent.
+     */
+    public function resolvePrixForTicket(Ticket $ticket, ?float $fallback = null): float
     {
+        $dateTicket = $ticket->date_ticket instanceof \Carbon\CarbonInterface
+            ? $ticket->date_ticket->format('Y-m-d')
+            : (string) $ticket->date_ticket;
+
+        $catalog = $this->getPrixUnitaireByDateAndUsine($dateTicket, (int) $ticket->id_usine);
+
+        if ($catalog['found']) {
+            return (float) $catalog['prix'];
+        }
+
+        if ($fallback !== null && $fallback > 0) {
+            return $fallback;
+        }
+
+        if ($ticket->hasPrixUnitaire()) {
+            return (float) $ticket->prix_unitaire;
+        }
+
+        $usine = $ticket->usine?->nom_usine ?? ('#'.$ticket->id_usine);
+
+        throw new \InvalidArgumentException(
+            "Aucun prix unitaire défini pour l'usine {$usine} à la date du ticket ({$dateTicket})."
+        );
+    }
+
+    public function validate(Ticket $ticket, ?float $prixUnitaire = null): Ticket
+    {
+        $prix = $this->resolvePrixForTicket($ticket, $prixUnitaire);
+
         $ticket->update([
-            'prix_unitaire' => $prixUnitaire,
+            'prix_unitaire' => $prix,
             'date_validation_boss' => now(),
-            'montant_paie' => $prixUnitaire * (float) $ticket->poids,
+            'montant_paie' => $prix * (float) $ticket->poids,
         ]);
 
         return $ticket->fresh();
@@ -135,13 +167,16 @@ class TicketService
     /**
      * Applique rétroactivement un prix unitaire à tous les tickets non payés
      * de l'usine dont la date_ticket est dans la période.
+     *
+     * @return array{tickets: int, bordereaux: list<string>}
      */
     public function applyPrixUnitaireToPendingTickets(
         int $idUsine,
         float $prix,
         string $dateDebut,
         ?string $dateFin = null,
-    ): int {
+        bool $onlyMismatch = false,
+    ): array {
         $query = Ticket::query()
             ->where('id_usine', $idUsine)
             ->whereNull('date_paie')
@@ -151,9 +186,18 @@ class TicketService
             $query->whereDate('date_ticket', '<=', $dateFin);
         }
 
-        $updated = 0;
+        if ($onlyMismatch) {
+            $query->where(function ($q) use ($prix) {
+                $q->whereNull('prix_unitaire')
+                    ->orWhere('prix_unitaire', 0)
+                    ->orWhere('prix_unitaire', '!=', $prix);
+            });
+        }
 
-        $query->orderBy('id_ticket')->chunkById(100, function ($tickets) use ($prix, &$updated) {
+        $updated = 0;
+        $bordereaux = [];
+
+        $query->orderBy('id_ticket')->chunkById(100, function ($tickets) use ($prix, &$updated, &$bordereaux) {
             foreach ($tickets as $ticket) {
                 $montantPaie = round($prix * (float) $ticket->poids, 2);
                 $montantPayer = (float) ($ticket->montant_payer ?? 0);
@@ -165,19 +209,68 @@ class TicketService
                     'montant_reste' => $montantReste,
                 ]);
                 $updated++;
+
+                if (! empty($ticket->numero_bordereau)) {
+                    $bordereaux[$ticket->numero_bordereau] = true;
+                }
             }
         }, 'id_ticket');
+
+        $bordereauNumeros = array_keys($bordereaux);
+        if ($bordereauNumeros !== []) {
+            $this->recalculateBordereauxMontants($bordereauNumeros);
+        }
+
+        return [
+            'tickets' => $updated,
+            'bordereaux' => $bordereauNumeros,
+        ];
+    }
+
+    /**
+     * @param  list<string>  $numeros
+     */
+    public function recalculateBordereauxMontants(array $numeros): int
+    {
+        $updated = 0;
+
+        foreach (array_unique($numeros) as $numero) {
+            $bordereau = \App\Models\Bordereau::query()
+                ->where('numero_bordereau', $numero)
+                ->whereNull('date_paie')
+                ->first();
+
+            if (! $bordereau) {
+                continue;
+            }
+
+            $tickets = Ticket::query()
+                ->where('numero_bordereau', $numero)
+                ->get(['poids', 'prix_unitaire']);
+
+            $montantTotal = round($tickets->sum(
+                fn (Ticket $ticket) => (float) $ticket->prix_unitaire * (float) $ticket->poids
+            ), 2);
+            $montantPayer = (float) ($bordereau->montant_payer ?? 0);
+
+            $bordereau->update([
+                'montant_total' => $montantTotal,
+                'montant_reste' => max(0, $montantTotal - $montantPayer),
+            ]);
+            $updated++;
+        }
 
         return $updated;
     }
 
     /**
      * @param  array<int>  $ticketIds
-     * @return array{validated: int, usines_updated: array<int>}
+     * @return array{validated: int, validated_ids: list<int>, usines_updated: list<int>}
      */
-    public function validateMany(array $ticketIds, float $prixUnitaire, bool $updateAllUsine = false): array
+    public function validateMany(array $ticketIds, ?float $prixUnitaire = null, bool $updateAllUsine = false): array
     {
         $tickets = Ticket::query()
+            ->with('usine')
             ->whereIn('id_ticket', $ticketIds)
             ->pending()
             ->get();
@@ -192,14 +285,14 @@ class TicketService
             $validatedIds[] = $ticket->id_ticket;
 
             if ($updateAllUsine) {
-                $usineIds[] = $ticket->id_usine;
+                $usineIds[] = (int) $ticket->id_usine;
             }
         }
 
         $usineIds = array_values(array_unique($usineIds));
 
         if ($updateAllUsine && $usineIds !== []) {
-            Ticket::query()
+            $pending = Ticket::query()
                 ->whereIn('id_usine', $usineIds)
                 ->whereNull('date_validation_boss')
                 ->where(function ($query) {
@@ -207,10 +300,22 @@ class TicketService
                         ->orWhere('prix_unitaire', 0);
                 })
                 ->whereNotIn('id_ticket', $validatedIds)
-                ->update([
-                    'prix_unitaire' => $prixUnitaire,
+                ->orderBy('id_ticket')
+                ->get();
+
+            foreach ($pending as $ticket) {
+                try {
+                    $prix = $this->resolvePrixForTicket($ticket, $prixUnitaire);
+                } catch (\InvalidArgumentException) {
+                    continue;
+                }
+
+                $ticket->update([
+                    'prix_unitaire' => $prix,
+                    'montant_paie' => round($prix * (float) $ticket->poids, 2),
                     'updated_at' => now(),
                 ]);
+            }
         }
 
         return [

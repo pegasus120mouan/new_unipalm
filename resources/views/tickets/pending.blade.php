@@ -91,8 +91,9 @@
                             <label for="prix_unitaire" class="form-label">Prix unitaire</label>
                             <input type="number" name="prix_unitaire" id="prix_unitaire"
                                 class="form-control @error('prix_unitaire') is-invalid @enderror"
-                                step="0.01" min="0.01" placeholder="0.00" required
+                                step="0.01" min="0.01" placeholder="0.00"
                                 value="{{ old('prix_unitaire') }}">
+                            <div class="form-text">Le prix catalogue de l'usine à la date du ticket est prioritaire.</div>
                             <div class="invalid-feedback" id="validateTicketError"></div>
                         </div>
                     </div>
@@ -118,22 +119,28 @@
                         <div class="alert alert-info py-2" id="bulkTicketCount">
                             0 ticket(s) sélectionné(s)
                         </div>
+                        <div class="alert alert-warning py-2 d-none" id="bulkMixedPricesWarning">
+                            Usines / prix catalogue différents : chaque ticket recevra le prix de
+                            <strong>son usine</strong> à la date du ticket (pas un prix unique).
+                        </div>
                         <div class="mb-3">
                             <label for="bulk_prix_unitaire" class="form-label">Prix unitaire (FCFA)</label>
                             <input type="number" name="prix_unitaire" id="bulk_prix_unitaire"
                                 class="form-control" step="0.01" min="0.01"
-                                placeholder="Entrez le prix unitaire" required>
-                            <div class="form-text">Le prix sera appliqué à tous les tickets sélectionnés.</div>
+                                placeholder="Utilisé seulement si aucun prix catalogue">
+                            <div class="form-text" id="bulkPrixHelp">
+                                Si un prix catalogue existe pour l'usine et la date du ticket, il est appliqué automatiquement.
+                            </div>
                             <div class="invalid-feedback" id="bulkValidateError"></div>
                         </div>
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" name="update_all_usine"
                                 id="update_all_usine" value="1">
                             <label class="form-check-label" for="update_all_usine">
-                                Appliquer automatiquement ce prix à tous les tickets en attente de la même usine
+                                Préremplir aussi le prix catalogue sur les autres tickets en attente des mêmes usines
                             </label>
                             <div class="form-text text-warning">
-                                Si coché, tous les tickets non validés de la même usine recevront ce prix unitaire.
+                                Si coché, chaque ticket en attente reçoit le prix catalogue de son usine / sa date.
                             </div>
                         </div>
                         <div id="bulkTicketIdsContainer"></div>
@@ -342,12 +349,28 @@
                     .map((checkbox) => checkbox.dataset.prixUnitaire)
                     .filter((value) => value !== '');
                 const uniquePrices = [...new Set(prices)];
-                if (uniquePrices.length === 1) {
+                const uniqueUsines = [...new Set(selected.map((checkbox) => checkbox.dataset.usineId).filter(Boolean))];
+                const mixedWarning = document.getElementById('bulkMixedPricesWarning');
+                const isMixed = uniqueUsines.length > 1 || uniquePrices.length > 1;
+
+                if (mixedWarning) {
+                    mixedWarning.classList.toggle('d-none', !isMixed);
+                }
+
+                if (uniquePrices.length === 1 && !isMixed) {
                     bulkPrixInput.value = String(parseFloat(uniquePrices[0]));
                     bulkPrixInput.readOnly = true;
+                    bulkPrixInput.required = false;
+                } else if (isMixed) {
+                    bulkPrixInput.value = '';
+                    bulkPrixInput.readOnly = true;
+                    bulkPrixInput.required = false;
+                    bulkPrixInput.placeholder = 'Prix catalogue appliqué automatiquement par usine';
                 } else {
                     bulkPrixInput.value = '';
                     bulkPrixInput.readOnly = false;
+                    bulkPrixInput.required = true;
+                    bulkPrixInput.placeholder = 'Entrez le prix unitaire';
                 }
                 document.getElementById('bulkValidateError').textContent = '';
                 bulkPrixInput.classList.remove('is-invalid');
@@ -364,9 +387,12 @@
             document.getElementById('bulkValidateModal').addEventListener('hidden.bs.modal', () => {
                 bulkPrixInput.value = '';
                 bulkPrixInput.readOnly = false;
+                bulkPrixInput.required = true;
+                bulkPrixInput.placeholder = 'Entrez le prix unitaire';
                 document.getElementById('update_all_usine').checked = false;
                 document.getElementById('bulkValidateError').textContent = '';
                 bulkPrixInput.classList.remove('is-invalid');
+                document.getElementById('bulkMixedPricesWarning')?.classList.add('d-none');
             });
 
             form.addEventListener('submit', function (event) {
